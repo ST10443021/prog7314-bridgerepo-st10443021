@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- isiXhosa translation — satisfies the "at least two South African languages" requirement. -->
+<resources>
+    <string name="app_name">DevLedger</string>
+    <string name="app_tagline">Bhala ikhowudi. Landelela. Lawula. Khusela.</string>
+
+    <string name="splash_initializing">Iyaqalisa…</string>
+
+    <string name="auth_welcome_back">Wamkelekile kwakhona!</string>
+    <string name="auth_subtitle">Ngena ukuze uqhubeke nendawo yakho yokusebenza.</string>
+    <string name="auth_sign_in_google">Ngena nge-Google</string>
+    <string name="auth_sign_in_github">Ngena nge-GitHub</string>
+    <string name="auth_sign_in_email">Ngena nge-imeyile</string>
+    <string name="auth_no_account">Awunayo i-akhawunti?</string>
+    <string name="auth_create_one">Yenza enye</string>
+    <string name="auth_email">I-imeyile</string>
+    <string name="auth_password">Iphasiwedi</string>
+    <string name="auth_error_generic">Ukungena akuphumelelanga. Nceda ujonge iinkcukacha zakho uze uzame kwakhona.</string>
+
+    <string name="biometric_title">Qinisekisa Ubuqu Bakho</string>
+    <string name="biometric_subtitle">Sebenzisa i-biometric yakho ukufikelela ngokukhuselekileyo kwi-vault yakho ye-DevLedger</string>
+    <string name="biometric_touch_sensor">Chukumisa isensa yomnwe</string>
+    <string name="biometric_use_face">Sebenzisa Ukuqondwa Kobuso</string>
+    <string name="biometric_data_safe_title">Idatha yakho ihlala ikhuselekile</string>
+    <string name="biometric_data_safe_body">Idatha yakho ye-biometric igcinwa kule divayisi kuphela kwaye ayabelwana nayo ne-DevLedger.</string>
+    <string name="biometric_use_pin">Sebenzisa i-PIN okanye Iphasiwedi</string>
+    <string name="biometric_prompt_title">I-vault ye-DevLedger</string>
+    <string name="biometric_prompt_subtitle">Qinisekisa ubuqu bakho ukuze uqhubeke</string>
+
+    <string name="dashboard_welcome_back">Wamkelekile kwakhona,</string>
+    <string name="dashboard_overview">Nazi iinkcukacha zemali yakho yophuhliso.</string>
+    <string name="dashboard_total_snippets">Iziqwenga Zekhowudi Zizonke</string>
+    <string name="dashboard_monthly_income">Ingeniso Yenyanga</string>
+    <string name="dashboard_monthly_expenses">Iindleko Zenyanga</string>
+    <string name="dashboard_net_income">Ingeniso Ephuma Konke</string>
+    <string name="dashboard_quick_actions">Izenzo Ezikhawulezileyo</string>
+    <string name="dashboard_recent_activity">Umsebenzi Wamva Nje</string>
+    <string name="dashboard_view_all">Jonga Konke</string>
+
+    <string name="nav_dashboard">Ideshbhodi</string>
+    <string name="nav_snippets">Iziqwenga</string>
+    <string name="nav_finance">Ezemali</string>
+    <string name="nav_notifications">Izaziso</string>
+
+    <string name="vault_title">I-Vault Yeziqwenga Zekhowudi</string>
+    <string name="vault_subtitle">Gcina, hlela kwaye uphinde usebenzise iziqwenga zakho zekhowudi.</string>
+    <string name="vault_search_hint">Khangela iziqwenga zekhowudi…</string>
+    <string name="vault_new_folder">Ifolda Entsha</string>
+    <string name="vault_all_snippets">Zonke Iziqwenga</string>
+    <string name="vault_empty">Akukabikho ziqwenga. Cofa u- + ukwenza eyakho yokuqala.</string>
+
+    <string name="editor_title_new">Isiqwenga Esitsha</string>
+    <string name="editor_title_edit">Hlela Isiqwenga</string>
+    <string name="editor_field_title">Isihloko</string>
+    <string name="editor_field_folder">Ifolda</string>
+    <string name="editor_field_language">Ulwimi</string>
+    <string name="editor_field_tags">Iitegi</string>
+    <string name="editor_field_code">Ikhowudi</string>
+    <string name="editor_field_description">Inkcazo (Ayimfuneki)</string>
+    <string name="editor_save">Gcina</string>
+    <string name="editor_error_required">Isihloko nekhowudi ziyafuneka.</string>
+    <string name="editor_saved_offline">Igciniwe apha kwidivayisi. Iya kuvumelaniswa xa likhona iinthanethi.</string>
+
+    <string name="finance_title">Umlandeleli Wezemali</string>
+    <string name="finance_subtitle">Landelela ingeniso yakho, iindleko kunye nempilo yakho yezemali iyonke.</string>
+    <string name="finance_total_income">Ingeniso Iyonke</string>
+    <string name="finance_total_expenses">Iindleko Ziyonke</string>
+    <string name="finance_net_balance">Ibhalansi Ephuma Konke</string>
+    <string name="finance_recent_transactions">Iintengiselwano Zamva Nje</string>
+    <string name="finance_add_transaction">Yongeza Intengiselwano</string>
+    <string name="finance_budget_alert">Umda wesabelo-mali seva ufikelelwe</string>
+
+    <string name="add_tx_title">Yongeza Intengiselwano</string>
+    <string name="add_tx_subtitle">Bhala ingeniso okanye iindleko ezintsha</string>
+    <string name="add_tx_income">Ingeniso</string>
+    <string name="add_tx_expense">Iindleko</string>
+    <string name="add_tx_amount">Isixa</string>
+    <string name="add_tx_category">Udidi</string>
+    <string name="add_tx_date">Umhla</string>
+    <string name="add_tx_description">Inkcazo</string>
+    <string name="add_tx_save">Gcina Intengiselwano</string>
+    <string name="add_tx_cancel">Rhoxisa</string>
+    <string name="add_tx_error_required">Uhlobo, isixa, udidi nomhla ziyafuneka.</string>
+
+    <string name="notifications_title">Izaziso</string>
+    <string name="notifications_subtitle">Hlala usaziswa ngayo yonke into ebalulekileyo.</string>
+    <string name="notifications_empty">Uphelelwe zizaziso.</string>
+    <string name="notifications_mark_all_read">Phawula konke njengokufundiweyo</string>
+
+    <string name="settings_title">Iisethingi</string>
+    <string name="settings_subtitle">Lawula uthando lwakho kunye neesethingi zenkqubo.</string>
+    <string name="settings_language">Ulwimi</string>
+    <string name="settings_security">Ukhuseleko</string>
+    <string name="settings_biometric_login">Ukungena nge-Biometric</string>
+    <string name="settings_notifications">Izaziso</string>
+    <string name="settings_push_notifications">Izaziso Ezityhalelwayo</string>
+    <string name="settings_sync">Iisethingi Zokuvumelanisa</string>
+    <string name="settings_auto_sync">Ukuvumelanisa Ngokuzenzekelayo</string>
+    <string name="settings_wifi_only">Vumelanisa nge-Wi-Fi Kuphela</string>
+    <string name="settings_sync_now">Vumelanisa Ngoku</string>
+    <string name="settings_currency">Uhlobo Lwemali Oluyisiseko</string>
+    <string name="settings_logout">Phuma</string>
+    <string name="settings_about">Malunga ne-DevLedger</string>
+
+    <string name="sync_all_up_to_date">Konke Kusemgangathweni!</string>
+    <string name="sync_syncing">Iyavumelanisa…</string>
+    <string name="sync_error">Ezinye izinto azivumelaniswanga. Cofa ukuze uzame kwakhona.</string>
+    <string name="sync_last_synced">Ivumelaniswe okokugqibela %1$s</string>
+
+    <string name="language_english">IsiNgesi</string>
+    <string name="language_afrikaans">IsiBhulu</string>
+    <string name="language_xhosa">IsiXhosa</string>
+</resources>

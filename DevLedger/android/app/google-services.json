@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "293392981245",
+    "project_id": "devledger-70860",
+    "storage_bucket": "devledger-70860.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:293392981245:android:833cf82fd938c6cd3ff294",
+        "android_client_info": {
+          "package_name": "com.devledger.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBLY8XCZxNsOLsg8k14GsxksCRRmP8cqEI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
