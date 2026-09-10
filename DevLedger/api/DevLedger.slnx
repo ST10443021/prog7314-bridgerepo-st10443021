@@ -1,1 +1,4 @@
-<Solution />
+<Solution>
+  <Project Path="DevLedger.Api.Tests/DevLedger.Api.Tests.csproj" Id="f6e809d8-5ed3-44b3-b6b1-100a4a6f0eb0" />
+  <Project Path="DevLedger.Api/DevLedger.Api.csproj" />
+</Solution>
