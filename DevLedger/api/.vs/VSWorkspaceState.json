@@ -6,6 +6,6 @@
     "\\DevLedger.Api\\Migrations",
     "\\DevLedger.Api\\Models"
   ],
-  "SelectedNode": "\\DevLedger.Api\\Migrations\\20260911104019_InitialCreate.cs",
+  "SelectedNode": "\\DevLedger.Api",
   "PreviewInSolutionExplorer": false
 }
