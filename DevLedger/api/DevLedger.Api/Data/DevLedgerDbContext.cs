@@ -4,11 +4,9 @@ using Microsoft.EntityFrameworkCore;
 namespace DevLedger.Api.Data;
 
 /// <summary>
-/// EF Core database context. Configured for SQLite in Development (a single
-/// devledger.db file — zero external setup for markers) and can be pointed at
-/// Azure Database for PostgreSQL / Azure SQL in Production via the connection
-/// string in appsettings.Production.json, matching the "Development Stack and
-/// Hosting" section of the Part 1 Planning and Design document.
+/// EF Core database context for DevLedger.
+/// PostgreSQL is used for local development and production through the
+/// configured DefaultConnection connection string.
 /// </summary>
 public class DevLedgerDbContext : DbContext
 {
