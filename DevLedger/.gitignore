@@ -1,0 +1,35 @@
+# --- Android / Gradle / Kotlin ---
+*.iml
+.gradle/
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+local.properties
+android/app/google-services.json
+android/.idea/
+android/*.hprof
+
+# --- .NET ---
+api/**/bin/
+api/**/obj/
+api/**/*.db
+api/**/*.db-shm
+api/**/*.db-wal
+api/DevLedger.Api/appsettings.Production.json
+
+# --- General ---
+.DS_Store
+*.log
+.vscode/
+
+# --- Visual Studio / generated .NET files ---
+.vs/
+packages/
+*.user
+
+# --- Local development configuration / secrets ---
+api/DevLedger.Api/appsettings.Development.json
+
+# Temporary local diagnostic output
+android/unit-test-compile.txt
