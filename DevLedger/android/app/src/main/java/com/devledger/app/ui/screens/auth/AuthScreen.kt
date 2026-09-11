@@ -53,34 +53,45 @@ fun AuthScreen(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp, vertical = 48.dp),
     ) {
+        // Logo and Tagline
         Text(
             text = stringResource(R.string.app_name),
             color = DevLedgerColors.TextPrimary,
-            fontSize = 26.sp,
+            fontSize = 32.sp,
             fontWeight = FontWeight.Bold,
         )
         Text(
             text = stringResource(R.string.app_tagline),
             color = DevLedgerColors.AccentBlue,
-            fontSize = 12.sp,
-            modifier = Modifier.padding(bottom = 32.dp, top = 2.dp),
+            fontSize = 14.sp,
+            modifier = Modifier.padding(bottom = 48.dp, top = 2.dp),
         )
 
-        Text(stringResource(R.string.auth_welcome_back), color = DevLedgerColors.TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
-        Text(stringResource(R.string.auth_subtitle), color = DevLedgerColors.TextMuted, fontSize = 13.sp, modifier = Modifier.padding(bottom = 24.dp, top = 4.dp))
+        Text(
+            text = "Welcome back!",
+            color = DevLedgerColors.TextPrimary,
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = "Sign in to continue to your workspace.",
+            color = DevLedgerColors.TextMuted,
+            fontSize = 14.sp,
+            modifier = Modifier.padding(bottom = 32.dp, top = 4.dp)
+        )
 
         DevLedgerSecondaryButton(
-            text = stringResource(R.string.auth_sign_in_google),
+            text = "Sign in with Google",
             onClick = { viewModel.signInWithGoogle(demoIdToken()) },
         )
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(16.dp))
         DevLedgerSecondaryButton(
-            text = stringResource(R.string.auth_sign_in_github),
+            text = "Sign in with GitHub",
             onClick = { viewModel.signInWithGitHub(demoIdToken()) },
         )
 
         Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp),
+            modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             HorizontalDividerLine()
@@ -91,32 +102,43 @@ fun AuthScreen(
         DevLedgerTextField(
             value = state.email,
             onValueChange = viewModel::onEmailChange,
-            label = stringResource(R.string.auth_email),
-            modifier = Modifier.padding(bottom = 12.dp),
+            label = "",
+            placeholder = "Email",
+            modifier = Modifier.padding(bottom = 16.dp),
         )
         DevLedgerTextField(
             value = state.password,
             onValueChange = viewModel::onPasswordChange,
-            label = stringResource(R.string.auth_password),
+            label = "",
+            placeholder = "Password",
             isPassword = true,
             isError = state.errorMessage != null,
-            supportingText = state.errorMessage,
-            modifier = Modifier.padding(bottom = 20.dp),
+            modifier = Modifier.padding(bottom = 8.dp),
         )
 
+        // API Error Message matching the screenshot
+        if (state.errorMessage != null) {
+            Text(
+                text = state.errorMessage!!,
+                color = DevLedgerColors.ErrorRed,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(bottom = 20.dp, start = 4.dp),
+            )
+        }
+
         DevLedgerPrimaryButton(
-            text = stringResource(R.string.auth_sign_in_email),
+            text = "Sign in with email",
             onClick = viewModel::signInWithEmail,
             loading = state.isLoading,
         )
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(32.dp))
         Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.auth_no_account), color = DevLedgerColors.TextMuted, fontSize = 13.sp)
+            Text("Don't have an account? ", color = DevLedgerColors.TextMuted, fontSize = 14.sp)
             Text(
-                text = " " + stringResource(R.string.auth_create_one),
+                text = "Create one",
                 color = DevLedgerColors.AccentBlue,
-                fontSize = 13.sp,
+                fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.clickable(onClick = onNavigateToRegister),
             )

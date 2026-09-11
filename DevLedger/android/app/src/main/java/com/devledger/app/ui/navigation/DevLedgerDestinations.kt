@@ -14,6 +14,7 @@ object DevLedgerDestinations {
     const val ADD_TRANSACTION = "add_transaction"
     const val NOTIFICATIONS = "notifications"
     const val SETTINGS = "settings"
+    const val REGISTER = "register"
 
     fun snippetEditorRoute(snippetId: String? = null) =
         if (snippetId == null) "snippet_editor" else "snippet_editor?snippetId=$snippetId"

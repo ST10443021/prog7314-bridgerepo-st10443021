@@ -21,6 +21,7 @@ import com.devledger.app.data.repository.AuthRepository
 import com.devledger.app.ui.components.BottomNavTab
 import com.devledger.app.ui.components.DevLedgerBottomNav
 import com.devledger.app.ui.screens.auth.AuthScreen
+import com.devledger.app.ui.screens.auth.RegisterScreen
 import com.devledger.app.ui.screens.biometric.BiometricScreen
 import com.devledger.app.ui.screens.dashboard.DashboardScreen
 import com.devledger.app.ui.screens.finance.AddTransactionScreen
@@ -65,7 +66,20 @@ fun DevLedgerNavHost(navController: NavHostController) {
                         popUpTo(DevLedgerDestinations.AUTH) { inclusive = true }
                     }
                 },
-                onNavigateToRegister = { /* Registration re-uses AuthScreen's email fields for the prototype */ },
+                onNavigateToRegister = {
+                    navController.navigate(DevLedgerDestinations.REGISTER)
+                },
+            )
+        }
+
+        composable(DevLedgerDestinations.REGISTER) {
+            RegisterScreen(
+                onBack = { navController.popBackStack() },
+                onSuccess = {
+                    navController.navigate(DevLedgerDestinations.BIOMETRIC) {
+                        popUpTo(DevLedgerDestinations.AUTH) { inclusive = true }
+                    }
+                }
             )
         }
 
