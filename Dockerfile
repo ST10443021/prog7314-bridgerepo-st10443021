@@ -1,9 +1,9 @@
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-preview AS base
 WORKDIR /app
 EXPOSE 8080
 ENV ASPNETCORE_URLS=http://+:8080
 
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0-preview AS build
 WORKDIR /src
 COPY ["DevLedger/api/DevLedger.Api/DevLedger.Api.csproj", "DevLedger/api/DevLedger.Api/"]
 RUN dotnet restore "DevLedger/api/DevLedger.Api/DevLedger.Api.csproj"
