@@ -110,4 +110,13 @@
     <string name="language_english">Engels</string>
     <string name="language_afrikaans">Afrikaans</string>
     <string name="language_xhosa">isiXhosa</string>
+
+    <!-- Registration -->
+    <string name="register_title">Skep jou rekening</string>
+    <string name="register_subtitle">Hou jou ontwikkelaarbates en finansies bymekaar.</string>
+    <string name="register_full_name">Volle naam</string>
+    <string name="register_confirm_password">Bevestig wagwoord</string>
+    <string name="register_submit">Skep rekening</string>
+    <string name="register_back_to_login">Terug na aanmelding</string>
+
 </resources>

@@ -123,5 +123,11 @@
     <string name="language_afrikaans">Afrikaans</string>
     <string name="language_xhosa">isiXhosa</string>
 
-    
+    <!-- Registration -->
+    <string name="register_title">Create your account</string>
+    <string name="register_subtitle">Keep your developer assets and finances together.</string>
+    <string name="register_full_name">Full name</string>
+    <string name="register_confirm_password">Confirm password</string>
+    <string name="register_submit">Create account</string>
+    <string name="register_back_to_login">Back to sign in</string>
 </resources>
