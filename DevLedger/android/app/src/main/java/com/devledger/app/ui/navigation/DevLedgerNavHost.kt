@@ -34,6 +34,7 @@ import com.devledger.app.ui.screens.splash.SplashScreen
 import javax.inject.Inject
 import com.devledger.app.ui.screens.legal.PrivacyPolicyScreen
 import com.devledger.app.ui.screens.legal.TermsScreen
+import com.devledger.app.ui.screens.biometric.PinVerificationScreen
 
 /**
  * Root navigation graph. Route wiring mirrors the navigation wireflow diagram
@@ -114,14 +115,33 @@ fun DevLedgerNavHost(navController: NavHostController) {
             BiometricScreen(
                 onVerified = {
                     navController.navigate(DevLedgerDestinations.DASHBOARD) {
-                        popUpTo(DevLedgerDestinations.SPLASH) { inclusive = true }
+                        popUpTo(DevLedgerDestinations.BIOMETRIC) {
+                            inclusive = true
+                        }
                     }
                 },
                 onUsePinInstead = {
-                    navController.navigate(DevLedgerDestinations.DASHBOARD) {
-                        popUpTo(DevLedgerDestinations.SPLASH) { inclusive = true }
-                    }
+                    navController.navigate(
+                        DevLedgerDestinations.PIN_VERIFICATION
+                    )
                 },
+            )
+        }
+
+        composable(DevLedgerDestinations.PIN_VERIFICATION) {
+            PinVerificationScreen(
+                onBack = {
+                    navController.popBackStack()
+                },
+                onVerified = {
+                    navController.navigate(
+                        DevLedgerDestinations.DASHBOARD
+                    ) {
+                        popUpTo(DevLedgerDestinations.BIOMETRIC) {
+                            inclusive = true
+                        }
+                    }
+                }
             )
         }
 

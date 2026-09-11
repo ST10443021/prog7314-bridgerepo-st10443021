@@ -11,6 +11,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.devledger.app.data.local.PinStorage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 data class RegisterUiState(
     val fullName: String = "",
@@ -42,6 +45,7 @@ data class RegisterUiState(
 @HiltViewModel
 class RegisterViewModel @Inject constructor(
     private val authRepository: AuthRepository,
+    private val pinStorage: PinStorage,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RegisterUiState())
@@ -229,6 +233,12 @@ class RegisterViewModel @Inject constructor(
 
             when (result) {
                 is DevLedgerResult.Success -> {
+
+                    // Store only the salted PIN hash locally after successful registration.
+                    withContext(Dispatchers.Default) {
+                        pinStorage.savePin(state.pin)
+                    }
+
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         isRegistered = true
@@ -242,6 +252,13 @@ class RegisterViewModel @Inject constructor(
                      * is connected.
                      */
                     if (result.message.contains("connect", ignoreCase = true)) {
+
+                        // TEMPORARY prototype behaviour.
+                        // Remove this bypass once the live API is connected.
+                        withContext(Dispatchers.Default) {
+                            pinStorage.savePin(state.pin)
+                        }
+
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
                             isRegistered = true
