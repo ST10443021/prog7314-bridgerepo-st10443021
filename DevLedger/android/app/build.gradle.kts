@@ -20,8 +20,12 @@ android {
         versionName = "1.0.0-prototype"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // 1. BASE_URL pointing to your live Render backend
+        buildConfigField("String", "BASE_URL", "\"https://devledger-api-op1w.onrender.com/\"")
+
+        // 2. GOOGLE_WEB_CLIENT_ID using your Web Client ID from Google Cloud
         // Base URL for the DevLedger REST API. Overridden per build type below.
-        buildConfigField("String", "BASE_URL", "\"https://devledger-api.azurewebsites.net/\"")
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"293392981245-br01csqhvog5audb2r5hvmq3lp9p15at.apps.googleusercontent.com\"")
     }
 
     buildTypes {

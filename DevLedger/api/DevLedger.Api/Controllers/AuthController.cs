@@ -2,6 +2,7 @@ using DevLedger.Api.Data;
 using DevLedger.Api.DTOs;
 using DevLedger.Api.Models;
 using DevLedger.Api.Services;
+using Google.Apis.Auth;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,27 +18,62 @@ public class AuthController : ControllerBase
 {
     private readonly DevLedgerDbContext _db;
     private readonly TokenService _tokenService;
+    private readonly IConfiguration _configuration;
 
-    public AuthController(DevLedgerDbContext db, TokenService tokenService)
+    public AuthController(DevLedgerDbContext db, TokenService tokenService, IConfiguration configuration)
     {
         _db = db;
         _tokenService = tokenService;
+        _configuration = configuration;
     }
 
     [HttpPost("sso")]
     public async Task<ActionResult<AuthResponse>> Sso([FromBody] SsoLoginRequest request)
     {
-        // NOTE: for the prototype, the SSO id token is trusted as-is once the
-        // provider is recognised. In production this calls Google/GitHub's token
-        // verification endpoint before trusting the claims inside idToken.
-        if (request.Provider != "GOOGLE" && request.Provider != "GITHUB")
-            return BadRequest("Unsupported SSO provider.");
+        string verifiedEmail;
+        string verifiedName;
 
-        var email = $"{request.Provider.ToLower()}-{request.IdToken.GetHashCode()}@devledger.local";
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == email);
+        switch (request.Provider)
+        {
+            case "GOOGLE":
+                var googleWebClientId = _configuration["Google:WebClientId"]
+                    ?? throw new InvalidOperationException("Google:WebClientId is not configured — set it via user-secrets.");
+
+                GoogleJsonWebSignature.Payload payload;
+                try
+                {
+                    // This is the real verification: it checks the token's signature against
+                    // Google's public keys, confirms it hasn't expired, and confirms it was
+                    // issued for OUR client ID (Audience) — not just any Google app's token.
+                    payload = await GoogleJsonWebSignature.ValidateAsync(request.IdToken, new GoogleJsonWebSignature.ValidationSettings
+                    {
+                        Audience = new[] { googleWebClientId },
+                    });
+                }
+                catch (InvalidJwtException)
+                {
+                    return Unauthorized("Invalid Google ID token.");
+                }
+
+                // Trust ONLY what Google's verified payload says — never the client-supplied
+                // fields — this is what closes the "random entry" hole.
+                verifiedEmail = payload.Email;
+                verifiedName = payload.Name ?? payload.Email;
+                break;
+
+            case "GITHUB":
+                // Phase 5 — not implemented yet. Returning 400 instead of silently accepting
+                // it, so it fails loudly rather than pretending to work.
+                return BadRequest("GitHub SSO is not implemented yet — complete Phase 5 first.");
+
+            default:
+                return BadRequest("Unsupported SSO provider.");
+        }
+
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == verifiedEmail);
         if (user is null)
         {
-            user = new User { Email = email, FullName = $"{request.Provider} User", SsoProvider = request.Provider };
+            user = new User { Email = verifiedEmail, FullName = verifiedName, SsoProvider = request.Provider };
             _db.Users.Add(user);
             await _db.SaveChangesAsync();
         }
