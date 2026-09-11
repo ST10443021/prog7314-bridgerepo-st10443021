@@ -39,6 +39,8 @@ import com.devledger.app.ui.theme.DevLedgerColors
 fun RegisterScreen(
     onBack: () -> Unit,
     onSuccess: () -> Unit,
+    onTermsClick: () -> Unit,
+    onPrivacyPolicyClick: () -> Unit,
     viewModel: RegisterViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -160,7 +162,53 @@ fun RegisterScreen(
 
         PasswordStrengthMeter(
             strength = state.passwordStrength,
-            modifier = Modifier.padding(bottom = 32.dp)
+            modifier = Modifier.padding(bottom = 20.dp)
+        )
+
+        Text(
+            text = "4-DIGIT PIN",
+            color = DevLedgerColors.TextSecondary,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold
+        )
+
+        DevLedgerTextField(
+            value = state.pin,
+            onValueChange = viewModel::onPinChange,
+            label = "",
+            placeholder = "Enter 4-digit PIN",
+            isPassword = true,
+            leadingIcon = Icons.Filled.Lock,
+            isValid = state.isPinValid,
+            isError = state.pinError != null,
+            supportingText = state.pinError,
+            modifier = Modifier.padding(
+                top = 8.dp,
+                bottom = 20.dp
+            )
+        )
+
+        Text(
+            text = "CONFIRM PIN",
+            color = DevLedgerColors.TextSecondary,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold
+        )
+
+        DevLedgerTextField(
+            value = state.confirmPin,
+            onValueChange = viewModel::onConfirmPinChange,
+            label = "",
+            placeholder = "Re-enter your PIN",
+            isPassword = true,
+            leadingIcon = Icons.Filled.Lock,
+            isValid = state.isConfirmPinValid,
+            isError = state.confirmPinError != null,
+            supportingText = state.confirmPinError,
+            modifier = Modifier.padding(
+                top = 8.dp,
+                bottom = 32.dp
+            )
         )
 
         // API Error Banner
@@ -193,12 +241,45 @@ fun RegisterScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "By creating an account you agree to our Terms of Service and Privacy Policy.",
+                text = "By creating an account you agree to our",
                 color = DevLedgerColors.TextMuted,
                 fontSize = 12.sp,
-                modifier = Modifier.padding(horizontal = 8.dp),
                 textAlign = TextAlign.Center
             )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Terms of Service",
+                    color = DevLedgerColors.AccentBlue,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.clickable(
+                        onClick = onTermsClick
+                    )
+                )
+
+                Text(
+                    text = " and ",
+                    color = DevLedgerColors.TextMuted,
+                    fontSize = 12.sp
+                )
+
+                Text(
+                    text = "Privacy Policy",
+                    color = DevLedgerColors.AccentBlue,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.clickable(
+                        onClick = onPrivacyPolicyClick
+                    )
+                )
+            }
 
             Spacer(modifier = Modifier.height(24.dp))
 

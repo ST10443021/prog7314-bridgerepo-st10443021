@@ -32,6 +32,8 @@ import com.devledger.app.ui.screens.snippets.SnippetEditorScreen
 import com.devledger.app.ui.screens.snippets.SnippetVaultScreen
 import com.devledger.app.ui.screens.splash.SplashScreen
 import javax.inject.Inject
+import com.devledger.app.ui.screens.legal.PrivacyPolicyScreen
+import com.devledger.app.ui.screens.legal.TermsScreen
 
 /**
  * Root navigation graph. Route wiring mirrors the navigation wireflow diagram
@@ -75,10 +77,35 @@ fun DevLedgerNavHost(navController: NavHostController) {
         composable(DevLedgerDestinations.REGISTER) {
             RegisterScreen(
                 onBack = { navController.popBackStack() },
+
+                onTermsClick = {
+                    navController.navigate(DevLedgerDestinations.TERMS)
+                },
+
+                onPrivacyPolicyClick = {
+                    navController.navigate(DevLedgerDestinations.PRIVACY_POLICY)
+                },
+
                 onSuccess = {
                     navController.navigate(DevLedgerDestinations.BIOMETRIC) {
                         popUpTo(DevLedgerDestinations.AUTH) { inclusive = true }
                     }
+                }
+            )
+        }
+
+        composable(DevLedgerDestinations.TERMS) {
+            TermsScreen(
+                onBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(DevLedgerDestinations.PRIVACY_POLICY) {
+            PrivacyPolicyScreen(
+                onBack = {
+                    navController.popBackStack()
                 }
             )
         }
