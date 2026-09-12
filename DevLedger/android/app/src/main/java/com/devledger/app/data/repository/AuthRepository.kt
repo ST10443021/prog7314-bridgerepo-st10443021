@@ -30,7 +30,10 @@ class AuthRepository @Inject constructor(
     suspend fun signInWithSso(provider: String, idToken: String): DevLedgerResult<UserEntity> =
         DevLedgerResult.safeCall {
             val response = api.ssoLogin(SsoLoginRequest(provider, idToken))
-            if (!response.isSuccessful) error("SSO sign-in failed: HTTP ${response.code()}")
+            if (!response.isSuccessful) {
+                val errorMsg = response.errorBody()?.string() ?: "Unknown error"
+                error("SSO sign-in failed: HTTP ${response.code()} - $errorMsg")
+            }
             val body = response.body() ?: error("Empty auth response")
             tokenManager.saveTokens(body.accessToken, body.refreshToken)
             val user = UserEntity(
