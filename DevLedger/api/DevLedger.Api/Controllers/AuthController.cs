@@ -50,9 +50,11 @@ public class AuthController : ControllerBase
                         Audience = new[] { googleWebClientId },
                     });
                 }
-                catch (InvalidJwtException)
+                catch (InvalidJwtException ex)
                 {
-                    return Unauthorized("Invalid Google ID token.");
+                    // Log the error so it shows up in Render/Console logs
+                    Console.WriteLine($"Google SSO Validation failed: {ex.Message}");
+                    return Unauthorized($"Invalid Google ID token: {ex.Message}");
                 }
 
                 // Trust ONLY what Google's verified payload says — never the client-supplied
