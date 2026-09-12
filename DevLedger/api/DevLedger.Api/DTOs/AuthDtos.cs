@@ -1,6 +1,6 @@
 namespace DevLedger.Api.DTOs;
 
-public record SsoLoginRequest(string Provider, string IdToken);
+public record SsoLoginRequest(string Provider, string? IdToken = null, string? Code = null);
 public record EmailLoginRequest(string Email, string Password);
 public record RegisterRequest(string Email, string Password, string FullName);
 public record RefreshRequest(string RefreshToken);
