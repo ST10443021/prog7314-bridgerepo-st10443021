@@ -26,6 +26,9 @@ android {
         // 2. GOOGLE_WEB_CLIENT_ID using your Web Client ID from Google Cloud
         // Base URL for the DevLedger REST API. Overridden per build type below.
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"293392981245-br01csqhvog5audb2r5hvmq3lp9p15at.apps.googleusercontent.com\"")
+
+        //3. GITHUB_CLIENT_ID using your GitHub Client ID from GitHub
+        buildConfigField("String", "GITHUB_CLIENT_ID", "\"Ov23liCiru7JpKPZZKwn\"")
     }
 
     buildTypes {
@@ -78,6 +81,9 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.navigation:navigation-compose:2.7.7")
+
+    // Browser (for custom tabs)
+    implementation("androidx.browser:browser:1.8.0")
 
     // Room (offline-first local persistence — Google Developers, n.d.b)
     implementation("androidx.room:room-runtime:2.6.1")

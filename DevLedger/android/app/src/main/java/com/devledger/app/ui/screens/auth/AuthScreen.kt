@@ -3,6 +3,7 @@ package com.devledger.app.ui.screens.auth
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.clickable
@@ -18,6 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import android.net.Uri
 import com.devledger.app.BuildConfig
 import com.devledger.app.R
 import com.devledger.app.ui.components.DevLedgerPrimaryButton
@@ -36,11 +38,10 @@ private const val TAG = "AuthScreen"
  * "register and log in ... using single sign-on (SSO)" core requirement.
  *
  * SSO WIRING STATUS:
- * - Google: real — launches the on-device Google Sign-In flow via play-services-auth
- *   and forwards the genuine ID token to [AuthViewModel.signInWithGoogle], which the
- *   API verifies against Google's public keys (Phase 4).
- * - GitHub: still stubbed with [demoIdToken] — the API now explicitly rejects this
- *   provider until Phase 5 (authorization-code exchange) is implemented.
+ * - Google: real — launches the on-device Google Sign-In flow via play-services-auth.
+ * - GitHub: real — opens GitHub's authorize page in a Custom Tab; the resulting
+ *   redirect is caught by [com.devledger.app.MainActivity] (outside the Compose tree,
+ *   since it arrives as a plain Intent) and republished here via [GitHubOAuthEvents].
  */
 @Composable
 fun AuthScreen(
@@ -73,10 +74,26 @@ fun AuthScreen(
                 Log.w(TAG, "Google Sign-In returned no ID token")
             }
         } catch (e: ApiException) {
-            // Status code 10 (DEVELOPER_ERROR) here almost always means the SHA-1 fingerprint
-            // for this build variant hasn't been registered against an Android OAuth client
-            // in the same Google Cloud project as GOOGLE_WEB_CLIENT_ID.
             Log.e(TAG, "Google Sign-In failed with status code ${e.statusCode}", e)
+        }
+    }
+
+    // Collects the GitHub redirect result that MainActivity received as a deep-link
+    // Intent. LaunchedEffect(Unit) means this subscribes once and stays subscribed
+    // for the lifetime of this composable, which is what we want — the user may be
+    // away from the app (in the Custom Tab) for several seconds.
+    LaunchedEffect(Unit) {
+        GitHubOAuthEvents.events.collect { result ->
+            when (result) {
+                is GitHubOAuthResult.Success -> {
+                    Log.i(TAG, "GitHub OAuth redirect received an authorization code, forwarding to API")
+                    viewModel.signInWithGitHub(result.code)
+                }
+                is GitHubOAuthResult.Failure -> {
+                    Log.w(TAG, "GitHub OAuth redirect failed: ${result.reason}")
+                    viewModel.onGitHubOAuthFailure(result.reason)
+                }
+            }
         }
     }
 
@@ -91,7 +108,6 @@ fun AuthScreen(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp, vertical = 48.dp),
     ) {
-        // Logo and Tagline
         Text(
             text = stringResource(R.string.app_name),
             color = DevLedgerColors.TextPrimary,
@@ -109,13 +125,13 @@ fun AuthScreen(
             text = "Welcome back!",
             color = DevLedgerColors.TextPrimary,
             fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.Bold
         )
         Text(
             text = "Sign in to continue to your workspace.",
             color = DevLedgerColors.TextMuted,
             fontSize = 14.sp,
-            modifier = Modifier.padding(bottom = 32.dp, top = 4.dp),
+            modifier = Modifier.padding(bottom = 32.dp, top = 4.dp)
         )
 
         DevLedgerSecondaryButton(
@@ -125,7 +141,13 @@ fun AuthScreen(
         Spacer(modifier = Modifier.height(16.dp))
         DevLedgerSecondaryButton(
             text = "Sign in with GitHub",
-            onClick = { viewModel.signInWithGitHub(demoIdToken()) },
+            onClick = {
+                val authorizeUrl = "https://github.com/login/oauth/authorize" +
+                        "?client_id=${BuildConfig.GITHUB_CLIENT_ID}" +
+                        "&redirect_uri=devledger://oauth/github/callback" +
+                        "&scope=read:user%20user:email"
+                CustomTabsIntent.Builder().build().launchUrl(context, Uri.parse(authorizeUrl))
+            },
         )
 
         Row(
@@ -154,7 +176,6 @@ fun AuthScreen(
             modifier = Modifier.padding(bottom = 8.dp),
         )
 
-        // API Error Message matching the screenshot
         if (state.errorMessage != null) {
             Text(
                 text = state.errorMessage!!,
@@ -193,6 +214,3 @@ private fun RowScope.HorizontalDividerLine() {
             .background(DevLedgerColors.Border),
     )
 }
-
-/** Placeholder token for the GitHub button only, until Phase 5 wires real GitHub OAuth. */
-private fun demoIdToken(): String = "demo-id-token"

@@ -16,6 +16,7 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton<TokenService>();
+builder.Services.AddHttpClient();
 
 // PostgreSQL connection.
 // Local development uses appsettings.Development.json.

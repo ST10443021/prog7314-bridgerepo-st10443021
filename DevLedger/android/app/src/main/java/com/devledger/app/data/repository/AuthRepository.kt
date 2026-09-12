@@ -27,9 +27,15 @@ class AuthRepository @Inject constructor(
 
     fun isLoggedIn(): Boolean = tokenManager.isLoggedIn()
 
-    suspend fun signInWithSso(provider: String, idToken: String): DevLedgerResult<UserEntity> =
+    /**
+     * @param idToken Google's on-device ID token — pass this for provider "GOOGLE".
+     * @param code GitHub's authorization code — pass this for provider "GITHUB".
+     *   Exactly one of the two should be non-null; the API's [SsoLoginRequest] mirrors
+     *   this shape and rejects the request if the wrong one is missing for the provider.
+     */
+    suspend fun signInWithSso(provider: String, idToken: String? = null, code: String? = null): DevLedgerResult<UserEntity> =
         DevLedgerResult.safeCall {
-            val response = api.ssoLogin(SsoLoginRequest(provider, idToken))
+            val response = api.ssoLogin(SsoLoginRequest(provider, idToken, code))
             if (!response.isSuccessful) {
                 val errorMsg = response.errorBody()?.string() ?: "Unknown error"
                 error("SSO sign-in failed: HTTP ${response.code()} - $errorMsg")
