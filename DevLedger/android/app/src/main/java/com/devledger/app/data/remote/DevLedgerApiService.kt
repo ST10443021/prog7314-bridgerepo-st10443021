@@ -23,11 +23,13 @@ interface DevLedgerApiService {
     @POST("api/auth/refresh")
     suspend fun refresh(@Body request: RefreshRequest): Response<AuthResponse>
 
-    @GET("api/users/me/settings")
+    @GET("api/settings")
     suspend fun getSettings(): Response<UserSettingsDto>
 
-    @PUT("api/users/me/settings")
-    suspend fun updateSettings(@Body settings: UserSettingsDto): Response<UserSettingsDto>
+    @PUT("api/settings")
+    suspend fun updateSettings(
+        @Body settings: UserSettingsDto
+    ): Response<UserSettingsDto>
 
     @GET("api/snippets")
     suspend fun getSnippets(): Response<List<SnippetDto>>

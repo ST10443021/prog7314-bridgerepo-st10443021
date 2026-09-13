@@ -10,19 +10,28 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.devledger.app.data.remote.DevLedgerApiService
+import com.devledger.app.data.remote.dto.UserSettingsDto
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import retrofit2.HttpException
 
 private val Context.dataStore by preferencesDataStore(name = "devledger_settings")
 
 /**
- * Local app preferences (language, biometric toggle, sync policy, base currency) via
- * Jetpack DataStore. Language changes are also pushed to the REST API's
- * `/api/users/me/settings` endpoint so a second device inherits the same preference,
- * per Section 3.3 of the Part 1 Planning and Design document.
+ * Stores local preferences in DataStore and provides explicit API load/save
+ * operations through /api/settings.
  */
 @Singleton
-class SettingsRepository @Inject constructor(@ApplicationContext context: Context) {
+class SettingsRepository @Inject constructor(
+    @ApplicationContext context: Context,
+    private val api: DevLedgerApiService,
+)
+{
 
     private val store = context.dataStore
+
+    private val remoteMutex = Mutex()
 
     private object Keys {
         val LANGUAGE = stringPreferencesKey("language")
@@ -50,5 +59,65 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
 
     suspend fun setBaseCurrency(currency: String) {
         store.edit { it[Keys.BASE_CURRENCY] = currency }
+    }
+
+    /**
+     * Loads the authenticated user's settings from the API and updates
+     * the local DataStore cache only after a successful response.
+     */
+    suspend fun loadFromApi(): UserSettingsDto = remoteMutex.withLock {
+        val settings = fetchRemoteSettings()
+        cacheSettings(settings)
+        settings
+    }
+
+    /**
+     * Updates the four preferences currently exposed by the Settings screen.
+     * Fetches the latest server values first to preserve the monthly budget.
+     */
+    suspend fun saveToApi(
+        language: String,
+        biometricEnabled: Boolean,
+        wifiOnlySync: Boolean,
+        baseCurrency: String,
+    ): UserSettingsDto = remoteMutex.withLock {
+        val current = fetchRemoteSettings()
+
+        val updated = current.copy(
+            language = language,
+            biometricEnabled = biometricEnabled,
+            syncOnWifiOnly = wifiOnlySync,
+            baseCurrency = baseCurrency,
+        )
+
+        val response = api.updateSettings(updated)
+        if (!response.isSuccessful) {
+            throw HttpException(response)
+        }
+
+        val saved = response.body()
+            ?: throw IllegalStateException("The API returned no saved settings.")
+
+        cacheSettings(saved)
+        saved
+    }
+
+    private suspend fun fetchRemoteSettings(): UserSettingsDto {
+        val response = api.getSettings()
+        if (!response.isSuccessful) {
+            throw HttpException(response)
+        }
+
+        return response.body()
+            ?: throw IllegalStateException("The API returned no settings.")
+    }
+
+    private suspend fun cacheSettings(settings: UserSettingsDto) {
+        store.edit { preferences ->
+            preferences[Keys.LANGUAGE] = settings.language
+            preferences[Keys.BIOMETRIC_ENABLED] = settings.biometricEnabled
+            preferences[Keys.WIFI_ONLY_SYNC] = settings.syncOnWifiOnly
+            preferences[Keys.BASE_CURRENCY] = settings.baseCurrency
+        }
     }
 }

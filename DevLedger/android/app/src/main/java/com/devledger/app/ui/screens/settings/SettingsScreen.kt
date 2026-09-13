@@ -23,6 +23,7 @@ import com.devledger.app.sync.SyncScheduler
 import com.devledger.app.ui.components.DevLedgerCard
 import com.devledger.app.ui.theme.DevLedgerColors
 import com.devledger.app.util.CurrencyConverter
+import androidx.compose.runtime.LaunchedEffect
 
 /**
  * Settings screen. Covers every user-facing preference required by the Part 1 brief:
@@ -38,6 +39,19 @@ fun SettingsScreen(
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
+    // Apply preferences only after the API has confirmed their values.
+    LaunchedEffect(state.appliedLanguage) {
+        state.appliedLanguage?.let {
+            applyAppLocale(context, it)
+        }
+    }
+
+    LaunchedEffect(state.appliedWifiOnlySync) {
+        state.appliedWifiOnlySync?.let {
+            SyncScheduler.schedulePeriodicSync(context, it)
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -51,13 +65,13 @@ fun SettingsScreen(
         SectionLabel(stringResource(R.string.settings_language))
         DevLedgerCard(modifier = Modifier.padding(bottom = 16.dp)) {
             LanguageOption("en", stringResource(R.string.language_english), state.language) {
-                viewModel.setLanguage(it); applyAppLocale(context, it)
+                viewModel.setLanguage(it)
             }
             LanguageOption("af", stringResource(R.string.language_afrikaans), state.language) {
-                viewModel.setLanguage(it); applyAppLocale(context, it)
+                viewModel.setLanguage(it)
             }
             LanguageOption("xh", stringResource(R.string.language_xhosa), state.language) {
-                viewModel.setLanguage(it); applyAppLocale(context, it)
+                viewModel.setLanguage(it)
             }
         }
 
@@ -68,14 +82,47 @@ fun SettingsScreen(
 
         SectionLabel(stringResource(R.string.settings_sync))
         DevLedgerCard(modifier = Modifier.padding(bottom = 16.dp)) {
-            ToggleRow(stringResource(R.string.settings_wifi_only), state.wifiOnlySync) { enabled ->
-                viewModel.setWifiOnlySync(enabled)
-                SyncScheduler.schedulePeriodicSync(context, enabled)
+            ToggleRow(
+                stringResource(R.string.settings_wifi_only),
+                state.wifiOnlySync,
+                viewModel::setWifiOnlySync,
+            )
             }
             Spacer(modifier = Modifier.height(8.dp))
             TextButton(onClick = { SyncScheduler.syncNow(context) }) {
                 Text(stringResource(R.string.settings_sync_now), color = DevLedgerColors.AccentBlue)
             }
+        }
+
+        if (state.isLoading) {
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            Text(
+                text = "Loading settings...",
+                color = DevLedgerColors.TextMuted,
+                modifier = Modifier.padding(vertical = 8.dp),
+            )
+        }
+
+        state.error?.let { error ->
+            Text(
+                text = error,
+                color = DevLedgerColors.ErrorRed,
+                modifier = Modifier.padding(vertical = 8.dp),
+            )
+
+            if (!state.isLoaded && !state.isLoading) {
+                TextButton(onClick = viewModel::loadSettings) {
+                    Text("Retry loading")
+                }
+            }
+        }
+
+        state.message?.let { message ->
+            Text(
+                text = message,
+                color = DevLedgerColors.TextPrimary,
+                modifier = Modifier.padding(vertical = 8.dp),
+            )
         }
 
         SectionLabel(stringResource(R.string.settings_currency))
@@ -91,6 +138,19 @@ fun SettingsScreen(
             }
         }
 
+        Button(
+            onClick = viewModel::saveSettings,
+            enabled = state.isLoaded &&
+                    !state.isLoading &&
+                    !state.isSaving &&
+                    state.hasChanges,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 12.dp),
+        ) {
+            Text(if (state.isSaving) "Saving..." else "Save changes")
+        }
+
         OutlinedButton(
             onClick = { viewModel.signOut(); onSignedOut() },
             modifier = Modifier.fillMaxWidth(),
@@ -99,7 +159,7 @@ fun SettingsScreen(
             Text(stringResource(R.string.settings_logout))
         }
     }
-}
+
 
 @Composable
 private fun SectionLabel(text: String) {
