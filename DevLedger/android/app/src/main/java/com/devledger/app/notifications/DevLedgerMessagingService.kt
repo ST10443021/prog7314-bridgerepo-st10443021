@@ -4,6 +4,8 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import androidx.core.app.NotificationCompat
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import com.devledger.app.MainActivity
 import com.devledger.app.R
 import com.devledger.app.data.local.entity.NotificationEntity
@@ -51,9 +53,13 @@ class DevLedgerMessagingService : FirebaseMessagingService() {
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        // The refreshed FCM token is pushed to the API the next time SyncWorker runs,
-        // via api.registerDevice() — kept out of this callback to avoid a network call
-        // on a system-invoked, non-cancellable code path.
+        // Enqueued via WorkManager (Google, n.d.c) rather than called directly: this
+        // callback runs on a system-managed path outside normal Activity/ViewModel
+        // scope, so a plain network call here would be unsafe if the process is about
+        // to be torn down. RegisterDeviceWorker re-reads the token itself, so the
+        // parameter isn't threaded through — see DeviceRegistrar.
+        val request = OneTimeWorkRequestBuilder<RegisterDeviceWorker>().build()
+        WorkManager.getInstance(applicationContext).enqueue(request)
     }
 
     private fun showSystemNotification(title: String, body: String) {

@@ -1,6 +1,8 @@
 using System.Text;
 using DevLedger.Api.Data;
 using DevLedger.Api.Services;
+using FirebaseAdmin;
+using Google.Apis.Auth.OAuth2;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -59,7 +61,26 @@ builder.Services.AddCors(options =>
     options.AddDefaultPolicy(policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
 });
 
+// Firebase Admin SDK — enables server-initiated push notifications (Google, n.d.a),
+// the server-side half of the "Implementation of Real-time Notification" core
+// requirement. Reads a service-account credentials file whose path comes from
+// user-secrets locally or a Render Secret File in production; never committed.
+var firebaseCredentialsPath = builder.Configuration["Firebase:CredentialsPath"];
+if (!string.IsNullOrEmpty(firebaseCredentialsPath) && File.Exists(firebaseCredentialsPath) && FirebaseApp.DefaultInstance is null)
+{
+    FirebaseApp.Create(new AppOptions
+    {
+        Credential = GoogleCredential.FromFile(firebaseCredentialsPath),
+    });
+}
+builder.Services.AddSingleton<NotificationService>();
+
 var app = builder.Build();
+
+if (FirebaseApp.DefaultInstance is null)
+{
+    app.Logger.LogWarning("Firebase Admin SDK was not initialised — push notifications are disabled until Firebase:CredentialsPath points at a valid service-account file.");
+}
 
 // Enable Swagger in all environments (including Production)
 app.UseSwagger();

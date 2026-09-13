@@ -2,6 +2,7 @@ using System.Security.Claims;
 using DevLedger.Api.Data;
 using DevLedger.Api.DTOs;
 using DevLedger.Api.Models;
+using DevLedger.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -17,8 +18,13 @@ namespace DevLedger.Api.Controllers;
 public class TransactionsController : ControllerBase
 {
     private readonly DevLedgerDbContext _db;
+    private readonly NotificationService _notificationService;
 
-    public TransactionsController(DevLedgerDbContext db) => _db = db;
+    public TransactionsController(DevLedgerDbContext db, NotificationService notificationService)
+    {
+        _db = db;
+        _notificationService = notificationService;
+    }
 
     private Guid CurrentUserId => Guid.Parse(User.FindFirst("sub")?.Value
         ?? User.FindFirstValue(ClaimTypes.NameIdentifier)
@@ -68,10 +74,9 @@ public class TransactionsController : ControllerBase
         return Ok(new TransactionSummaryDto(income, expenses, income - expenses, user?.BaseCurrency ?? "ZAR"));
     }
 
-    /// <summary>Server-side budget check backing the "Push Notifications: FCM alerts
-    /// when cloud hosting budgets reach threshold limits" feature from the Part 1 app
-    /// concept. A real deployment sends this via Firebase Admin SDK; here it is a
-    /// documented extension point (see README "Push notification wiring").</summary>
+    /// <summary>Server-side budget check backing the "Push Notifications" core
+    /// requirement, sent via the Firebase Admin SDK (Google, n.d.a) to every device
+    /// the user has registered through /api/notifications/register.</summary>
     private async Task CheckBudgetThreshold()
     {
         var user = await _db.Users.FindAsync(CurrentUserId);
@@ -83,8 +88,20 @@ public class TransactionsController : ControllerBase
 
         if (expenses >= user.MonthlyBudget * 0.8m)
         {
-            // TODO (production): call the Firebase Admin SDK here with the user's
-            // registered NotificationToken rows to push a real budget-threshold alert.
+            var tokens = await _db.NotificationTokens
+                .Where(n => n.UserId == CurrentUserId)
+                .Select(n => n.FcmToken)
+                .ToListAsync();
+
+            if (tokens.Count > 0)
+            {
+                var percentage = Math.Round((double)(expenses / user.MonthlyBudget.Value) * 100);
+                await _notificationService.SendToTokensAsync(
+                    tokens,
+                    title: "Budget alert",
+                    body: $"You've used {percentage}% of your {user.BaseCurrency} {user.MonthlyBudget:N0} monthly budget.",
+                    type: "BUDGET_ALERT");
+            }
         }
     }
 
