@@ -6,8 +6,20 @@
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\user\\AppData\\Roaming\\Microsoft\\UserSecrets\\b5985fa1-ad87-4f3d-8700-5821a25ba313\\secrets.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
     },
     {
+      "AbsoluteMoniker": "D:0:0:{640891C4-E23F-B29F-89BC-4A49180A456F}|DevLedger.Api\\DevLedger.Api.csproj|e:\\github\\prog7314-2026-prog7314-2026-part2-st10443021\\devledger\\api\\devledger.api\\dtos\\authdtos.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{640891C4-E23F-B29F-89BC-4A49180A456F}|DevLedger.Api\\DevLedger.Api.csproj|solutionrelative:devledger.api\\dtos\\authdtos.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{640891C4-E23F-B29F-89BC-4A49180A456F}|DevLedger.Api\\DevLedger.Api.csproj|e:\\github\\prog7314-2026-prog7314-2026-part2-st10443021\\devledger\\api\\devledger.api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{640891C4-E23F-B29F-89BC-4A49180A456F}|DevLedger.Api\\DevLedger.Api.csproj|solutionrelative:devledger.api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{640891C4-E23F-B29F-89BC-4A49180A456F}|DevLedger.Api\\DevLedger.Api.csproj|e:\\github\\prog7314-2026-prog7314-2026-part2-st10443021\\devledger\\api\\devledger.api\\controllers\\authcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{640891C4-E23F-B29F-89BC-4A49180A456F}|DevLedger.Api\\DevLedger.Api.csproj|solutionrelative:devledger.api\\controllers\\authcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{640891C4-E23F-B29F-89BC-4A49180A456F}|DevLedger.Api\\DevLedger.Api.csproj|e:\\github\\prog7314-2026-prog7314-2026-part2-st10443021\\devledger\\api\\devledger.api\\controllers\\userscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{640891C4-E23F-B29F-89BC-4A49180A456F}|DevLedger.Api\\DevLedger.Api.csproj|solutionrelative:devledger.api\\controllers\\userscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{640891C4-E23F-B29F-89BC-4A49180A456F}|DevLedger.Api\\DevLedger.Api.csproj|e:\\github\\prog7314-2026-prog7314-2026-part2-st10443021\\devledger\\api\\devledger.api\\devledger.api.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
@@ -20,10 +32,6 @@
     {
       "AbsoluteMoniker": "D:0:0:{640891C4-E23F-B29F-89BC-4A49180A456F}|DevLedger.Api\\DevLedger.Api.csproj|e:\\github\\prog7314-2026-prog7314-2026-part2-st10443021\\devledger\\api\\devledger.api\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
       "RelativeMoniker": "D:0:0:{640891C4-E23F-B29F-89BC-4A49180A456F}|DevLedger.Api\\DevLedger.Api.csproj|solutionrelative:devledger.api\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{640891C4-E23F-B29F-89BC-4A49180A456F}|DevLedger.Api\\DevLedger.Api.csproj|e:\\github\\prog7314-2026-prog7314-2026-part2-st10443021\\devledger\\api\\devledger.api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{640891C4-E23F-B29F-89BC-4A49180A456F}|DevLedger.Api\\DevLedger.Api.csproj|solutionrelative:devledger.api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{640891C4-E23F-B29F-89BC-4A49180A456F}|DevLedger.Api\\DevLedger.Api.csproj|e:\\github\\prog7314-2026-prog7314-2026-part2-st10443021\\devledger\\api\\devledger.api\\data\\devledgerdbcontextfactory.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -48,17 +56,42 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 1,
+          "SelectedChildIndex": 3,
           "Children": [
             {
               "$type": "Document",
               "DocumentIndex": 1,
+              "Title": "AuthDtos.cs",
+              "DocumentMoniker": "E:\\GitHub\\prog7314-2026-prog7314-2026-part2-st10443021\\DevLedger\\api\\DevLedger.Api\\DTOs\\AuthDtos.cs",
+              "RelativeDocumentMoniker": "DevLedger.Api\\DTOs\\AuthDtos.cs",
+              "ToolTip": "E:\\GitHub\\prog7314-2026-prog7314-2026-part2-st10443021\\DevLedger\\api\\DevLedger.Api\\DTOs\\AuthDtos.cs",
+              "RelativeToolTip": "DevLedger.Api\\DTOs\\AuthDtos.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-12T21:21:13.583Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "UsersController.cs",
+              "DocumentMoniker": "E:\\GitHub\\prog7314-2026-prog7314-2026-part2-st10443021\\DevLedger\\api\\DevLedger.Api\\Controllers\\UsersController.cs",
+              "RelativeDocumentMoniker": "DevLedger.Api\\Controllers\\UsersController.cs",
+              "ToolTip": "E:\\GitHub\\prog7314-2026-prog7314-2026-part2-st10443021\\DevLedger\\api\\DevLedger.Api\\Controllers\\UsersController.cs",
+              "RelativeToolTip": "DevLedger.Api\\Controllers\\UsersController.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-11T20:04:15.756Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
               "Title": "AuthController.cs",
               "DocumentMoniker": "E:\\GitHub\\prog7314-2026-prog7314-2026-part2-st10443021\\DevLedger\\api\\DevLedger.Api\\Controllers\\AuthController.cs",
               "RelativeDocumentMoniker": "DevLedger.Api\\Controllers\\AuthController.cs",
               "ToolTip": "E:\\GitHub\\prog7314-2026-prog7314-2026-part2-st10443021\\DevLedger\\api\\DevLedger.Api\\Controllers\\AuthController.cs",
               "RelativeToolTip": "DevLedger.Api\\Controllers\\AuthController.cs",
-              "ViewState": "AgIAABUAAAAAAAAAAAAYwAAAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAEwAAAAAAAAAAAAiwH8AAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-09-11T17:45:37.954Z",
               "EditorCaption": ""
@@ -69,14 +102,14 @@
               "Title": "secrets.json",
               "DocumentMoniker": "C:\\Users\\user\\AppData\\Roaming\\Microsoft\\UserSecrets\\b5985fa1-ad87-4f3d-8700-5821a25ba313\\secrets.json",
               "ToolTip": "C:\\Users\\user\\AppData\\Roaming\\Microsoft\\UserSecrets\\b5985fa1-ad87-4f3d-8700-5821a25ba313\\secrets.json",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA0AAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA0AAAApAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
               "WhenOpened": "2026-09-11T12:13:16.731Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 10,
               "Title": "DevLedger.Api.Tests.csproj",
               "DocumentMoniker": "E:\\GitHub\\prog7314-2026-prog7314-2026-part2-st10443021\\DevLedger\\api\\DevLedger.Api.Tests\\DevLedger.Api.Tests.csproj",
               "RelativeDocumentMoniker": "DevLedger.Api.Tests\\DevLedger.Api.Tests.csproj",
@@ -88,7 +121,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 7,
               "Title": "appsettings.json",
               "DocumentMoniker": "E:\\GitHub\\prog7314-2026-prog7314-2026-part2-st10443021\\DevLedger\\api\\DevLedger.Api\\appsettings.json",
               "RelativeDocumentMoniker": "DevLedger.Api\\appsettings.json",
@@ -100,7 +133,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 2,
               "Title": "Program.cs",
               "DocumentMoniker": "E:\\GitHub\\prog7314-2026-prog7314-2026-part2-st10443021\\DevLedger\\api\\DevLedger.Api\\Program.cs",
               "RelativeDocumentMoniker": "DevLedger.Api\\Program.cs",
@@ -108,11 +141,12 @@
               "RelativeToolTip": "DevLedger.Api\\Program.cs",
               "ViewState": "AgIAABIAAAAAAAAAAAAAADwAAAAaAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-10T17:22:05.676Z"
+              "WhenOpened": "2026-09-10T17:22:05.676Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 6,
               "Title": "appsettings.Development.json",
               "DocumentMoniker": "E:\\GitHub\\prog7314-2026-prog7314-2026-part2-st10443021\\DevLedger\\api\\DevLedger.Api\\appsettings.Development.json",
               "RelativeDocumentMoniker": "DevLedger.Api\\appsettings.Development.json",
@@ -124,7 +158,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 5,
               "Title": "DevLedger.Api.csproj",
               "DocumentMoniker": "E:\\GitHub\\prog7314-2026-prog7314-2026-part2-st10443021\\DevLedger\\api\\DevLedger.Api\\DevLedger.Api.csproj",
               "RelativeDocumentMoniker": "DevLedger.Api\\DevLedger.Api.csproj",
@@ -136,7 +170,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 9,
               "Title": "DevLedgerDbContext.cs",
               "DocumentMoniker": "E:\\GitHub\\prog7314-2026-prog7314-2026-part2-st10443021\\DevLedger\\api\\DevLedger.Api\\Data\\DevLedgerDbContext.cs",
               "RelativeDocumentMoniker": "DevLedger.Api\\Data\\DevLedgerDbContext.cs",
@@ -148,7 +182,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 8,
               "Title": "DevLedgerDbContextFactory.cs",
               "DocumentMoniker": "E:\\GitHub\\prog7314-2026-prog7314-2026-part2-st10443021\\DevLedger\\api\\DevLedger.Api\\Data\\DevLedgerDbContextFactory.cs",
               "RelativeDocumentMoniker": "DevLedger.Api\\Data\\DevLedgerDbContextFactory.cs",
@@ -160,7 +194,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 11,
               "Title": "Test1.cs",
               "DocumentMoniker": "C:\\Users\\user\\source\\repos\\DevLedger\\DevLedger.Api.Tests\\Test1.cs",
               "ToolTip": "C:\\Users\\user\\source\\repos\\DevLedger\\DevLedger.Api.Tests\\Test1.cs",
