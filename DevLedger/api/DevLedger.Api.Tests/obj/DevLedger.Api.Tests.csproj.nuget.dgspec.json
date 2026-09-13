@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\user\\source\\repos\\DevLedger\\DevLedger.Api.Tests\\DevLedger.Api.Tests.csproj": {}
+    "E:\\GitHub\\prog7314-2026-prog7314-2026-part2-st10443021\\DevLedger\\api\\DevLedger.Api.Tests\\DevLedger.Api.Tests.csproj": {}
   },
   "projects": {
-    "C:\\Users\\user\\source\\repos\\DevLedger\\DevLedger.Api.Tests\\DevLedger.Api.Tests.csproj": {
+    "E:\\GitHub\\prog7314-2026-prog7314-2026-part2-st10443021\\DevLedger\\api\\DevLedger.Api.Tests\\DevLedger.Api.Tests.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\user\\source\\repos\\DevLedger\\DevLedger.Api.Tests\\DevLedger.Api.Tests.csproj",
+        "projectUniqueName": "E:\\GitHub\\prog7314-2026-prog7314-2026-part2-st10443021\\DevLedger\\api\\DevLedger.Api.Tests\\DevLedger.Api.Tests.csproj",
         "projectName": "DevLedger.Api.Tests",
-        "projectPath": "C:\\Users\\user\\source\\repos\\DevLedger\\DevLedger.Api.Tests\\DevLedger.Api.Tests.csproj",
+        "projectPath": "E:\\GitHub\\prog7314-2026-prog7314-2026-part2-st10443021\\DevLedger\\api\\DevLedger.Api.Tests\\DevLedger.Api.Tests.csproj",
         "packagesPath": "C:\\Users\\user\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\user\\source\\repos\\DevLedger\\DevLedger.Api.Tests\\obj\\",
+        "outputPath": "E:\\GitHub\\prog7314-2026-prog7314-2026-part2-st10443021\\DevLedger\\api\\DevLedger.Api.Tests\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -33,8 +33,8 @@
             "framework": "net10.0",
             "targetAlias": "net10.0",
             "projectReferences": {
-              "C:\\Users\\user\\source\\repos\\DevLedger\\DevLedger.Api\\DevLedger.Api.csproj": {
-                "projectPath": "C:\\Users\\user\\source\\repos\\DevLedger\\DevLedger.Api\\DevLedger.Api.csproj"
+              "E:\\GitHub\\prog7314-2026-prog7314-2026-part2-st10443021\\DevLedger\\api\\DevLedger.Api\\DevLedger.Api.csproj": {
+                "projectPath": "E:\\GitHub\\prog7314-2026-prog7314-2026-part2-st10443021\\DevLedger\\api\\DevLedger.Api\\DevLedger.Api.csproj"
               }
             }
           }
@@ -375,14 +375,14 @@
         }
       }
     },
-    "C:\\Users\\user\\source\\repos\\DevLedger\\DevLedger.Api\\DevLedger.Api.csproj": {
+    "E:\\GitHub\\prog7314-2026-prog7314-2026-part2-st10443021\\DevLedger\\api\\DevLedger.Api\\DevLedger.Api.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\user\\source\\repos\\DevLedger\\DevLedger.Api\\DevLedger.Api.csproj",
+        "projectUniqueName": "E:\\GitHub\\prog7314-2026-prog7314-2026-part2-st10443021\\DevLedger\\api\\DevLedger.Api\\DevLedger.Api.csproj",
         "projectName": "DevLedger.Api",
-        "projectPath": "C:\\Users\\user\\source\\repos\\DevLedger\\DevLedger.Api\\DevLedger.Api.csproj",
+        "projectPath": "E:\\GitHub\\prog7314-2026-prog7314-2026-part2-st10443021\\DevLedger\\api\\DevLedger.Api\\DevLedger.Api.csproj",
         "packagesPath": "C:\\Users\\user\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\user\\source\\repos\\DevLedger\\DevLedger.Api\\obj\\",
+        "outputPath": "E:\\GitHub\\prog7314-2026-prog7314-2026-part2-st10443021\\DevLedger\\api\\DevLedger.Api\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -423,6 +423,10 @@
           "framework": "net10.0",
           "targetAlias": "net10.0",
           "dependencies": {
+            "Google.Apis.Auth": {
+              "target": "Package",
+              "version": "[1.76.0, )"
+            },
             "Microsoft.AspNetCore.Authentication.JwtBearer": {
               "target": "Package",
               "version": "[10.0.12, )"
@@ -445,9 +449,9 @@
               "target": "Package",
               "version": "[10.0.12, )"
             },
-            "Microsoft.EntityFrameworkCore.Sqlite": {
+            "Npgsql.EntityFrameworkCore.PostgreSQL": {
               "target": "Package",
-              "version": "[10.0.12, )"
+              "version": "[10.0.3, )"
             },
             "Swashbuckle.AspNetCore": {
               "target": "Package",

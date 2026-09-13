@@ -3,7 +3,7 @@ package com.devledger.app.data.remote.dto
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class SsoLoginRequest(val provider: String, val idToken: String)
+data class SsoLoginRequest(val provider: String, val idToken: String? = null, val code: String? = null)
 
 @Serializable
 data class EmailLoginRequest(val email: String, val password: String)
