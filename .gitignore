@@ -29,7 +29,10 @@
 *.user
 *.suo
 *.userosscache
+*.userossc
 *.sln.docstates
+DocumentLayout.json
+DocumentLayout.backup.json
 
 # NuGet Packages
 *.nupkg
