@@ -164,15 +164,19 @@ fun AuthScreen(
             onValueChange = viewModel::onEmailChange,
             label = "",
             placeholder = "Email",
+            isError = state.emailError != null,
+            supportingText = state.emailError,
             modifier = Modifier.padding(bottom = 16.dp),
         )
+
         DevLedgerTextField(
             value = state.password,
             onValueChange = viewModel::onPasswordChange,
             label = "",
             placeholder = "Password",
             isPassword = true,
-            isError = state.errorMessage != null,
+            isError = state.passwordError != null,
+            supportingText = state.passwordError,
             modifier = Modifier.padding(bottom = 8.dp),
         )
 
