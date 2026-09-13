@@ -7,6 +7,7 @@ import com.devledger.app.data.remote.auth.TokenManager
 import com.devledger.app.data.remote.dto.EmailLoginRequest
 import com.devledger.app.data.remote.dto.RegisterRequest
 import com.devledger.app.data.remote.dto.SsoLoginRequest
+import com.devledger.app.notifications.DeviceRegistrar
 import com.devledger.app.util.DevLedgerResult
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
@@ -22,17 +23,12 @@ class AuthRepository @Inject constructor(
     private val api: DevLedgerApiService,
     private val tokenManager: TokenManager,
     private val userDao: UserDao,
+    private val deviceRegistrar: DeviceRegistrar,
 ) {
     val currentUser: Flow<UserEntity?> = userDao.observeCurrentUser()
 
     fun isLoggedIn(): Boolean = tokenManager.isLoggedIn()
 
-    /**
-     * @param idToken Google's on-device ID token — pass this for provider "GOOGLE".
-     * @param code GitHub's authorization code — pass this for provider "GITHUB".
-     *   Exactly one of the two should be non-null; the API's [SsoLoginRequest] mirrors
-     *   this shape and rejects the request if the wrong one is missing for the provider.
-     */
     suspend fun signInWithSso(provider: String, idToken: String? = null, code: String? = null): DevLedgerResult<UserEntity> =
         DevLedgerResult.safeCall {
             val response = api.ssoLogin(SsoLoginRequest(provider, idToken, code))
@@ -49,6 +45,7 @@ class AuthRepository @Inject constructor(
                 ssoProvider = provider,
             )
             userDao.upsert(user)
+            deviceRegistrar.registerCurrentToken()
             user
         }
 
@@ -60,6 +57,7 @@ class AuthRepository @Inject constructor(
             tokenManager.saveTokens(body.accessToken, body.refreshToken)
             val user = UserEntity(userId = body.userId, email = body.email, fullName = body.fullName, ssoProvider = null)
             userDao.upsert(user)
+            deviceRegistrar.registerCurrentToken()
             user
         }
 
@@ -71,6 +69,7 @@ class AuthRepository @Inject constructor(
             tokenManager.saveTokens(body.accessToken, body.refreshToken)
             val user = UserEntity(userId = body.userId, email = body.email, fullName = body.fullName, ssoProvider = null)
             userDao.upsert(user)
+            deviceRegistrar.registerCurrentToken()
             user
         }
 
