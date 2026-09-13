@@ -110,4 +110,12 @@
     <string name="language_english">IsiNgesi</string>
     <string name="language_afrikaans">IsiBhulu</string>
     <string name="language_xhosa">IsiXhosa</string>
+
+    <!-- Registration -->
+    <string name="register_title">Yenza iakhawunti yakho</string>
+    <string name="register_subtitle">Gcina izixhobo zakho zophuhliso kunye nemali yakho ndawonye.</string>
+    <string name="register_full_name">Igama elipheleleyo</string>
+    <string name="register_confirm_password">Qinisekisa iphasiwedi</string>
+    <string name="register_submit">Yenza iakhawunti</string>
+    <string name="register_back_to_login">Buyela ekungeneni</string>
 </resources>

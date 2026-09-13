@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import android.util.Patterns
 
 data class AuthUiState(
     val email: String = "",
@@ -17,6 +18,8 @@ data class AuthUiState(
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val isAuthenticated: Boolean = false,
+    val emailError: String? = null,
+    val passwordError: String? = null,
 )
 
 /**
@@ -37,9 +40,27 @@ class AuthViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
-    fun onEmailChange(value: String) { _uiState.value = _uiState.value.copy(email = value, errorMessage = null) }
-    fun onPasswordChange(value: String) { _uiState.value = _uiState.value.copy(password = value, errorMessage = null) }
+    fun onEmailChange(value: String) {
+        val state = _uiState.value
+        if (state.isLoading || state.isAuthenticated) return
 
+        _uiState.value = state.copy(
+            email = value,
+            emailError = null,
+            errorMessage = null,
+        )
+    }
+
+    fun onPasswordChange(value: String) {
+        val state = _uiState.value
+        if (state.isLoading || state.isAuthenticated) return
+
+        _uiState.value = state.copy(
+            password = value,
+            passwordError = null,
+            errorMessage = null,
+        )
+    }
     fun signInWithGoogle(idToken: String) = performSso("GOOGLE", idToken = idToken)
     fun signInWithGitHub(code: String) = performSso("GITHUB", code = code)
 
@@ -50,6 +71,7 @@ class AuthViewModel @Inject constructor(
     }
 
     private fun performSso(provider: String, idToken: String? = null, code: String? = null) {
+        if (_uiState.value.isLoading || _uiState.value.isAuthenticated) return
         _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
         viewModelScope.launch {
             when (val result = authRepository.signInWithSso(provider, idToken = idToken, code = code)) {
@@ -61,15 +83,62 @@ class AuthViewModel @Inject constructor(
 
     fun signInWithEmail() {
         val state = _uiState.value
-        if (state.email.isBlank() || state.password.isBlank()) {
-            _uiState.value = state.copy(errorMessage = "Email and password are required.")
+        if (state.isLoading || state.isAuthenticated) return
+
+        val email = state.email.trim()
+
+        val emailError = when {
+            email.isBlank() -> "Enter your email address."
+            !Patterns.EMAIL_ADDRESS.matcher(email).matches() ->
+                "Enter a valid email address."
+            else -> null
+        }
+
+        val passwordError = if (state.password.isEmpty()) {
+            "Enter your password."
+        } else {
+            null
+        }
+
+        if (emailError != null || passwordError != null) {
+            _uiState.value = state.copy(
+                email = email,
+                emailError = emailError,
+                passwordError = passwordError,
+                errorMessage = null,
+            )
             return
         }
-        _uiState.value = state.copy(isLoading = true, errorMessage = null)
+
+        _uiState.value = state.copy(
+            email = email,
+            isLoading = true,
+            emailError = null,
+            passwordError = null,
+            errorMessage = null,
+        )
+
         viewModelScope.launch {
-            when (val result = authRepository.signInWithEmail(state.email, state.password)) {
-                is DevLedgerResult.Success -> _uiState.value = _uiState.value.copy(isLoading = false, isAuthenticated = true)
-                is DevLedgerResult.Error -> _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = result.message)
+            when (
+                val result = authRepository.signInWithEmail(
+                    email,
+                    state.password,
+                )
+            ) {
+                is DevLedgerResult.Success -> {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        isAuthenticated = true,
+                        password = "",
+                    )
+                }
+
+                is DevLedgerResult.Error -> {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        errorMessage = result.message,
+                    )
+                }
             }
         }
     }

@@ -22,3 +22,14 @@ api/DevLedger.Api/appsettings.Production.json
 .DS_Store
 *.log
 .vscode/
+
+# --- Visual Studio / generated .NET files ---
+.vs/
+packages/
+*.user
+
+# --- Local development configuration / secrets ---
+api/DevLedger.Api/appsettings.Development.json
+
+# Temporary local diagnostic output
+android/unit-test-compile.txt

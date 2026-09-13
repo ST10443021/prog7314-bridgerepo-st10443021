@@ -20,7 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.devledger.app.ui.theme.DevLedgerColors
 
-/** Filled primary action button — matches the `#1D6FE8` accent buttons across every
+/** Filled primary action button â€” matches the `#1D6FE8` accent buttons across every
  *  design screen (Sign In, Save Transaction, Save snippet, etc.). */
 @Composable
 fun DevLedgerPrimaryButton(
@@ -36,7 +36,7 @@ fun DevLedgerPrimaryButton(
         enabled = enabled && !loading,
         modifier = modifier
             .fillMaxWidth()
-            .height(52.dp),
+            .heightIn(min = 52.dp),
         shape = RoundedCornerShape(14.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = DevLedgerColors.AccentBlue,
@@ -48,7 +48,10 @@ fun DevLedgerPrimaryButton(
             CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
         } else {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Text(
+                    text = text,
+                    style = MaterialTheme.typography.labelLarge,
+                )
                 if (trailingIcon != null) {
                     Spacer(modifier = Modifier.width(8.dp))
                     Icon(trailingIcon, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -68,7 +71,7 @@ fun DevLedgerSecondaryButton(
 ) {
     OutlinedButton(
         onClick = onClick,
-        modifier = modifier.fillMaxWidth().height(52.dp),
+        modifier = modifier.fillMaxWidth().heightIn(min = 52.dp),
         shape = RoundedCornerShape(14.dp),
         border = androidx.compose.foundation.BorderStroke(1.dp, DevLedgerColors.Border),
         colors = ButtonDefaults.outlinedButtonColors(contentColor = DevLedgerColors.TextPrimary),
@@ -82,13 +85,16 @@ fun DevLedgerSecondaryButton(
                 leadingIcon()
                 Spacer(modifier = Modifier.width(12.dp))
             }
-            Text(text, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelLarge,
+            )
         }
     }
 }
 
-/** Dark, rounded card used for every panel — dashboard summary cards, snippet rows,
- *  transaction rows — matching `#141824` surface with a `#1E2A3E` hairline border. */
+/** Dark, rounded card used for every panel â€” dashboard summary cards, snippet rows,
+ *  transaction rows â€” matching `#141824` surface with a `#1E2A3E` hairline border. */
 @Composable
 fun DevLedgerCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
     Column(
@@ -123,7 +129,11 @@ fun DevLedgerTextField(
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
-            label = { Text(label) },
+            label = if (label.isNotBlank()) {
+                { Text(label) }
+            } else {
+                null
+            },
             placeholder = placeholder?.let { { Text(it, color = DevLedgerColors.TextMuted) } },
             singleLine = singleLine,
             minLines = minLines,
@@ -231,4 +241,3 @@ fun PasswordStrengthMeter(strength: Int, modifier: Modifier = Modifier) {
         }
     }
 }
-

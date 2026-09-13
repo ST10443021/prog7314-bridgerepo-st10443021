@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.devledger.app.R
 import com.devledger.app.ui.theme.DevLedgerColors
+import androidx.compose.material3.MaterialTheme
 
 enum class BottomNavTab { DASHBOARD, SNIPPETS, FINANCE, NOTIFICATIONS }
 
@@ -82,7 +83,11 @@ private fun NavItem(icon: androidx.compose.ui.graphics.vector.ImageVector, label
         IconButton(onClick = onClick) {
             Icon(icon, contentDescription = label, tint = color)
         }
-        Text(text = label, color = color, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+        Text(
+            text = label,
+            color = color,
+            style = MaterialTheme.typography.labelSmall,
+        )
     }
 }
 

@@ -3,7 +3,7 @@ package com.devledger.app.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -14,6 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.devledger.app.ui.theme.DevLedgerColors
+import androidx.compose.material3.MaterialTheme
 
 /** Simple top bar with an optional back button — used across the secondary screens
  *  (Snippet Editor, Add Transaction, etc.) matching the design's `TopBar.tsx`. */
@@ -32,7 +33,7 @@ fun DevLedgerTopBar(
     ) {
         if (onBack != null) {
             IconButton(onClick = onBack) {
-                Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = DevLedgerColors.TextPrimary)
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = DevLedgerColors.TextPrimary)
             }
         } else {
             Spacer(modifier = Modifier.width(12.dp))
@@ -40,8 +41,7 @@ fun DevLedgerTopBar(
         Text(
             text = title,
             color = DevLedgerColors.TextPrimary,
-            fontSize = 17.sp,
-            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.weight(1f),
         )
         Row(content = actions)

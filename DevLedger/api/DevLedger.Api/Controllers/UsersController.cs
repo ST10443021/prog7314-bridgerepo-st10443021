@@ -6,13 +6,13 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace DevLedger.Api.Controllers;
 
-/// <summary>User settings (language, currency, biometric flag, sync policy, monthly
-/// hosting budget) — "/api/users/me/settings" in the Part 1 endpoint spec, satisfying
-/// the core requirement "The user must be able to change their settings in the
-/// app" with server-side persistence so a second device inherits the same
-/// preferences.</summary>
+/// <summary>
+/// Reads and saves the authenticated user's settings in PostgreSQL.
+/// Supports /api/settings and the existing /api/users/me/settings route.
+/// </summary>
 [ApiController]
-[Route("api/users/me")]
+[Route("api/settings")]
+[Route("api/users/me/settings")]
 [Authorize]
 public class UsersController : ControllerBase
 {
@@ -20,20 +20,28 @@ public class UsersController : ControllerBase
 
     public UsersController(DevLedgerDbContext db) => _db = db;
 
-    private Guid CurrentUserId => Guid.Parse(User.FindFirst("sub")?.Value
+    private Guid CurrentUserId => Guid.Parse(
+        User.FindFirst("sub")?.Value
         ?? User.FindFirstValue(ClaimTypes.NameIdentifier)
         ?? throw new UnauthorizedAccessException());
 
-    [HttpGet("settings")]
+    [HttpGet]
     public async Task<ActionResult<UserSettingsDto>> GetSettings()
     {
         var user = await _db.Users.FindAsync(CurrentUserId);
         if (user is null) return NotFound();
-        return Ok(new UserSettingsDto(user.PreferredLanguage, user.BaseCurrency, user.BiometricEnabled, user.SyncOnWifiOnly, user.MonthlyBudget));
+
+        return Ok(new UserSettingsDto(
+            user.PreferredLanguage,
+            user.BaseCurrency,
+            user.BiometricEnabled,
+            user.SyncOnWifiOnly,
+            user.MonthlyBudget));
     }
 
-    [HttpPut("settings")]
-    public async Task<ActionResult<UserSettingsDto>> UpdateSettings([FromBody] UserSettingsDto settings)
+    [HttpPut]
+    public async Task<ActionResult<UserSettingsDto>> UpdateSettings(
+        [FromBody] UserSettingsDto settings)
     {
         var user = await _db.Users.FindAsync(CurrentUserId);
         if (user is null) return NotFound();

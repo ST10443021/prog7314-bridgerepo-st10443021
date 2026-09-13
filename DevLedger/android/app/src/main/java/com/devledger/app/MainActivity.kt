@@ -2,8 +2,7 @@ package com.devledger.app
 
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log
-import androidx.activity.ComponentActivity
+import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
@@ -32,8 +31,7 @@ import kotlinx.coroutines.launch
  * [onNewIntent] fires instead of a second MainActivity instance being created.
  */
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
-
+class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -55,8 +53,6 @@ class MainActivity : ComponentActivity() {
     private fun handleGitHubRedirect(intent: Intent?) {
         val uri = intent?.data ?: return
         if (uri.scheme != "devledger" || uri.host != "oauth") return
-
-        Log.i("MainActivity", "Received GitHub OAuth redirect: $uri")
 
         lifecycleScope.launch {
             val code = uri.getQueryParameter("code")

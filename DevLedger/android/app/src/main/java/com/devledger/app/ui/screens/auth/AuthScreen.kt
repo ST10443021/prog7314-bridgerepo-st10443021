@@ -29,6 +29,7 @@ import com.devledger.app.ui.theme.DevLedgerColors
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
+import androidx.compose.material3.MaterialTheme
 
 private const val TAG = "AuthScreen"
 
@@ -124,8 +125,7 @@ fun AuthScreen(
         Text(
             text = "Welcome back!",
             color = DevLedgerColors.TextPrimary,
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold
+            style = MaterialTheme.typography.headlineMedium,
         )
         Text(
             text = "Sign in to continue to your workspace.",
@@ -164,15 +164,19 @@ fun AuthScreen(
             onValueChange = viewModel::onEmailChange,
             label = "",
             placeholder = "Email",
+            isError = state.emailError != null,
+            supportingText = state.emailError,
             modifier = Modifier.padding(bottom = 16.dp),
         )
+
         DevLedgerTextField(
             value = state.password,
             onValueChange = viewModel::onPasswordChange,
             label = "",
             placeholder = "Password",
             isPassword = true,
-            isError = state.errorMessage != null,
+            isError = state.passwordError != null,
+            supportingText = state.passwordError,
             modifier = Modifier.padding(bottom = 8.dp),
         )
 

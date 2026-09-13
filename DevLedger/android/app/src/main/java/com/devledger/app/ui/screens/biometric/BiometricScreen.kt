@@ -96,14 +96,42 @@ fun BiometricScreen(
         DevLedgerPrimaryButton(
             text = stringResource(R.string.biometric_title),
             onClick = {
-                if (activity != null) {
-                    BiometricAuthHelper(activity).authenticate(
-                        onSuccess = onVerified,
-                        onError = { message -> errorText = message },
-                    )
-                } else {
-                    errorText = "Biometric prompt unavailable in this preview."
+                errorText = null
+
+                if (activity == null) {
+                    errorText = "Biometric authentication is unavailable."
+                    return@DevLedgerPrimaryButton
                 }
+
+                val biometricHelper = BiometricAuthHelper(activity)
+
+                if (!biometricHelper.canAuthenticate()) {
+                    errorText = when (biometricHelper.authenticationStatus()) {
+                        androidx.biometric.BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE ->
+                            "This device does not have a fingerprint sensor."
+
+                        androidx.biometric.BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE ->
+                            "The fingerprint sensor is currently unavailable."
+
+                        androidx.biometric.BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED ->
+                            "No fingerprint is enrolled. Add one in your device settings first."
+
+                        else ->
+                            "Fingerprint authentication is unavailable on this device."
+                    }
+
+                    return@DevLedgerPrimaryButton
+                }
+
+                biometricHelper.authenticate(
+                    onSuccess = {
+                        errorText = null
+                        onVerified()
+                    },
+                    onError = { message ->
+                        errorText = message
+                    }
+                )
             },
         )
         Spacer(modifier = Modifier.height(12.dp))
