@@ -1,31 +1,54 @@
-# --- Android / Gradle / Kotlin ---
-*.iml
+# ==========================================
+# ASP.NET Core & App Settings (Secrets & Local Dev)
+# ==========================================
+**/appsettings.Development.json
+**/appsettings.Local.json
+**/appsettings.Production.json
+**/appsettings.json
+!**/appsettings.json.example
+
+# Environment, Keys, and Certificates
+*.env
+*.env.*
+*.pem
+*.pfx
+
+# ==========================================
+# Android & Mobile Client (Keystores & Firebase)
+# ==========================================
+*.jks
+*.keystore
+**/google-services.json
+
+# ==========================================
+# .NET / Visual Studio Build & Temporary Files
+# ==========================================
+[Bb]in/
+[Ob]j/
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# NuGet Packages
+*.nupkg
+*.snupkg
+**/packages/
+
+# ==========================================
+# Android Studio / JetBrains / Gradle
+# ==========================================
+.idea/
 .gradle/
-build/
-captures/
+**/build/
+**/captures/
 .externalNativeBuild/
 .cxx/
 local.properties
-android/app/google-services.json
-android/.idea/
-android/*.hprof
 
-# --- .NET ---
-api/**/bin/
-api/**/obj/
-api/**/*.db
-api/**/*.db-shm
-api/**/*.db-wal
-api/DevLedger.Api/appsettings.Production.json
-
-# --- General ---
+# ==========================================
+# Operating System Files
+# ==========================================
 .DS_Store
-*.log
-.vscode/
-
-# --- Local development / IDE ---
-.idea/
-api/**/appsettings.Development.json
-
-# --- Local tooling artifacts ---
-android/.artifacts/
+Thumbs.db

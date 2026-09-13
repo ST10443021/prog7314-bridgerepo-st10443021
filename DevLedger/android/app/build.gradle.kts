@@ -20,14 +20,20 @@ android {
         versionName = "1.0.0-prototype"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // 1. BASE_URL pointing to your live Render backend
+        buildConfigField("String", "BASE_URL", "\"https://devledger-api-op1w.onrender.com/\"")
+
+        // 2. GOOGLE_WEB_CLIENT_ID using your Web Client ID from Google Cloud
         // Base URL for the DevLedger REST API. Overridden per build type below.
-        buildConfigField("String", "BASE_URL", "\"https://devledger-api.azurewebsites.net/\"")
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"293392981245-br01csqhvog5audb2r5hvmq3lp9p15at.apps.googleusercontent.com\"")
+
+        //3. GITHUB_CLIENT_ID using your GitHub Client ID from GitHub
+        buildConfigField("String", "GITHUB_CLIENT_ID", "\"Ov23liCiru7JpKPZZKwn\"")
     }
 
     buildTypes {
         debug {
             isMinifyEnabled = false
-            buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:5000/\"") // Android emulator loopback to local API
         }
         release {
             isMinifyEnabled = true
@@ -75,6 +81,9 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.navigation:navigation-compose:2.7.7")
+
+    // Browser (for custom tabs)
+    implementation("androidx.browser:browser:1.8.0")
 
     // Room (offline-first local persistence — Google Developers, n.d.b)
     implementation("androidx.room:room-runtime:2.6.1")

@@ -16,18 +16,22 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton<TokenService>();
+builder.Services.AddHttpClient();
 
-// SQLite for local/dev use (zero external setup); swap the connection string in
-// appsettings.Production.json for Azure Database for PostgreSQL / Azure SQL when
-// deploying to Azure App Service (Microsoft Learn, n.d.).
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=devledger.db";
+// PostgreSQL connection.
+// Local development uses appsettings.Development.json.
+// Production will use the Render environment variable:
+// ConnectionStrings__DefaultConnection.
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException(
+        "Connection string 'DefaultConnection' was not found.");
 if (builder.Environment.IsEnvironment("Testing"))
 {
     builder.Services.AddDbContext<DevLedgerDbContext>(options => options.UseInMemoryDatabase("DevLedgerTestDb"));
 }
 else
 {
-    builder.Services.AddDbContext<DevLedgerDbContext>(options => options.UseSqlite(connectionString));
+    builder.Services.AddDbContext<DevLedgerDbContext>(options => options.UseNpgsql(connectionString));
 }
 
 var jwtSigningKey = builder.Configuration["Jwt:SigningKey"] ?? "dev-only-signing-key-change-in-production-32chars!!";
@@ -57,24 +61,22 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+// Enable Swagger in all environments (including Production)
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-// Auto-create the SQLite schema on first run so markers don't need to run
-// migrations manually — acceptable for a Part 2 prototype.
+// Apply pending EF Core migrations on startup.
+// This keeps the PostgreSQL schema in sync with the application's migrations.
 if (!app.Environment.IsEnvironment("Testing"))
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<DevLedgerDbContext>();
-    db.Database.EnsureCreated();
+    db.Database.Migrate();
 }
 
 app.MapGet("/", () => Results.Ok(new { status = "DevLedger API is running", version = "1.0.0-prototype" }));
