@@ -18,5 +18,17 @@ val DevLedgerTypography = Typography(
     bodyLarge = TextStyle(fontFamily = DevLedgerFontFamily, fontWeight = FontWeight.Normal, fontSize = 15.sp),
     bodyMedium = TextStyle(fontFamily = DevLedgerFontFamily, fontWeight = FontWeight.Normal, fontSize = 13.sp),
     bodySmall = TextStyle(fontFamily = DevLedgerFontFamily, fontWeight = FontWeight.Normal, fontSize = 11.sp),
+    labelLarge = TextStyle(
+        fontFamily = DevLedgerFontFamily,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 15.sp,
+        lineHeight = 20.sp,
+    ),
+    labelMedium = TextStyle(
+        fontFamily = DevLedgerFontFamily,
+        fontWeight = FontWeight.Medium,
+        fontSize = 12.sp,
+        lineHeight = 16.sp,
+    ),
     labelSmall = TextStyle(fontFamily = DevLedgerFontFamily, fontWeight = FontWeight.Medium, fontSize = 10.sp),
 )

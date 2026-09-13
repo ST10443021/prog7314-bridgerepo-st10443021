@@ -24,6 +24,7 @@ import com.devledger.app.ui.components.DevLedgerCard
 import com.devledger.app.ui.theme.DevLedgerColors
 import com.devledger.app.util.CurrencyConverter
 import androidx.compose.runtime.LaunchedEffect
+import com.devledger.app.ui.components.DevLedgerPrimaryButton
 
 /**
  * Settings screen. Covers every user-facing preference required by the Part 1 brief:
@@ -138,18 +139,15 @@ fun SettingsScreen(
             }
         }
 
-        Button(
+        DevLedgerPrimaryButton(
+            text = "Save changes",
             onClick = viewModel::saveSettings,
             enabled = state.isLoaded &&
                     !state.isLoading &&
-                    !state.isSaving &&
                     state.hasChanges,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 12.dp),
-        ) {
-            Text(if (state.isSaving) "Saving..." else "Save changes")
-        }
+            loading = state.isSaving,
+            modifier = Modifier.padding(bottom = 12.dp),
+        )
 
         OutlinedButton(
             onClick = { viewModel.signOut(); onSignedOut() },

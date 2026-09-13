@@ -25,6 +25,10 @@ import com.devledger.app.ui.components.DevLedgerCard
 import com.devledger.app.ui.theme.DevLedgerColors
 import java.text.NumberFormat
 import java.util.Locale
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.text.style.TextAlign
 
 /** Home dashboard: snippet/income/expense summary cards, quick actions and recent
  *  snippets — matches Figure "Dashboard Screen" from the Part 1 design document. */
@@ -51,8 +55,7 @@ fun DashboardScreen(
                 Text(
                     text = state.user?.fullName ?: "Developer",
                     color = DevLedgerColors.TextPrimary,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.headlineMedium,
                 )
                 Text(stringResource(R.string.dashboard_overview), color = DevLedgerColors.TextMuted, fontSize = 12.sp)
             }
@@ -84,8 +87,11 @@ fun DashboardScreen(
         }
 
         item {
-            Text(stringResource(R.string.dashboard_quick_actions), color = DevLedgerColors.TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-        }
+            Text(
+                text = stringResource(R.string.dashboard_quick_actions),
+                color = DevLedgerColors.TextPrimary,
+                style = MaterialTheme.typography.titleMedium,
+            )        }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 QuickActionTile(Modifier.weight(1f), stringResource(R.string.nav_snippets), onOpenSnippets)
@@ -95,8 +101,11 @@ fun DashboardScreen(
         }
 
         item {
-            Text(stringResource(R.string.dashboard_recent_activity), color = DevLedgerColors.TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-        }
+            Text(
+                text = stringResource(R.string.dashboard_recent_activity),
+                color = DevLedgerColors.TextPrimary,
+                style = MaterialTheme.typography.titleMedium,
+            )        }
         items(state.recentSnippets, key = { it.snippetId }) { snippet ->
             DevLedgerCard {
                 Text(snippet.title, color = DevLedgerColors.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
@@ -115,13 +124,32 @@ private fun SummaryStat(modifier: Modifier = Modifier, label: String, value: Str
 }
 
 @Composable
-private fun QuickActionTile(modifier: Modifier = Modifier, label: String, onClick: () -> Unit) {
+private fun QuickActionTile(
+    modifier: Modifier = Modifier,
+    label: String,
+    onClick: () -> Unit,
+) {
     Card(
         modifier = modifier.clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = DevLedgerColors.SurfaceCard),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, DevLedgerColors.Border),
+        colors = CardDefaults.cardColors(
+            containerColor = DevLedgerColors.SurfaceCard,
+        ),
     ) {
-        Box(modifier = Modifier.padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
-            Text(label, color = DevLedgerColors.TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 56.dp)
+                .padding(horizontal = 8.dp, vertical = 16.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = label,
+                color = DevLedgerColors.TextPrimary,
+                style = MaterialTheme.typography.labelMedium,
+                textAlign = TextAlign.Center,
+            )
         }
     }
 }

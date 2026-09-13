@@ -108,9 +108,8 @@ fun RegisterScreen(
 
         Text(
             text = "Create your account",
-            color = Color.White,
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold
+            color = DevLedgerColors.TextPrimary,
+            style = MaterialTheme.typography.headlineMedium
         )
         Text(
             text = "Your personal developer utility and asset vault.",
