@@ -11,16 +11,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import com.devledger.app.data.local.PinStorage
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 data class RegisterUiState(
     val fullName: String = "",
     val email: String = "",
     val password: String = "",
-    val pin: String = "",
-    val confirmPin: String = "",
 
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
@@ -30,22 +25,17 @@ data class RegisterUiState(
     val isFullNameValid: Boolean = false,
     val isEmailValid: Boolean = false,
     val isPasswordValid: Boolean = false,
-    val isPinValid: Boolean = false,
-    val isConfirmPinValid: Boolean = false,
 
     val passwordStrength: Int = 0,
 
     val fullNameError: String? = null,
     val emailError: String? = null,
     val passwordError: String? = null,
-    val pinError: String? = null,
-    val confirmPinError: String? = null,
 )
 
 @HiltViewModel
 class RegisterViewModel @Inject constructor(
     private val authRepository: AuthRepository,
-    private val pinStorage: PinStorage,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RegisterUiState())
@@ -98,53 +88,6 @@ class RegisterViewModel @Inject constructor(
         )
     }
 
-    fun onPinChange(value: String) {
-        // Only allow numbers and limit the PIN to four digits.
-        val filteredPin = value.filter { it.isDigit() }.take(4)
-        val isValid = filteredPin.length == 4
-
-        val currentConfirmPin = _uiState.value.confirmPin
-
-        _uiState.value = _uiState.value.copy(
-            pin = filteredPin,
-            isPinValid = isValid,
-            pinError = when {
-                filteredPin.isEmpty() -> null
-                filteredPin.length < 4 -> "PIN must be exactly 4 digits."
-                else -> null
-            },
-            isConfirmPinValid =
-                currentConfirmPin.length == 4 && currentConfirmPin == filteredPin,
-            confirmPinError = when {
-                currentConfirmPin.isEmpty() -> null
-                currentConfirmPin.length < 4 -> "Confirmation PIN must be 4 digits."
-                currentConfirmPin != filteredPin -> "PINs do not match."
-                else -> null
-            },
-            errorMessage = null
-        )
-    }
-
-    fun onConfirmPinChange(value: String) {
-        // Only allow numbers and limit the PIN to four digits.
-        val filteredPin = value.filter { it.isDigit() }.take(4)
-        val pin = _uiState.value.pin
-
-        val isValid = filteredPin.length == 4 && filteredPin == pin
-
-        _uiState.value = _uiState.value.copy(
-            confirmPin = filteredPin,
-            isConfirmPinValid = isValid,
-            confirmPinError = when {
-                filteredPin.isEmpty() -> null
-                filteredPin.length < 4 -> "Confirmation PIN must be 4 digits."
-                filteredPin != pin -> "PINs do not match."
-                else -> null
-            },
-            errorMessage = null
-        )
-    }
-
     private fun calculatePasswordStrength(password: String): Int {
         if (password.isEmpty()) return 0
 
@@ -181,39 +124,16 @@ class RegisterViewModel @Inject constructor(
             else if (!state.isPasswordValid) "Password must contain at least 8 characters."
             else null
 
-        val pinError =
-            if (state.pin.isBlank()) "PIN is required."
-            else if (!state.isPinValid) "PIN must be exactly 4 digits."
-            else null
-
-        val confirmPinError =
-            when {
-                state.confirmPin.isBlank() ->
-                    "Please confirm your PIN."
-
-                state.confirmPin.length != 4 ->
-                    "Confirmation PIN must be 4 digits."
-
-                state.confirmPin != state.pin ->
-                    "PINs do not match."
-
-                else -> null
-            }
-
         val hasErrors =
             fullNameError != null ||
                     emailError != null ||
-                    passwordError != null ||
-                    pinError != null ||
-                    confirmPinError != null
+                    passwordError != null
 
         if (hasErrors) {
             _uiState.value = state.copy(
                 fullNameError = fullNameError,
                 emailError = emailError,
                 passwordError = passwordError,
-                pinError = pinError,
-                confirmPinError = confirmPinError,
                 errorMessage = "Please correct the highlighted fields."
             )
             return
@@ -233,12 +153,6 @@ class RegisterViewModel @Inject constructor(
 
             when (result) {
                 is DevLedgerResult.Success -> {
-
-                    // Store only the salted PIN hash locally after successful registration.
-                    withContext(Dispatchers.Default) {
-                        pinStorage.savePin(state.pin)
-                    }
-
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         isRegistered = true
@@ -246,29 +160,10 @@ class RegisterViewModel @Inject constructor(
                 }
 
                 is DevLedgerResult.Error -> {
-                    /*
-                     * Temporary prototype behaviour.
-                     * Remove this network-error bypass once the deployed API
-                     * is connected.
-                     */
-                    if (result.message.contains("connect", ignoreCase = true)) {
-
-                        // TEMPORARY prototype behaviour.
-                        // Remove this bypass once the live API is connected.
-                        withContext(Dispatchers.Default) {
-                            pinStorage.savePin(state.pin)
-                        }
-
-                        _uiState.value = _uiState.value.copy(
-                            isLoading = false,
-                            isRegistered = true
-                        )
-                    } else {
-                        _uiState.value = _uiState.value.copy(
-                            isLoading = false,
-                            errorMessage = result.message
-                        )
-                    }
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        errorMessage = result.message
+                    )
                 }
             }
         }

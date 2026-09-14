@@ -2,6 +2,7 @@ package com.devledger.app.ui.screens.biometric
 
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import java.util.concurrent.Executor
 
@@ -32,6 +33,8 @@ class BiometricAuthHelper(
     }
 
     fun authenticate(
+        title: String = "Verify your identity",
+        subtitle: String = "Use your fingerprint to unlock DevLedger",
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
@@ -43,7 +46,7 @@ class BiometricAuthHelper(
         }
 
         val executor: Executor =
-            androidx.core.content.ContextCompat.getMainExecutor(activity)
+            ContextCompat.getMainExecutor(activity)
 
         val callback =
             object : BiometricPrompt.AuthenticationCallback() {
@@ -66,7 +69,7 @@ class BiometricAuthHelper(
                 override fun onAuthenticationFailed() {
                     super.onAuthenticationFailed()
                     onError(
-                        "Fingerprint not recognised. Please try again."
+                        "Fingerprint not recognised. Use a finger enrolled on this device."
                     )
                 }
             }
@@ -80,10 +83,8 @@ class BiometricAuthHelper(
 
         val promptInfo =
             BiometricPrompt.PromptInfo.Builder()
-                .setTitle("Verify your identity")
-                .setSubtitle(
-                    "Use your fingerprint to unlock DevLedger"
-                )
+                .setTitle(title)
+                .setSubtitle(subtitle)
                 .setAllowedAuthenticators(authenticators)
                 .setNegativeButtonText("Cancel")
                 .build()

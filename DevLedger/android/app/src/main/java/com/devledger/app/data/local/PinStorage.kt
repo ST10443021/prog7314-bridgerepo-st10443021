@@ -3,6 +3,7 @@ package com.devledger.app.data.local
 import android.content.Context
 import android.util.Base64
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.security.MessageDigest
 import java.security.SecureRandom
 import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.PBEKeySpec
@@ -10,10 +11,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Securely stores and verifies the user's fallback PIN.
- *
- * The raw PIN is never persisted. Instead, a random salt and PBKDF2 hash
- * are stored in private application preferences.
+ * Securely stores and verifies the user's fallback PIN and Biometric state.
+ * Supports multi-user separation by using email prefixes to avoid cross-account bleeding.
  */
 @Singleton
 class PinStorage @Inject constructor(
@@ -25,7 +24,7 @@ class PinStorage @Inject constructor(
         Context.MODE_PRIVATE
     )
 
-    fun savePin(pin: String) {
+    fun savePin(pin: String, email: String? = null) {
         require(pin.length == 4 && pin.all { it.isDigit() }) {
             "PIN must contain exactly four digits."
         }
@@ -34,26 +33,28 @@ class PinStorage @Inject constructor(
         SecureRandom().nextBytes(salt)
 
         val hash = hashPin(pin, salt)
+        val suffix = if (email.isNullOrBlank()) "" else "_$email"
 
         preferences.edit()
-            .putString(KEY_PIN_SALT, Base64.encodeToString(salt, Base64.NO_WRAP))
-            .putString(KEY_PIN_HASH, Base64.encodeToString(hash, Base64.NO_WRAP))
+            .putString(KEY_PIN_SALT + suffix, Base64.encodeToString(salt, Base64.NO_WRAP))
+            .putString(KEY_PIN_HASH + suffix, Base64.encodeToString(hash, Base64.NO_WRAP))
             .apply()
     }
 
-    fun verifyPin(pin: String): Boolean {
-        val storedSalt = preferences.getString(KEY_PIN_SALT, null)
-            ?: return false
+    fun verifyPin(pin: String, email: String? = null): Boolean {
+        val suffix = if (email.isNullOrBlank()) "" else "_$email"
+        val storedSalt = preferences.getString(KEY_PIN_SALT + suffix, null)
+            ?: preferences.getString(KEY_PIN_SALT, null) ?: return false
 
-        val storedHash = preferences.getString(KEY_PIN_HASH, null)
-            ?: return false
+        val storedHash = preferences.getString(KEY_PIN_HASH + suffix, null)
+            ?: preferences.getString(KEY_PIN_HASH, null) ?: return false
 
         return try {
             val salt = Base64.decode(storedSalt, Base64.NO_WRAP)
             val expectedHash = Base64.decode(storedHash, Base64.NO_WRAP)
             val enteredHash = hashPin(pin, salt)
 
-            java.security.MessageDigest.isEqual(
+            MessageDigest.isEqual(
                 expectedHash,
                 enteredHash
             )
@@ -62,15 +63,27 @@ class PinStorage @Inject constructor(
         }
     }
 
-    fun hasPin(): Boolean {
-        return preferences.contains(KEY_PIN_SALT) &&
-                preferences.contains(KEY_PIN_HASH)
+    fun hasPin(email: String? = null): Boolean {
+        val suffix = if (email.isNullOrBlank()) "" else "_$email"
+        return preferences.contains(KEY_PIN_SALT + suffix) || preferences.contains(KEY_PIN_SALT)
     }
 
-    fun clearPin() {
+    fun isFingerprintRegistered(email: String? = null): Boolean {
+        val suffix = if (email.isNullOrBlank()) "" else "_$email"
+        return preferences.getBoolean("fingerprint_registered" + suffix, false)
+    }
+
+    fun setFingerprintRegistered(registered: Boolean, email: String? = null) {
+        val suffix = if (email.isNullOrBlank()) "" else "_$email"
+        preferences.edit().putBoolean("fingerprint_registered" + suffix, registered).apply()
+    }
+
+    fun clearPin(email: String? = null) {
+        val suffix = if (email.isNullOrBlank()) "" else "_$email"
         preferences.edit()
-            .remove(KEY_PIN_SALT)
-            .remove(KEY_PIN_HASH)
+            .remove(KEY_PIN_SALT + suffix)
+            .remove(KEY_PIN_HASH + suffix)
+            .remove("fingerprint_registered" + suffix)
             .apply()
     }
 

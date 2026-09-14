@@ -1,5 +1,6 @@
 package com.devledger.app.ui.screens.auth
 
+import android.util.Patterns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.devledger.app.data.repository.AuthRepository
@@ -10,12 +11,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import android.util.Patterns
 
 data class AuthUiState(
     val email: String = "",
     val password: String = "",
     val isLoading: Boolean = false,
+    val isGoogleLoading: Boolean = false,
+    val isGitHubLoading: Boolean = false,
     val errorMessage: String? = null,
     val isAuthenticated: Boolean = false,
     val emailError: String? = null,
@@ -26,11 +28,6 @@ data class AuthUiState(
  * Drives the Authentication screen. Supports Google/GitHub SSO (Part 1 core
  * requirement: "register and log in ... using single sign-on") as well as an email
  * fallback, delegating all network/session handling to [AuthRepository].
- *
- * Google and GitHub use different token types under the hood — Google hands the app
- * an ID token directly; GitHub hands back only an authorization code, which the API
- * (holding the client secret) exchanges server-side — so [performSso] accepts either,
- * exactly one of which is non-null depending on [provider].
  */
 @HiltViewModel
 class AuthViewModel @Inject constructor(
@@ -61,22 +58,42 @@ class AuthViewModel @Inject constructor(
             errorMessage = null,
         )
     }
+    
+    fun onGoogleSignInClicked() {
+        _uiState.value = _uiState.value.copy(isGoogleLoading = true, errorMessage = null)
+    }
+
+    fun onGitHubSignInClicked() {
+        _uiState.value = _uiState.value.copy(isGitHubLoading = true, errorMessage = null)
+    }
+
     fun signInWithGoogle(idToken: String) = performSso("GOOGLE", idToken = idToken)
     fun signInWithGitHub(code: String) = performSso("GITHUB", code = code)
 
-    /** Called when the GitHub redirect itself failed (e.g. the user cancelled, or GitHub
-     *  returned an `error` query param) — before we ever get as far as calling the API. */
     fun onGitHubOAuthFailure(reason: String) {
-        _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = "GitHub sign-in failed: $reason")
+        _uiState.value = _uiState.value.copy(
+            isGitHubLoading = false, 
+            errorMessage = "GitHub sign-in failed: $reason"
+        )
     }
 
     private fun performSso(provider: String, idToken: String? = null, code: String? = null) {
-        if (_uiState.value.isLoading || _uiState.value.isAuthenticated) return
-        _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
         viewModelScope.launch {
             when (val result = authRepository.signInWithSso(provider, idToken = idToken, code = code)) {
-                is DevLedgerResult.Success -> _uiState.value = _uiState.value.copy(isLoading = false, isAuthenticated = true)
-                is DevLedgerResult.Error -> _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = result.message)
+                is DevLedgerResult.Success -> {
+                    _uiState.value = _uiState.value.copy(
+                        isGoogleLoading = false,
+                        isGitHubLoading = false,
+                        isAuthenticated = true
+                    )
+                }
+                is DevLedgerResult.Error -> {
+                    _uiState.value = _uiState.value.copy(
+                        isGoogleLoading = false,
+                        isGitHubLoading = false,
+                        errorMessage = result.message
+                    )
+                }
             }
         }
     }

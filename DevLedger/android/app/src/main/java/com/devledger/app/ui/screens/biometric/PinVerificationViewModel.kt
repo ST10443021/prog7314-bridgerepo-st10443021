@@ -3,11 +3,13 @@ package com.devledger.app.ui.screens.biometric
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.devledger.app.data.local.PinStorage
+import com.devledger.app.data.repository.AuthRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -22,6 +24,7 @@ data class PinVerificationUiState(
 @HiltViewModel
 class PinVerificationViewModel @Inject constructor(
     private val pinStorage: PinStorage,
+    private val authRepository: AuthRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PinVerificationUiState())
@@ -41,13 +44,6 @@ class PinVerificationViewModel @Inject constructor(
     fun verifyPin() {
         val state = _uiState.value
 
-        if (!pinStorage.hasPin()) {
-            _uiState.value = state.copy(
-                errorMessage = "No PIN has been configured for this account."
-            )
-            return
-        }
-
         if (state.pin.length != 4) {
             _uiState.value = state.copy(
                 errorMessage = "Enter your 4-digit PIN."
@@ -61,8 +57,18 @@ class PinVerificationViewModel @Inject constructor(
         )
 
         viewModelScope.launch {
+            val email = authRepository.currentUser.first()?.email
+
+            if (!pinStorage.hasPin(email)) {
+                _uiState.value = _uiState.value.copy(
+                    isVerifying = false,
+                    errorMessage = "No PIN has been configured for this account."
+                )
+                return@launch
+            }
+
             val matches = withContext(Dispatchers.Default) {
-                pinStorage.verifyPin(state.pin)
+                pinStorage.verifyPin(state.pin, email)
             }
 
             if (matches) {

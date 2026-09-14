@@ -1,6 +1,5 @@
 package com.devledger.app.ui.screens.auth
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -16,15 +15,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.devledger.app.R
 import com.devledger.app.ui.components.*
 import com.devledger.app.ui.theme.DevLedgerColors
 
@@ -87,7 +82,6 @@ fun RegisterScreen(
                     .background(DevLedgerColors.SurfaceCardAlt, shape = MaterialTheme.shapes.small),
                 contentAlignment = Alignment.Center
             ) {
-                // Placeholder for shield icon if R.drawable.ic_shield is missing, using person for now
                 Icon(
                     imageVector = Icons.Filled.Person,
                     contentDescription = null,
@@ -161,53 +155,7 @@ fun RegisterScreen(
 
         PasswordStrengthMeter(
             strength = state.passwordStrength,
-            modifier = Modifier.padding(bottom = 20.dp)
-        )
-
-        Text(
-            text = "4-DIGIT PIN",
-            color = DevLedgerColors.TextSecondary,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold
-        )
-
-        DevLedgerTextField(
-            value = state.pin,
-            onValueChange = viewModel::onPinChange,
-            label = "",
-            placeholder = "Enter 4-digit PIN",
-            isPassword = true,
-            leadingIcon = Icons.Filled.Lock,
-            isValid = state.isPinValid,
-            isError = state.pinError != null,
-            supportingText = state.pinError,
-            modifier = Modifier.padding(
-                top = 8.dp,
-                bottom = 20.dp
-            )
-        )
-
-        Text(
-            text = "CONFIRM PIN",
-            color = DevLedgerColors.TextSecondary,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold
-        )
-
-        DevLedgerTextField(
-            value = state.confirmPin,
-            onValueChange = viewModel::onConfirmPinChange,
-            label = "",
-            placeholder = "Re-enter your PIN",
-            isPassword = true,
-            leadingIcon = Icons.Filled.Lock,
-            isValid = state.isConfirmPinValid,
-            isError = state.confirmPinError != null,
-            supportingText = state.confirmPinError,
-            modifier = Modifier.padding(
-                top = 8.dp,
-                bottom = 32.dp
-            )
+            modifier = Modifier.padding(bottom = 32.dp)
         )
 
         // API Error Banner
