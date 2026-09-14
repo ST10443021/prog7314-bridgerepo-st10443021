@@ -33,7 +33,7 @@ class PinStorage @Inject constructor(
         SecureRandom().nextBytes(salt)
 
         val hash = hashPin(pin, salt)
-        val suffix = if (email.isNullOrBlank()) "" else "_$email"
+        val suffix = if (email.isNullOrBlank()) "" else "_${email.lowercase()}"
 
         preferences.edit()
             .putString(KEY_PIN_SALT + suffix, Base64.encodeToString(salt, Base64.NO_WRAP))
@@ -42,12 +42,12 @@ class PinStorage @Inject constructor(
     }
 
     fun verifyPin(pin: String, email: String? = null): Boolean {
-        val suffix = if (email.isNullOrBlank()) "" else "_$email"
+        val suffix = if (email.isNullOrBlank()) "" else "_${email.lowercase()}"
         val storedSalt = preferences.getString(KEY_PIN_SALT + suffix, null)
-            ?: preferences.getString(KEY_PIN_SALT, null) ?: return false
+            ?: return false
 
         val storedHash = preferences.getString(KEY_PIN_HASH + suffix, null)
-            ?: preferences.getString(KEY_PIN_HASH, null) ?: return false
+            ?: return false
 
         return try {
             val salt = Base64.decode(storedSalt, Base64.NO_WRAP)
@@ -64,22 +64,22 @@ class PinStorage @Inject constructor(
     }
 
     fun hasPin(email: String? = null): Boolean {
-        val suffix = if (email.isNullOrBlank()) "" else "_$email"
-        return preferences.contains(KEY_PIN_SALT + suffix) || preferences.contains(KEY_PIN_SALT)
+        val suffix = if (email.isNullOrBlank()) "" else "_${email.lowercase()}"
+        return preferences.contains(KEY_PIN_SALT + suffix)
     }
 
     fun isFingerprintRegistered(email: String? = null): Boolean {
-        val suffix = if (email.isNullOrBlank()) "" else "_$email"
+        val suffix = if (email.isNullOrBlank()) "" else "_${email.lowercase()}"
         return preferences.getBoolean("fingerprint_registered" + suffix, false)
     }
 
     fun setFingerprintRegistered(registered: Boolean, email: String? = null) {
-        val suffix = if (email.isNullOrBlank()) "" else "_$email"
+        val suffix = if (email.isNullOrBlank()) "" else "_${email.lowercase()}"
         preferences.edit().putBoolean("fingerprint_registered" + suffix, registered).apply()
     }
 
     fun clearPin(email: String? = null) {
-        val suffix = if (email.isNullOrBlank()) "" else "_$email"
+        val suffix = if (email.isNullOrBlank()) "" else "_${email.lowercase()}"
         preferences.edit()
             .remove(KEY_PIN_SALT + suffix)
             .remove(KEY_PIN_HASH + suffix)

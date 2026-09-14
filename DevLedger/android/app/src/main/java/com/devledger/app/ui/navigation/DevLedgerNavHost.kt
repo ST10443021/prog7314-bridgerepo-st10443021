@@ -267,8 +267,10 @@ class AuthEntryPoint @Inject constructor(
                     Log.w("AuthEntryPoint", "needsSecuritySetupSync: User timed out in local cache")
                     return@runBlocking false
                 }
-                val hasPin = pinStorage.hasPin(email)
-                Log.i("AuthEntryPoint", "needsSecuritySetupSync: email=$email, hasPin=$hasPin")
+                // Case-insensitive check to ensure reliable account matching
+                val normalizedEmail = email?.lowercase()?.trim()
+                val hasPin = pinStorage.hasPin(normalizedEmail)
+                Log.i("AuthEntryPoint", "needsSecuritySetupSync: email=$normalizedEmail, hasPin=$hasPin")
                 !hasPin
             }
         } catch (e: Exception) {
