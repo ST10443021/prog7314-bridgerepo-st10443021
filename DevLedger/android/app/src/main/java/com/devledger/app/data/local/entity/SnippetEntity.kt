@@ -2,6 +2,7 @@ package com.devledger.app.data.local.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import kotlinx.serialization.Serializable
 
 /**
  * Local, offline-first representation of a code snippet — mirrors the `Snippet` schema
@@ -9,6 +10,8 @@ import androidx.room.PrimaryKey
  * [syncStatus] drives the offline-sync queue: PENDING rows are pushed to the REST API
  * by [com.devledger.app.sync.SyncWorker] once connectivity returns.
  */
+
+@Serializable
 @Entity(tableName = "snippets")
 data class SnippetEntity(
     @PrimaryKey val snippetId: String,
