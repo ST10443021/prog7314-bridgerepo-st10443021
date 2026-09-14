@@ -18,6 +18,7 @@ object DevLedgerDestinations {
     const val TERMS = "terms"
     const val PRIVACY_POLICY = "privacy_policy"
     const val PIN_VERIFICATION = "pin_verification"
+    const val SECURITY_SETUP = "security_setup"
 
     fun snippetEditorRoute(snippetId: String? = null) =
         if (snippetId == null) "snippet_editor" else "snippet_editor?snippetId=$snippetId"

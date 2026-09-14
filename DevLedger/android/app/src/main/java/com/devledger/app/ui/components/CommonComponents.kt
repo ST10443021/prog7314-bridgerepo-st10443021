@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Visibility
@@ -122,6 +123,7 @@ fun DevLedgerTextField(
     minLines: Int = 1,
     leadingIcon: ImageVector? = null,
     placeholder: String? = null,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
 ) {
     var passwordVisible by remember { mutableStateOf(false) }
 
@@ -138,6 +140,7 @@ fun DevLedgerTextField(
             singleLine = singleLine,
             minLines = minLines,
             isError = isError,
+            keyboardOptions = keyboardOptions,
             leadingIcon = leadingIcon?.let {
                 { Icon(it, contentDescription = null, tint = if (isError) DevLedgerColors.ErrorRed else DevLedgerColors.TextMuted) }
             },

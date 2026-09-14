@@ -1,5 +1,6 @@
 package com.devledger.app.ui.navigation
 
+import android.util.Log
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -9,7 +10,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.ViewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -18,11 +21,14 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.devledger.app.data.repository.AuthRepository
+import com.devledger.app.data.local.PinStorage
 import com.devledger.app.ui.components.BottomNavTab
 import com.devledger.app.ui.components.DevLedgerBottomNav
 import com.devledger.app.ui.screens.auth.AuthScreen
 import com.devledger.app.ui.screens.auth.RegisterScreen
 import com.devledger.app.ui.screens.biometric.BiometricScreen
+import com.devledger.app.ui.screens.biometric.PinVerificationScreen
+import com.devledger.app.ui.screens.biometric.SecuritySetupScreen
 import com.devledger.app.ui.screens.dashboard.DashboardScreen
 import com.devledger.app.ui.screens.finance.AddTransactionScreen
 import com.devledger.app.ui.screens.finance.FinancialTrackerScreen
@@ -31,18 +37,18 @@ import com.devledger.app.ui.screens.settings.SettingsScreen
 import com.devledger.app.ui.screens.snippets.SnippetEditorScreen
 import com.devledger.app.ui.screens.snippets.SnippetVaultScreen
 import com.devledger.app.ui.screens.splash.SplashScreen
-import javax.inject.Inject
 import com.devledger.app.ui.screens.legal.PrivacyPolicyScreen
 import com.devledger.app.ui.screens.legal.TermsScreen
-import com.devledger.app.ui.screens.biometric.PinVerificationScreen
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import javax.inject.Inject
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
-/**
- * Root navigation graph. Route wiring mirrors the navigation wireflow diagram
- * (Figure 11) from the Part 1 Planning and Design document: Splash → Auth →
- * Biometric → Dashboard, with Dashboard/Snippets/Finance/Notifications reachable via
- * the persistent bottom navigation bar, and Settings/Editor/AddTransaction as
- * secondary screens layered on top.
- */
 @Composable
 fun DevLedgerNavHost(navController: NavHostController) {
     val authViewModelHolder: AuthEntryPoint = hiltViewModel()
@@ -54,7 +60,12 @@ fun DevLedgerNavHost(navController: NavHostController) {
             SplashScreen(
                 isLoggedIn = isLoggedIn,
                 onNavigateNext = { loggedIn ->
-                    val destination = if (loggedIn) DevLedgerDestinations.BIOMETRIC else DevLedgerDestinations.AUTH
+                    val destination = if (loggedIn) {
+                        if (authViewModelHolder.needsSecuritySetupSync()) DevLedgerDestinations.SECURITY_SETUP 
+                        else DevLedgerDestinations.BIOMETRIC
+                    } else {
+                        DevLedgerDestinations.AUTH
+                    }
                     navController.navigate(destination) {
                         popUpTo(DevLedgerDestinations.SPLASH) { inclusive = true }
                     }
@@ -65,7 +76,9 @@ fun DevLedgerNavHost(navController: NavHostController) {
         composable(DevLedgerDestinations.AUTH) {
             AuthScreen(
                 onAuthenticated = {
-                    navController.navigate(DevLedgerDestinations.BIOMETRIC) {
+                    val destination = if (authViewModelHolder.needsSecuritySetupSync()) DevLedgerDestinations.SECURITY_SETUP 
+                                    else DevLedgerDestinations.BIOMETRIC
+                    navController.navigate(destination) {
                         popUpTo(DevLedgerDestinations.AUTH) { inclusive = true }
                     }
                 },
@@ -78,35 +91,27 @@ fun DevLedgerNavHost(navController: NavHostController) {
         composable(DevLedgerDestinations.REGISTER) {
             RegisterScreen(
                 onBack = { navController.popBackStack() },
-
-                onTermsClick = {
-                    navController.navigate(DevLedgerDestinations.TERMS)
-                },
-
-                onPrivacyPolicyClick = {
-                    navController.navigate(DevLedgerDestinations.PRIVACY_POLICY)
-                },
-
+                onTermsClick = { navController.navigate(DevLedgerDestinations.TERMS) },
+                onPrivacyPolicyClick = { navController.navigate(DevLedgerDestinations.PRIVACY_POLICY) },
                 onSuccess = {
-                    navController.navigate(DevLedgerDestinations.BIOMETRIC) {
+                    navController.navigate(DevLedgerDestinations.SECURITY_SETUP) {
                         popUpTo(DevLedgerDestinations.AUTH) { inclusive = true }
                     }
                 }
             )
         }
 
-        composable(DevLedgerDestinations.TERMS) {
-            TermsScreen(
-                onBack = {
-                    navController.popBackStack()
-                }
-            )
-        }
-
-        composable(DevLedgerDestinations.PRIVACY_POLICY) {
-            PrivacyPolicyScreen(
-                onBack = {
-                    navController.popBackStack()
+        composable(DevLedgerDestinations.SECURITY_SETUP) {
+            SecuritySetupScreen(
+                onComplete = {
+                    navController.navigate(DevLedgerDestinations.BIOMETRIC) {
+                        popUpTo(DevLedgerDestinations.SECURITY_SETUP) { inclusive = true }
+                    }
+                },
+                onLogout = {
+                    navController.navigate(DevLedgerDestinations.AUTH) {
+                        popUpTo(0) { inclusive = true }
+                    }
                 }
             )
         }
@@ -115,34 +120,32 @@ fun DevLedgerNavHost(navController: NavHostController) {
             BiometricScreen(
                 onVerified = {
                     navController.navigate(DevLedgerDestinations.DASHBOARD) {
-                        popUpTo(DevLedgerDestinations.BIOMETRIC) {
-                            inclusive = true
-                        }
+                        popUpTo(DevLedgerDestinations.BIOMETRIC) { inclusive = true }
                     }
                 },
                 onUsePinInstead = {
-                    navController.navigate(
-                        DevLedgerDestinations.PIN_VERIFICATION
-                    )
+                    navController.navigate(DevLedgerDestinations.PIN_VERIFICATION)
                 },
             )
         }
 
         composable(DevLedgerDestinations.PIN_VERIFICATION) {
             PinVerificationScreen(
-                onBack = {
-                    navController.popBackStack()
-                },
+                onBack = { navController.popBackStack() },
                 onVerified = {
-                    navController.navigate(
-                        DevLedgerDestinations.DASHBOARD
-                    ) {
-                        popUpTo(DevLedgerDestinations.BIOMETRIC) {
-                            inclusive = true
-                        }
+                    navController.navigate(DevLedgerDestinations.DASHBOARD) {
+                        popUpTo(DevLedgerDestinations.BIOMETRIC) { inclusive = true }
                     }
                 }
             )
+        }
+
+        composable(DevLedgerDestinations.TERMS) {
+            TermsScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(DevLedgerDestinations.PRIVACY_POLICY) {
+            PrivacyPolicyScreen(onBack = { navController.popBackStack() })
         }
 
         // Main, bottom-nav-hosted screens
@@ -156,14 +159,14 @@ fun DevLedgerNavHost(navController: NavHostController) {
             }
         }
         composable(DevLedgerDestinations.SNIPPET_VAULT) {
-            MainScaffold(navController, BottomNavTab.SNIPPETS, onFabClick = { navController.navigate(DevLedgerDestinations.snippetEditorRoute()) }) {
+            MainScaffold(navController, BottomNavTab.SNIPPETS) {
                 SnippetVaultScreen(
                     onOpenSnippet = { id -> navController.navigate(DevLedgerDestinations.snippetEditorRoute(id)) },
                 )
             }
         }
         composable(DevLedgerDestinations.FINANCE) {
-            MainScaffold(navController, BottomNavTab.FINANCE, onFabClick = { navController.navigate(DevLedgerDestinations.ADD_TRANSACTION) }) {
+            MainScaffold(navController, BottomNavTab.FINANCE) {
                 FinancialTrackerScreen(onAddTransaction = { navController.navigate(DevLedgerDestinations.ADD_TRANSACTION) })
             }
         }
@@ -173,7 +176,6 @@ fun DevLedgerNavHost(navController: NavHostController) {
             }
         }
 
-        // Secondary screens
         composable(
             route = DevLedgerDestinations.SNIPPET_EDITOR,
             arguments = listOf(navArgument("snippetId") { type = NavType.StringType; nullable = true; defaultValue = null }),
@@ -195,7 +197,6 @@ fun DevLedgerNavHost(navController: NavHostController) {
     }
 }
 
-/** Wraps a bottom-nav-hosted screen with the shared [DevLedgerBottomNav]. */
 @Composable
 private fun MainScaffold(
     navController: NavHostController,
@@ -211,7 +212,7 @@ private fun MainScaffold(
                 onFabClick = onFabClick,
             )
         },
-        containerColor = androidx.compose.ui.graphics.Color.Transparent,
+        containerColor = Color.Transparent,
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(bottom = padding.calculateBottomPadding())) {
             content()
@@ -233,11 +234,37 @@ private fun navigateToTab(navController: NavHostController, tab: BottomNavTab) {
     }
 }
 
-/** Small Hilt entry-point ViewModel purely to read [AuthRepository.isLoggedIn] once at
- *  the top of the nav graph, deciding whether Splash routes to Auth or Biometric. */
-@dagger.hilt.android.lifecycle.HiltViewModel
+@HiltViewModel
 class AuthEntryPoint @Inject constructor(
     private val authRepository: AuthRepository,
-) : androidx.lifecycle.ViewModel() {
+    private val pinStorage: PinStorage,
+) : ViewModel() {
     fun isLoggedIn(): Boolean = authRepository.isLoggedIn()
+
+    /** 
+     * Determines if the current user (if logged in) needs to configure their PIN.
+     * Uses runBlocking briefly to resolve the current user from the local cache.
+     */
+    fun needsSecuritySetupSync(): Boolean {
+        if (!isLoggedIn()) return false
+        return try {
+            runBlocking {
+                // Wait for the user cache to populate.
+                val user = withTimeoutOrNull(10000) {
+                    authRepository.currentUser.first { it != null }
+                }
+                val email = user?.email
+                if (user == null) {
+                    Log.w("AuthEntryPoint", "needsSecuritySetupSync: User timed out in local cache")
+                    return@runBlocking false
+                }
+                val hasPin = pinStorage.hasPin(email)
+                Log.i("AuthEntryPoint", "needsSecuritySetupSync: email=$email, hasPin=$hasPin")
+                !hasPin
+            }
+        } catch (e: Exception) {
+            Log.e("AuthEntryPoint", "needsSecuritySetupSync: Failed", e)
+            false
+        }
+    }
 }

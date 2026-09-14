@@ -52,7 +52,13 @@ class AuthRepository @Inject constructor(
     suspend fun signInWithEmail(email: String, password: String): DevLedgerResult<UserEntity> =
         DevLedgerResult.safeCall {
             val response = api.emailLogin(EmailLoginRequest(email, password))
-            if (!response.isSuccessful) error("Sign-in failed: HTTP ${response.code()}")
+            if (!response.isSuccessful) {
+                when (response.code()) {
+                    401 -> error("Wrong Password")
+                    404 -> error("Account not found")
+                    else -> error("Sign-in failed: HTTP ${response.code()}")
+                }
+            }
             val body = response.body() ?: error("Empty auth response")
             tokenManager.saveTokens(body.accessToken, body.refreshToken)
             val user = UserEntity(userId = body.userId, email = body.email, fullName = body.fullName, ssoProvider = null)
@@ -64,7 +70,10 @@ class AuthRepository @Inject constructor(
     suspend fun register(email: String, password: String, fullName: String): DevLedgerResult<UserEntity> =
         DevLedgerResult.safeCall {
             val response = api.register(RegisterRequest(email, password, fullName))
-            if (!response.isSuccessful) error("Registration failed: HTTP ${response.code()}")
+            if (!response.isSuccessful) {
+                if (response.code() == 409) error("An account with this email already exists.")
+                else error("Registration failed: HTTP ${response.code()}")
+            }
             val body = response.body() ?: error("Empty auth response")
             tokenManager.saveTokens(body.accessToken, body.refreshToken)
             val user = UserEntity(userId = body.userId, email = body.email, fullName = body.fullName, ssoProvider = null)
