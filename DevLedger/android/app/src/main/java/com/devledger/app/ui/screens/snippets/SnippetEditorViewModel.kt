@@ -6,9 +6,11 @@ import androidx.lifecycle.viewModelScope
 import com.devledger.app.data.repository.AuthRepository
 import com.devledger.app.data.repository.SnippetRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import android.util.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -70,7 +72,12 @@ class SnippetEditorViewModel @Inject constructor(
         }
         _uiState.value = state.copy(isSaving = true)
         viewModelScope.launch {
-            val userId = "local-user" // resolved from AuthRepository.currentUser in a full build; simplified for the prototype
+            val userId = authRepository.currentUser.first()?.userId ?: run {
+                Log.w(TAG, "save() called with no signed-in user cached — this should not happen post-auth")
+                _uiState.value = _uiState.value.copy(isSaving = false, errorMessage = "Not signed in.")
+                return@launch
+            }
+            Log.i(TAG, "Saving snippet '${state.title}' (id=${state.snippetId ?: "new"}) for user $userId")
             snippetRepository.createOrUpdate(
                 userId = userId,
                 id = state.snippetId,
@@ -82,5 +89,9 @@ class SnippetEditorViewModel @Inject constructor(
             )
             _uiState.value = _uiState.value.copy(isSaving = false, saved = true)
         }
+    }
+
+    private companion object {
+        const val TAG = "SnippetEditorViewModel"
     }
 }

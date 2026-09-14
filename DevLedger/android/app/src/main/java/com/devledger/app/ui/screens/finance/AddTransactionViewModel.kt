@@ -1,12 +1,15 @@
 package com.devledger.app.ui.screens.finance
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.devledger.app.data.repository.AuthRepository
 import com.devledger.app.data.repository.TransactionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -25,6 +28,7 @@ data class AddTransactionUiState(
  *  date are present, per the field requirements in the Part 1 design doc. */
 @HiltViewModel
 class AddTransactionViewModel @Inject constructor(
+    private val authRepository: AuthRepository,
     private val transactionRepository: TransactionRepository,
 ) : ViewModel() {
 
@@ -46,8 +50,14 @@ class AddTransactionViewModel @Inject constructor(
         }
         _uiState.value = state.copy(isSaving = true)
         viewModelScope.launch {
+            val userId = authRepository.currentUser.first()?.userId ?: run {
+                Log.w(TAG, "save() called with no signed-in user cached — this should not happen post-auth")
+                _uiState.value = _uiState.value.copy(isSaving = false, errorMessage = "Not signed in.")
+                return@launch
+            }
+            Log.i(TAG, "Saving $${amountValue} ${state.type} transaction (${state.category}) for user $userId")
             transactionRepository.addTransaction(
-                userId = "local-user",
+                userId = userId,
                 type = state.type,
                 amount = amountValue,
                 currency = state.currency,
@@ -57,5 +67,9 @@ class AddTransactionViewModel @Inject constructor(
             )
             _uiState.value = _uiState.value.copy(isSaving = false, saved = true)
         }
+    }
+
+    private companion object {
+        const val TAG = "AddTransactionViewModel"
     }
 }
