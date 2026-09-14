@@ -1,5 +1,6 @@
 package com.devledger.app.ui.screens.snippets
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -42,7 +43,7 @@ class SnippetEditorViewModel @Inject constructor(
     private val initialId = savedStateHandle.get<String>("snippetId")
 
     private val _uiState = MutableStateFlow(
-        SnippetEditorUiState(
+SnippetEditorUiState(
             snippetId = initialId,
             isLoading = initialId != null,
         ),
@@ -55,20 +56,12 @@ class SnippetEditorViewModel @Inject constructor(
         if (initialId != null) {
             viewModelScope.launch {
                 try {
-                    check(authRepository.isLoggedIn()) {
-                        "Sign in before opening a snippet."
-                    }
+check(authRepository.isLoggedIn()) { "Sign in before opening a snippet." }
+                    val user = authRepository.currentUser.first() ?: error("Your account could not be loaded. Sign in again.")
+                    val snippet = snippetRepository.getById(initialId) ?: error("This snippet could not be found.")
+                    check(snippet.userId == user.userId) { "This snippet does not belong to your account." }
 
-                    val user = authRepository.currentUser.first()
-                        ?: error("Your account could not be loaded. Sign in again.")
-
-                    val snippet = snippetRepository.getById(initialId)
-                        ?: error("This snippet could not be found.")
-
-                    check(snippet.userId == user.userId) {
-                        "This snippet does not belong to your account."
-                    }
-
+                    Log.i(TAG, "Loaded snippet $initialId for user ${user.userId}")
                     _uiState.value = _uiState.value.copy(
                         title = snippet.title,
                         content = snippet.content,
@@ -81,11 +74,11 @@ class SnippetEditorViewModel @Inject constructor(
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (error: Exception) {
+                    Log.e(TAG, "Failed to load snippet $initialId", error)
                     loadFailed = true
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        errorMessage = error.message
-                            ?: "Could not load this snippet. Go back and retry.",
+                        errorMessage = error.message ?: "Could not load this snippet. Go back and retry.",
                     )
                 }
             }
@@ -124,12 +117,10 @@ class SnippetEditorViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                check(authRepository.isLoggedIn()) {
-                    "Sign in before saving a snippet."
-                }
+                check(authRepository.isLoggedIn()) { "Sign in before saving a snippet." }
+                val user = authRepository.currentUser.first() ?: error("Your account could not be loaded. Sign in again.")
 
-                val user = authRepository.currentUser.first()
-                    ?: error("Your account could not be loaded. Sign in again.")
+                Log.i(TAG, "Saving snippet '${state.title}' (id=${state.snippetId ?: "new"}) for user ${user.userId}")
 
                 val snippet = snippetRepository.createOrUpdate(
                     userId = user.userId,
@@ -142,20 +133,17 @@ class SnippetEditorViewModel @Inject constructor(
                     folderId = state.folderId,
                 )
 
-                _uiState.value = _uiState.value.copy(
-                    snippetId = snippet.snippetId,
-                    isSaving = false,
-                    saved = true,
-                )
+                _uiState.value = _uiState.value.copy(snippetId = snippet.snippetId, isSaving = false, saved = true)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isSaving = false,
-                    errorMessage = error.message
-                        ?: "Could not save the snippet. Please retry.",
-                )
+                Log.e(TAG, "Failed to save snippet", error)
+                _uiState.value = _uiState.value.copy(isSaving = false, errorMessage = error.message ?: "Could not save the snippet. Please retry.")
             }
         }
+    }
+
+    private companion object {
+        const val TAG = "SnippetEditorViewModel"
     }
 }
