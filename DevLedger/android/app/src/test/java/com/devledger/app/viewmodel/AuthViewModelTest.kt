@@ -82,10 +82,21 @@ class AuthViewModelTest {
         viewModel.onPasswordChange("")
 
         viewModel.uiState.test {
-            awaitItem() // initial (post the two onChange emissions, collapsed by test scheduler)
+            awaitItem()
+
             viewModel.signInWithEmail()
+
             val result = awaitItem()
-            assertThat(result.errorMessage).isEqualTo("Email and password are required.")
+
+            assertThat(result.emailError)
+                .isEqualTo("Enter your email address.")
+
+            assertThat(result.passwordError)
+                .isEqualTo("Enter your password.")
+
+            assertThat(result.errorMessage).isNull()
+            assertThat(result.isLoading).isFalse()
+            assertThat(result.isAuthenticated).isFalse()
         }
     }
 }
