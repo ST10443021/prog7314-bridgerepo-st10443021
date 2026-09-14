@@ -64,6 +64,90 @@ public class TransactionsController : ControllerBase
         return CreatedAtAction(nameof(GetAll), ToDto(tx));
     }
 
+    [HttpPut("{id:guid}")]
+    public async Task<ActionResult<TransactionDto>> Update(
+        Guid id,
+        [FromBody] CreateTransactionRequest request)
+    {
+        if (request.Amount <= 0)
+            return BadRequest("Amount must be greater than zero.");
+
+        if (request.Type != "INCOME" &&
+            request.Type != "EXPENSE")
+        {
+            return BadRequest(
+                "Type must be INCOME or EXPENSE.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Currency) ||
+            request.Currency.Trim().Length != 3)
+        {
+            return BadRequest(
+                "A valid three-letter currency code is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Category))
+            return BadRequest("Category is required.");
+
+        DateTime transactionDate;
+
+        try
+        {
+            transactionDate = DateTimeOffset
+                .FromUnixTimeMilliseconds(request.TransactionDate)
+                .UtcDateTime;
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            return BadRequest(
+                "Transaction date is outside the supported range.");
+        }
+
+        var transaction = await _db.Transactions
+            .SingleOrDefaultAsync(
+                tx =>
+                    tx.TransactionId == id &&
+                    tx.UserId == CurrentUserId);
+
+        if (transaction is null)
+            return NotFound();
+
+        transaction.Type = request.Type;
+        transaction.Amount = request.Amount;
+        transaction.Currency =
+            request.Currency.Trim().ToUpperInvariant();
+        transaction.Category = request.Category.Trim();
+        transaction.Description =
+            string.IsNullOrWhiteSpace(request.Description)
+                ? null
+                : request.Description.Trim();
+        transaction.TransactionDate = transactionDate;
+
+        await _db.SaveChangesAsync();
+
+        await CheckBudgetThreshold();
+
+        return Ok(ToDto(transaction));
+    }
+
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        var transaction = await _db.Transactions
+            .SingleOrDefaultAsync(
+                tx =>
+                    tx.TransactionId == id &&
+                    tx.UserId == CurrentUserId);
+
+        if (transaction is null)
+            return NotFound();
+
+        _db.Transactions.Remove(transaction);
+        await _db.SaveChangesAsync();
+
+        return NoContent();
+    }
+
     [HttpGet("summary")]
     public async Task<ActionResult<TransactionSummaryDto>> Summary()
     {
