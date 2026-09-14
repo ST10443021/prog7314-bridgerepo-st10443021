@@ -42,14 +42,16 @@ DevLedger solves a problem identified in the Part 1 Research Report: existing to
 ## Architecture
 
 ```
-┌─────────────────────────────┐        HTTPS / JSON / JWT        ┌──────────────────────────────┐
-│   Android Client (Kotlin)   │ ────────────────────────────────▶│   DevLedger.Api (ASP.NET Core) │
-│  Jetpack Compose · MVVM     │◀──────────────────────────────── │   EF Core · SQLite / Azure SQL │
-│  Hilt DI · Retrofit         │                                   └──────────────────────────────┘
-│  RoomDB (offline cache)     │
-│  WorkManager (sync queue)   │        Firebase Cloud Messaging
-│  Firebase Messaging SDK     │◀────────────────────────────────  (server → device push)
-└─────────────────────────────┘
+┌─────────────────────────────┐        HTTPS / JSON / JWT        ┌───────────────────────────────┐
+│   Android Client (Kotlin)   │ ────────────────────────────────▶│  DevLedger.Api (ASP.NET Core)  │
+│  Jetpack Compose · MVVM     │◀──────────────────────────────── │  EF Core · PostgreSQL (Render) │
+│  Hilt DI · Retrofit         │                                   └──────────────┬────────────────┘
+│  RoomDB (offline cache)     │        Firebase Cloud Messaging                  │
+│  WorkManager (sync queue)   │◀──────────────────────────────── (Admin SDK)     │ Server-side verification
+│  Firebase Messaging SDK     │                                                  ▼
+│  Google Sign-In SDK         │────────────────────────▶  ┌──────────────────────────────────┐
+│  Custom Tabs (GitHub OAuth) │────────────────────────▶  │  Google OAuth 2.0 · GitHub OAuth 2.0 │
+└─────────────────────────────┘                            └──────────────────────────────────┘
 ```
 
 The Android app follows an **offline-first MVVM architecture**: every write (a new snippet, a new transaction) lands in Room immediately, flagged `PENDING`, so the UI never blocks on network. A `WorkManager`-scheduled `SyncWorker` replays pending rows to the REST API's `/api/sync/batch` endpoint whenever connectivity is available, exactly as specified in Section 5 of the Part 1 Planning and Design document (Google Developers, n.d.a; Google Developers, n.d.c).
