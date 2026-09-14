@@ -74,6 +74,7 @@ if (!string.IsNullOrEmpty(firebaseCredentialsPath) && File.Exists(firebaseCreden
     });
 }
 builder.Services.AddSingleton<NotificationService>();
+builder.Services.AddScoped<BudgetAlertService>();
 
 var app = builder.Build();
 

@@ -19,6 +19,8 @@ namespace DevLedger.Api.Controllers;
 public class SyncController : ControllerBase
 {
     private readonly DevLedgerDbContext _db;
+    private readonly BudgetAlertService _budgetAlertService;
+    private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
     private static readonly JsonSerializerOptions JsonOptions =
         new(JsonSerializerDefaults.Web);

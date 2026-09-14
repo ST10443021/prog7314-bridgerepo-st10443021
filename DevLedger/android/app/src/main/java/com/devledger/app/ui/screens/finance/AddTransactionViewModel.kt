@@ -1,5 +1,6 @@
 package com.devledger.app.ui.screens.finance
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.devledger.app.data.repository.AuthRepository
@@ -27,6 +28,7 @@ data class AddTransactionUiState(
 
 @HiltViewModel
 class AddTransactionViewModel @Inject constructor(
+    private val authRepository: AuthRepository,
     private val transactionRepository: TransactionRepository,
     private val authRepository: AuthRepository,
 ) : ViewModel() {
@@ -76,6 +78,28 @@ class AddTransactionViewModel @Inject constructor(
         _uiState.value = state.copy(isSaving = true, errorMessage = null)
 
         viewModelScope.launch {
+            val userId = authRepository.currentUser.first()?.userId ?: run {
+                Log.w(TAG, "save() called with no signed-in user cached — this should not happen post-auth")
+                _uiState.value = _uiState.value.copy(isSaving = false, errorMessage = "Not signed in.")
+                return@launch
+            }
+            Log.i(TAG, "Saving $${amountValue} ${state.type} transaction (${state.category}) for user $userId")
+            transactionRepository.addTransaction(
+                userId = userId,
+                type = state.type,
+                amount = amountValue,
+                currency = state.currency,
+                category = state.category,
+                description = state.description.ifBlank { null },
+                transactionDate = System.currentTimeMillis(),
+            )
+            _uiState.value = _uiState.value.copy(isSaving = false, saved = true)
+        }
+    }
+
+    private companion object {
+        const val TAG = "AddTransactionViewModel"
+    }
             try {
                 val user = authRepository.currentUser.first()
                 if (user == null) {

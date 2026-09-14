@@ -18,12 +18,12 @@ namespace DevLedger.Api.Controllers;
 public class TransactionsController : ControllerBase
 {
     private readonly DevLedgerDbContext _db;
-    private readonly NotificationService _notificationService;
+    private readonly BudgetAlertService _budgetAlertService;
 
-    public TransactionsController(DevLedgerDbContext db, NotificationService notificationService)
+    public TransactionsController(DevLedgerDbContext db, BudgetAlertService budgetAlertService)
     {
         _db = db;
-        _notificationService = notificationService;
+        _budgetAlertService = budgetAlertService;
     }
 
     private Guid CurrentUserId => Guid.Parse(User.FindFirst("sub")?.Value
@@ -59,7 +59,7 @@ public class TransactionsController : ControllerBase
         _db.Transactions.Add(tx);
         await _db.SaveChangesAsync();
 
-        await CheckBudgetThreshold();
+        await _budgetAlertService.CheckAndNotifyAsync(CurrentUserId);
 
         return CreatedAtAction(nameof(GetAll), ToDto(tx));
     }
@@ -156,37 +156,6 @@ public class TransactionsController : ControllerBase
         var expenses = transactions.Where(t => t.Type == "EXPENSE").Sum(t => t.Amount);
         var user = await _db.Users.FindAsync(CurrentUserId);
         return Ok(new TransactionSummaryDto(income, expenses, income - expenses, user?.BaseCurrency ?? "ZAR"));
-    }
-
-    /// <summary>Server-side budget check backing the "Push Notifications" core
-    /// requirement, sent via the Firebase Admin SDK (Google, n.d.a) to every device
-    /// the user has registered through /api/notifications/register.</summary>
-    private async Task CheckBudgetThreshold()
-    {
-        var user = await _db.Users.FindAsync(CurrentUserId);
-        if (user?.MonthlyBudget is null || user.MonthlyBudget <= 0) return;
-
-        var expenses = await _db.Transactions
-            .Where(t => t.UserId == CurrentUserId && t.Type == "EXPENSE")
-            .SumAsync(t => t.Amount);
-
-        if (expenses >= user.MonthlyBudget * 0.8m)
-        {
-            var tokens = await _db.NotificationTokens
-                .Where(n => n.UserId == CurrentUserId)
-                .Select(n => n.FcmToken)
-                .ToListAsync();
-
-            if (tokens.Count > 0)
-            {
-                var percentage = Math.Round((double)(expenses / user.MonthlyBudget.Value) * 100);
-                await _notificationService.SendToTokensAsync(
-                    tokens,
-                    title: "Budget alert",
-                    body: $"You've used {percentage}% of your {user.BaseCurrency} {user.MonthlyBudget:N0} monthly budget.",
-                    type: "BUDGET_ALERT");
-            }
-        }
     }
 
     private static TransactionDto ToDto(Transaction t) => new(
