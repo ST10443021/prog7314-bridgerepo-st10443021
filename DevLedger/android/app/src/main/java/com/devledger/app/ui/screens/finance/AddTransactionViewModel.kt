@@ -32,12 +32,15 @@ data class AddTransactionUiState(
 class AddTransactionViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val transactionRepository: TransactionRepository,
+    private val authRepository: AuthRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddTransactionUiState())
     val uiState: StateFlow<AddTransactionUiState> = _uiState.asStateFlow()
 
-    private fun edit(transform: (AddTransactionUiState) -> AddTransactionUiState) {
+private fun edit(
+        transform: (AddTransactionUiState) -> AddTransactionUiState,
+    ) {
         val state = _uiState.value
         if (state.isSaving || state.saved) return
         _uiState.value = transform(state).copy(errorMessage = null)
@@ -57,10 +60,14 @@ class AddTransactionViewModel @Inject constructor(
         val currency = state.currency.trim().uppercase(Locale.ROOT)
 
         val error = when {
-            state.type !in setOf("INCOME", "EXPENSE") -> "Choose income or expense."
-            amount == null || !amount.isFinite() || amount <= 0.0 -> "Enter an amount greater than zero."
-            !currency.matches(Regex("[A-Z]{3}")) -> "Choose a valid currency."
-            state.category.isBlank() -> "Enter a category."
+            state.type !in setOf("INCOME", "EXPENSE") ->
+                "Choose income or expense."
+            amount == null || !amount.isFinite() || amount <= 0.0 ->
+                "Enter an amount greater than zero."
+            !currency.matches(Regex("[A-Z]{3}")) ->
+                "Choose a valid currency."
+            state.category.isBlank() ->
+                "Enter a category."
             else -> null
         }
 
@@ -107,5 +114,36 @@ class AddTransactionViewModel @Inject constructor(
 
     private companion object {
         const val TAG = "AddTransactionViewModel"
+    }
+            try {
+                val user = authRepository.currentUser.first()
+                if (user == null) {
+                    _uiState.value = _uiState.value.copy(
+                        errorMessage = "Please sign in before saving a transaction.",
+                    )
+                    return@launch
+                }
+
+                transactionRepository.addTransaction(
+                    userId = user.userId,
+                    type = state.type,
+                    amount = validAmount,
+                    currency = currency,
+                    category = state.category.trim(),
+                    description = state.description.trim().ifBlank { null },
+                    transactionDate = System.currentTimeMillis(),
+                )
+
+                _uiState.value = _uiState.value.copy(saved = true)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    errorMessage = "Could not save the transaction. Please try again.",
+                )
+            } finally {
+                _uiState.value = _uiState.value.copy(isSaving = false)
+            }
+        }
     }
 }

@@ -49,6 +49,17 @@ interface DevLedgerApiService {
     @POST("api/transactions")
     suspend fun createTransaction(@Body request: CreateTransactionRequest): Response<TransactionDto>
 
+    @PUT("api/transactions/{id}")
+    suspend fun updateTransaction(
+        @Path("id") id: String,
+        @Body request: CreateTransactionRequest,
+    ): Response<TransactionDto>
+
+    @DELETE("api/transactions/{id}")
+    suspend fun deleteTransaction(
+        @Path("id") id: String,
+    ): Response<Unit>
+
     @GET("api/transactions/summary")
     suspend fun getTransactionSummary(): Response<TransactionSummaryDto>
 

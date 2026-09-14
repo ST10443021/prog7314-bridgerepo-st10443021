@@ -3,7 +3,6 @@ using System.Text.Json;
 using DevLedger.Api.Data;
 using DevLedger.Api.DTOs;
 using DevLedger.Api.Models;
-using DevLedger.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -28,22 +27,23 @@ public class SyncController : ControllerBase
     private readonly BudgetAlertService _budgetAlertService;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
-    public SyncController(DevLedgerDbContext db, BudgetAlertService budgetAlertService)
-    {
-        _db = db;
-        _budgetAlertService = budgetAlertService;
-    }
+    private static readonly JsonSerializerOptions JsonOptions =
+        new(JsonSerializerDefaults.Web);
 
+public SyncController(DevLedgerDbContext db, IBudgetAlertService budgetAlertService) => (_db, _budgetAlertService) = (db, budgetAlertService);
     [HttpPost("batch")]
     public async Task<ActionResult<SyncBatchResponse>> Batch(
         [FromBody] SyncBatchRequest request,
         CancellationToken cancellationToken)
     {
-        var subject = User.FindFirst("sub")?.Value ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+var subject = User.FindFirst("sub")?.Value
+            ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+
         if (!Guid.TryParse(subject, out var userId))
             return Unauthorized();
 
-        if (!await _db.Users.AnyAsync(user => user.UserId == userId, cancellationToken))
+        if (!await _db.Users.AnyAsync(
+                user => user.UserId == userId, cancellationToken))
             return Unauthorized();
 
         if (request.Operations is null)
@@ -147,23 +147,6 @@ public class SyncController : ControllerBase
         }
 
         var applied = new List<string>();
-
-        // Pass 2: apply snippets — last-write-wins; a conflict rolls back the whole batch.
-        foreach (var payload in snippetPayloads)
-        {
-            var snippet = await _db.Snippets.SingleOrDefaultAsync(item => item.SnippetId == payload.SnippetId, cancellationToken);
-            if (snippet is not null && snippet.UserId != userId)
-                return Forbid();
-
-            if (snippet is not null)
-            {
-                var serverTimestamp = new DateTimeOffset(snippet.UpdatedAt).ToUnixTimeMilliseconds();
-                if (serverTimestamp > payload.UpdatedAt || (serverTimestamp == payload.UpdatedAt && !HasSameContent(snippet, payload)))
-                {
-                    return Conflict(new SyncBatchResponse(
-                        Applied: new List<string>(),
-                        Conflicts: new List<string> { payload.SnippetId.ToString() }));
-                }
             }
             else
             {

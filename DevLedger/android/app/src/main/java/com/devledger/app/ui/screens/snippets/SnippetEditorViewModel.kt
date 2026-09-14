@@ -43,7 +43,10 @@ class SnippetEditorViewModel @Inject constructor(
     private val initialId = savedStateHandle.get<String>("snippetId")
 
     private val _uiState = MutableStateFlow(
-        SnippetEditorUiState(snippetId = initialId, isLoading = initialId != null),
+SnippetEditorUiState(
+            snippetId = initialId,
+            isLoading = initialId != null,
+        ),
     )
     val uiState: StateFlow<SnippetEditorUiState> = _uiState.asStateFlow()
 
@@ -53,7 +56,7 @@ class SnippetEditorViewModel @Inject constructor(
         if (initialId != null) {
             viewModelScope.launch {
                 try {
-                    check(authRepository.isLoggedIn()) { "Sign in before opening a snippet." }
+check(authRepository.isLoggedIn()) { "Sign in before opening a snippet." }
                     val user = authRepository.currentUser.first() ?: error("Your account could not be loaded. Sign in again.")
                     val snippet = snippetRepository.getById(initialId) ?: error("This snippet could not be found.")
                     check(snippet.userId == user.userId) { "This snippet does not belong to your account." }
