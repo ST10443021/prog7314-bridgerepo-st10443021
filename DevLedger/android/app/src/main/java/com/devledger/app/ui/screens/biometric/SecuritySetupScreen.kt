@@ -11,10 +11,10 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,7 +34,6 @@ import androidx.lifecycle.viewModelScope
 import com.devledger.app.data.local.PinStorage
 import com.devledger.app.data.repository.AuthRepository
 import com.devledger.app.ui.components.DevLedgerPrimaryButton
-import com.devledger.app.ui.components.DevLedgerSecondaryButton
 import com.devledger.app.ui.components.DevLedgerTextField
 import com.devledger.app.ui.theme.DevLedgerColors
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -109,8 +108,8 @@ fun SecuritySetupScreen(
         val helper = BiometricAuthHelper(activity)
         if (helper.canAuthenticate()) {
             helper.authenticate(
-                title = "Register Fingerprint",
-                subtitle = "Touch the sensor to link your device biometric to this account",
+                title = "Link Fingerprint",
+                subtitle = "Touch the sensor to verify and link your device biometric to this DevLedger account",
                 onSuccess = {
                     viewModel.isFingerprintVerified = true
                     viewModel.errorText = null
@@ -131,7 +130,15 @@ fun SecuritySetupScreen(
             containerColor = DevLedgerColors.SurfaceCard,
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Logout, contentDescription = null, tint = DevLedgerColors.AccentBlue)
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(DevLedgerColors.AccentBlue.copy(alpha = 0.1f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, tint = DevLedgerColors.AccentBlue, modifier = Modifier.size(18.dp))
+                    }
                     Spacer(modifier = Modifier.width(12.dp))
                     Text("Logout", color = Color.White, fontWeight = FontWeight.Bold)
                 }
@@ -183,6 +190,13 @@ fun SecuritySetupScreen(
                 text = "Security Configuration",
                 color = DevLedgerColors.AccentBlue,
                 fontSize = 14.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            Text(
+                text = "Registration Step",
+                color = DevLedgerColors.AccentBlue.copy(alpha = 0.7f),
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Bold
             )
         }
@@ -329,7 +343,11 @@ fun SecuritySetupScreen(
             ),
             border = BorderStroke(1.dp, DevLedgerColors.ErrorRed.copy(alpha = 0.5f))
         ) {
-            Text("Logout & Cancel Setup", fontWeight = FontWeight.Bold)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Logout & Cancel Setup", fontWeight = FontWeight.Bold)
+            }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
