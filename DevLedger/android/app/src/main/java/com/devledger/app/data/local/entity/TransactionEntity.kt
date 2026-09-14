@@ -3,7 +3,7 @@ package com.devledger.app.data.local.entity
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-/** Income/expense record — mirrors the `Transaction` schema from Part 1's data model. */
+/** Income/expense record — mirrors the Transaction schema from Part 1's data model. */
 @Entity(tableName = "transactions")
 data class TransactionEntity(
     @PrimaryKey val transactionId: String,
