@@ -125,7 +125,7 @@ public class TransactionsController : ControllerBase
 
         await _db.SaveChangesAsync();
 
-        await CheckBudgetThreshold();
+        await _budgetAlertService.CheckAndNotifyAsync(CurrentUserId);
 
         return Ok(ToDto(transaction));
     }
