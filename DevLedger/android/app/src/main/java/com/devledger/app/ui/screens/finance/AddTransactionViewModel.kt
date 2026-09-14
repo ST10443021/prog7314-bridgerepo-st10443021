@@ -32,13 +32,12 @@ data class AddTransactionUiState(
 class AddTransactionViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val transactionRepository: TransactionRepository,
-    private val authRepository: AuthRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddTransactionUiState())
     val uiState: StateFlow<AddTransactionUiState> = _uiState.asStateFlow()
 
-private fun edit(
+    private fun edit(
         transform: (AddTransactionUiState) -> AddTransactionUiState,
     ) {
         val state = _uiState.value
@@ -114,36 +113,5 @@ private fun edit(
 
     private companion object {
         const val TAG = "AddTransactionViewModel"
-    }
-            try {
-                val user = authRepository.currentUser.first()
-                if (user == null) {
-                    _uiState.value = _uiState.value.copy(
-                        errorMessage = "Please sign in before saving a transaction.",
-                    )
-                    return@launch
-                }
-
-                transactionRepository.addTransaction(
-                    userId = user.userId,
-                    type = state.type,
-                    amount = validAmount,
-                    currency = currency,
-                    category = state.category.trim(),
-                    description = state.description.trim().ifBlank { null },
-                    transactionDate = System.currentTimeMillis(),
-                )
-
-                _uiState.value = _uiState.value.copy(saved = true)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    errorMessage = "Could not save the transaction. Please try again.",
-                )
-            } finally {
-                _uiState.value = _uiState.value.copy(isSaving = false)
-            }
-        }
     }
 }

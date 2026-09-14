@@ -3,6 +3,7 @@ using System.Text.Json;
 using DevLedger.Api.Data;
 using DevLedger.Api.DTOs;
 using DevLedger.Api.Models;
+using DevLedger.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -11,12 +12,7 @@ namespace DevLedger.Api.Controllers;
 
 /// <summary>
 /// Persists queued snippet and transaction upserts for the authenticated user —
-/// "/api/sync/batch" in the Part 1 endpoint specification. Every payload in a batch is
-/// validated up front; if any one is invalid, the whole batch is rejected before any
-/// database change is made, and a snippet conflict (server has a newer edit) rolls back
-/// the entire batch rather than partially applying it. Transactions additionally
-/// re-trigger the budget-alert check (Google Developers, n.d.a), so an over-budget
-/// transaction logged offline still fires a push once it syncs.
+/// "/api/sync/batch" in the Part 1 endpoint specification.
 /// </summary>
 [ApiController]
 [Route("api/sync")]
@@ -27,16 +23,15 @@ public class SyncController : ControllerBase
     private readonly BudgetAlertService _budgetAlertService;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
-    private static readonly JsonSerializerOptions JsonOptions =
-        new(JsonSerializerDefaults.Web);
+    public SyncController(DevLedgerDbContext db, BudgetAlertService budgetAlertService) =>
+        (_db, _budgetAlertService) = (db, budgetAlertService);
 
-public SyncController(DevLedgerDbContext db, IBudgetAlertService budgetAlertService) => (_db, _budgetAlertService) = (db, budgetAlertService);
     [HttpPost("batch")]
     public async Task<ActionResult<SyncBatchResponse>> Batch(
         [FromBody] SyncBatchRequest request,
         CancellationToken cancellationToken)
     {
-var subject = User.FindFirst("sub")?.Value
+        var subject = User.FindFirst("sub")?.Value
             ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
 
         if (!Guid.TryParse(subject, out var userId))
@@ -65,8 +60,7 @@ var subject = User.FindFirst("sub")?.Value
         var seenSnippetIds = new HashSet<Guid>();
         var seenTransactionIds = new HashSet<Guid>();
 
-        // Pass 1: validate every payload before touching the database, so a single
-        // malformed item can't leave the batch half-applied.
+        // Pass 1: validate every payload before touching the database
         foreach (var operation in request.Operations)
         {
             if (string.IsNullOrWhiteSpace(operation.Payload))
@@ -147,6 +141,20 @@ var subject = User.FindFirst("sub")?.Value
         }
 
         var applied = new List<string>();
+        var conflicts = new List<string>();
+
+        // Pass 2: apply snippets (Last-Write-Wins based on client timestamp)
+        foreach (var payload in snippetPayloads)
+        {
+            var snippet = await _db.Snippets.FirstOrDefaultAsync(s => s.SnippetId == payload.SnippetId, cancellationToken);
+            if (snippet != null)
+            {
+                var payloadUpdatedAtUtc = DateTimeOffset.FromUnixTimeMilliseconds(payload.UpdatedAt).UtcDateTime;
+                if (snippet.UpdatedAt > payloadUpdatedAtUtc && !HasSameContent(snippet, payload))
+                {
+                    conflicts.Add(payload.SnippetId.ToString());
+                    continue;
+                }
             }
             else
             {
@@ -172,8 +180,12 @@ var subject = User.FindFirst("sub")?.Value
             applied.Add(payload.SnippetId.ToString());
         }
 
-        // Pass 3: apply transactions — insert-only (no edit endpoint exists); an ID that
-        // already exists is treated as already-synced, not a conflict.
+        if (conflicts.Count > 0)
+        {
+            return Ok(new SyncBatchResponse(Applied: new List<string>(), Conflicts: conflicts));
+        }
+
+        // Pass 3: apply transactions
         foreach (var payload in transactionPayloads)
         {
             var alreadyExists = await _db.Transactions.AnyAsync(t => t.TransactionId == payload.TransactionId, cancellationToken);
