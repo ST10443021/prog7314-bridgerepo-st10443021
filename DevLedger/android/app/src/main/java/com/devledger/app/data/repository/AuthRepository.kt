@@ -44,7 +44,7 @@ class AuthRepository @Inject constructor(
                 fullName = body.fullName,
                 ssoProvider = provider,
             )
-            userDao.upsert(user)
+            userDao.replaceCurrentUser(user)
             deviceRegistrar.registerCurrentToken()
             user
         }
@@ -56,7 +56,7 @@ class AuthRepository @Inject constructor(
             val body = response.body() ?: error("Empty auth response")
             tokenManager.saveTokens(body.accessToken, body.refreshToken)
             val user = UserEntity(userId = body.userId, email = body.email, fullName = body.fullName, ssoProvider = null)
-            userDao.upsert(user)
+            userDao.replaceCurrentUser(user)
             deviceRegistrar.registerCurrentToken()
             user
         }
@@ -68,7 +68,7 @@ class AuthRepository @Inject constructor(
             val body = response.body() ?: error("Empty auth response")
             tokenManager.saveTokens(body.accessToken, body.refreshToken)
             val user = UserEntity(userId = body.userId, email = body.email, fullName = body.fullName, ssoProvider = null)
-            userDao.upsert(user)
+            userDao.replaceCurrentUser(user)
             deviceRegistrar.registerCurrentToken()
             user
         }

@@ -90,7 +90,10 @@ fun SettingsScreen(
             )
             }
             Spacer(modifier = Modifier.height(8.dp))
-            TextButton(onClick = { SyncScheduler.syncNow(context) }) {
+            TextButton(onClick = { SyncScheduler.syncNow(
+                context,
+                wifiOnly = state.appliedWifiOnlySync ?: true,
+            ) }) {
                 Text(stringResource(R.string.settings_sync_now), color = DevLedgerColors.AccentBlue)
             }
         }
