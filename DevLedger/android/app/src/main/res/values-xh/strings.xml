@@ -36,6 +36,9 @@
     <string name="dashboard_quick_actions">Izenzo Ezikhawulezileyo</string>
     <string name="dashboard_recent_activity">Umsebenzi Wamva Nje</string>
     <string name="dashboard_view_all">Jonga Konke</string>
+    <string name="dashboard_financial_overview">Ushwankathelo lwezemali</string>
+    <string name="dashboard_this_month">Kule nyanga</string>
+    <string name="dashboard_no_recent_activity">Akukho msebenzi wakutshanje okwangoku.</string>
 
     <string name="nav_dashboard">Ideshbhodi</string>
     <string name="nav_snippets">Iziqwenga</string>

@@ -39,6 +39,9 @@
     <string name="dashboard_quick_actions">Quick Actions</string>
     <string name="dashboard_recent_activity">Recent Activity</string>
     <string name="dashboard_view_all">View All</string>
+    <string name="dashboard_financial_overview">Financial Overview</string>
+    <string name="dashboard_this_month">This Month</string>
+    <string name="dashboard_no_recent_activity">No recent activity yet.</string>
 
     <!-- Bottom nav -->
     <string name="nav_dashboard">Dashboard</string>

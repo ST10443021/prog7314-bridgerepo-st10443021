@@ -60,8 +60,18 @@ fun SettingsScreen(
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
     ) {
-        Text(stringResource(R.string.settings_title), color = DevLedgerColors.TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-        Text(stringResource(R.string.settings_subtitle), color = DevLedgerColors.TextMuted, fontSize = 12.sp, modifier = Modifier.padding(bottom = 20.dp))
+        Text(
+            stringResource(R.string.settings_title),
+            color = DevLedgerColors.TextPrimary,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            stringResource(R.string.settings_subtitle),
+            color = DevLedgerColors.TextMuted,
+            fontSize = 12.sp,
+            modifier = Modifier.padding(bottom = 20.dp)
+        )
 
         SectionLabel(stringResource(R.string.settings_language))
         DevLedgerCard(modifier = Modifier.padding(bottom = 16.dp)) {
@@ -76,25 +86,31 @@ fun SettingsScreen(
             }
         }
 
-        SectionLabel(stringResource(R.string.settings_security))
-        DevLedgerCard(modifier = Modifier.padding(bottom = 16.dp)) {
-            ToggleRow(stringResource(R.string.settings_biometric_login), state.biometricEnabled, viewModel::setBiometricEnabled)
-        }
-
         SectionLabel(stringResource(R.string.settings_sync))
-        DevLedgerCard(modifier = Modifier.padding(bottom = 16.dp)) {
+
+        DevLedgerCard(
+            modifier = Modifier.padding(bottom = 16.dp),
+        ) {
             ToggleRow(
-                stringResource(R.string.settings_wifi_only),
-                state.wifiOnlySync,
-                viewModel::setWifiOnlySync,
+                label = stringResource(R.string.settings_wifi_only),
+                checked = state.wifiOnlySync,
+                onCheckedChange = viewModel::setWifiOnlySync,
             )
-            }
+
             Spacer(modifier = Modifier.height(8.dp))
-            TextButton(onClick = { SyncScheduler.syncNow(
-                context,
-                wifiOnly = state.appliedWifiOnlySync ?: true,
-            ) }) {
-                Text(stringResource(R.string.settings_sync_now), color = DevLedgerColors.AccentBlue)
+
+            TextButton(
+                onClick = {
+                    SyncScheduler.syncNow(
+                        context = context,
+                        wifiOnly = state.appliedWifiOnlySync ?: true,
+                    )
+                },
+            ) {
+                Text(
+                    text = stringResource(R.string.settings_sync_now),
+                    color = DevLedgerColors.AccentBlue,
+                )
             }
         }
 
@@ -160,7 +176,7 @@ fun SettingsScreen(
             Text(stringResource(R.string.settings_logout))
         }
     }
-
+}
 
 @Composable
 private fun SectionLabel(text: String) {
