@@ -149,9 +149,18 @@ fun DevLedgerNavHost(navController: NavHostController) {
         composable(DevLedgerDestinations.DASHBOARD) {
             MainScaffold(navController, BottomNavTab.DASHBOARD) {
                 DashboardScreen(
-                    onOpenSnippets = { navController.navigate(DevLedgerDestinations.SNIPPET_VAULT) },
-                    onOpenFinance = { navController.navigate(DevLedgerDestinations.FINANCE) },
-                    onOpenSettings = { navController.navigate(DevLedgerDestinations.SETTINGS) },
+                    onOpenSnippets = {
+                        navController.navigate(DevLedgerDestinations.SNIPPET_VAULT)
+                    },
+                    onOpenFinance = {
+                        navController.navigate(DevLedgerDestinations.FINANCE)
+                    },
+                    onOpenSettings = {
+                        navController.navigate(DevLedgerDestinations.SETTINGS)
+                    },
+                    onOpenNotifications = {
+                        navController.navigate(DevLedgerDestinations.NOTIFICATIONS)
+                    },
                 )
             }
         }

@@ -36,6 +36,9 @@
     <string name="dashboard_quick_actions">Vinnige Aksies</string>
     <string name="dashboard_recent_activity">Onlangse Aktiwiteit</string>
     <string name="dashboard_view_all">Bekyk Alles</string>
+    <string name="dashboard_financial_overview">Finansiële oorsig</string>
+    <string name="dashboard_this_month">Hierdie maand</string>
+    <string name="dashboard_no_recent_activity">Nog geen onlangse aktiwiteit nie.</string>
 
     <string name="nav_dashboard">Paneelbord</string>
     <string name="nav_snippets">Kodesnitte</string>
