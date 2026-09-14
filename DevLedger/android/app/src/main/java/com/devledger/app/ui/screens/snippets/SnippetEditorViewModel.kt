@@ -1,12 +1,13 @@
 package com.devledger.app.ui.screens.snippets
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.devledger.app.data.repository.AuthRepository
 import com.devledger.app.data.repository.SnippetRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import android.util.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,11 +25,14 @@ data class SnippetEditorUiState(
     val isSaving: Boolean = false,
     val errorMessage: String? = null,
     val saved: Boolean = false,
+    val isLoading: Boolean = false,
+    val folderId: String? = null,
 )
 
-/** Create/update flow for a single snippet — Screen "Snippet Editor Screen" in the
- *  design doc. Writes land in Room immediately (offline-first) and are queued for the
- *  next [com.devledger.app.sync.SyncWorker] run. */
+/**
+ * Loads and saves snippets belonging to the signed-in user.
+ * Saves to Room first; pending records require cloud synchronisation.
+ */
 @HiltViewModel
 class SnippetEditorViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
@@ -36,58 +40,103 @@ class SnippetEditorViewModel @Inject constructor(
     private val snippetRepository: SnippetRepository,
 ) : ViewModel() {
 
+    private val initialId = savedStateHandle.get<String>("snippetId")
+
     private val _uiState = MutableStateFlow(
-        SnippetEditorUiState(snippetId = savedStateHandle.get<String>("snippetId")),
+        SnippetEditorUiState(snippetId = initialId, isLoading = initialId != null),
     )
     val uiState: StateFlow<SnippetEditorUiState> = _uiState.asStateFlow()
 
+    private var loadFailed = false
+
     init {
-        val id = savedStateHandle.get<String>("snippetId")
-        if (id != null) {
+        if (initialId != null) {
             viewModelScope.launch {
-                snippetRepository.getById(id)?.let { snippet ->
+                try {
+                    check(authRepository.isLoggedIn()) { "Sign in before opening a snippet." }
+                    val user = authRepository.currentUser.first() ?: error("Your account could not be loaded. Sign in again.")
+                    val snippet = snippetRepository.getById(initialId) ?: error("This snippet could not be found.")
+                    check(snippet.userId == user.userId) { "This snippet does not belong to your account." }
+
+                    Log.i(TAG, "Loaded snippet $initialId for user ${user.userId}")
                     _uiState.value = _uiState.value.copy(
                         title = snippet.title,
                         content = snippet.content,
                         language = snippet.language,
                         description = snippet.description ?: "",
                         tags = snippet.tagsCsv,
+                        folderId = snippet.folderId,
+                        isLoading = false,
+                    )
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (error: Exception) {
+                    Log.e(TAG, "Failed to load snippet $initialId", error)
+                    loadFailed = true
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        errorMessage = error.message ?: "Could not load this snippet. Go back and retry.",
                     )
                 }
             }
         }
     }
 
-    fun onTitleChange(v: String) { _uiState.value = _uiState.value.copy(title = v, errorMessage = null) }
-    fun onContentChange(v: String) { _uiState.value = _uiState.value.copy(content = v, errorMessage = null) }
-    fun onLanguageChange(v: String) { _uiState.value = _uiState.value.copy(language = v) }
-    fun onDescriptionChange(v: String) { _uiState.value = _uiState.value.copy(description = v) }
-    fun onTagsChange(v: String) { _uiState.value = _uiState.value.copy(tags = v) }
+    private fun edit(change: (SnippetEditorUiState) -> SnippetEditorUiState) {
+        val state = _uiState.value
+        if (state.isLoading || state.isSaving || state.saved || loadFailed) return
+        _uiState.value = change(state).copy(errorMessage = null)
+    }
+
+    fun onTitleChange(v: String) = edit { it.copy(title = v) }
+    fun onContentChange(v: String) = edit { it.copy(content = v) }
+    fun onLanguageChange(v: String) = edit { it.copy(language = v) }
+    fun onDescriptionChange(v: String) = edit { it.copy(description = v) }
+    fun onTagsChange(v: String) = edit { it.copy(tags = v) }
 
     fun save() {
         val state = _uiState.value
-        if (state.title.isBlank() || state.content.isBlank()) {
-            _uiState.value = state.copy(errorMessage = "Title and code are required.")
+        if (state.isLoading || state.isSaving || state.saved || loadFailed) return
+
+        val validationError = when {
+            state.title.isBlank() -> "Enter a snippet title."
+            state.content.isBlank() -> "Enter some code or configuration content."
+            state.language.isBlank() -> "Select a language."
+            else -> null
+        }
+
+        if (validationError != null) {
+            _uiState.value = state.copy(errorMessage = validationError)
             return
         }
-        _uiState.value = state.copy(isSaving = true)
+
+        _uiState.value = state.copy(isSaving = true, errorMessage = null)
+
         viewModelScope.launch {
-            val userId = authRepository.currentUser.first()?.userId ?: run {
-                Log.w(TAG, "save() called with no signed-in user cached — this should not happen post-auth")
-                _uiState.value = _uiState.value.copy(isSaving = false, errorMessage = "Not signed in.")
-                return@launch
+            try {
+                check(authRepository.isLoggedIn()) { "Sign in before saving a snippet." }
+                val user = authRepository.currentUser.first() ?: error("Your account could not be loaded. Sign in again.")
+
+                Log.i(TAG, "Saving snippet '${state.title}' (id=${state.snippetId ?: "new"}) for user ${user.userId}")
+
+                val snippet = snippetRepository.createOrUpdate(
+                    userId = user.userId,
+                    id = state.snippetId,
+                    title = state.title,
+                    content = state.content,
+                    language = state.language,
+                    description = state.description.ifBlank { null },
+                    tags = state.tags.split(","),
+                    folderId = state.folderId,
+                )
+
+                _uiState.value = _uiState.value.copy(snippetId = snippet.snippetId, isSaving = false, saved = true)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                Log.e(TAG, "Failed to save snippet", error)
+                _uiState.value = _uiState.value.copy(isSaving = false, errorMessage = error.message ?: "Could not save the snippet. Please retry.")
             }
-            Log.i(TAG, "Saving snippet '${state.title}' (id=${state.snippetId ?: "new"}) for user $userId")
-            snippetRepository.createOrUpdate(
-                userId = userId,
-                id = state.snippetId,
-                title = state.title,
-                content = state.content,
-                language = state.language,
-                description = state.description.ifBlank { null },
-                tags = state.tags.split(",").map { it.trim() }.filter { it.isNotEmpty() },
-            )
-            _uiState.value = _uiState.value.copy(isSaving = false, saved = true)
         }
     }
 
