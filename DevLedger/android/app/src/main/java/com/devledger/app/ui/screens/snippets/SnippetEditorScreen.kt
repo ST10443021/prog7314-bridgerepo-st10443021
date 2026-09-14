@@ -4,6 +4,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -18,8 +21,9 @@ import com.devledger.app.ui.components.DevLedgerTextField
 import com.devledger.app.ui.components.DevLedgerTopBar
 import com.devledger.app.ui.theme.DevLedgerColors
 
-/** Create/edit a snippet — Screen 4 ("Snippet Editor & Tester") in the Part 1 design
- *  doc. Title and code are required; everything else is optional. */
+/**
+ * Creates or edits a snippet, with loading and save-error feedback.
+ */
 @Composable
 fun SnippetEditorScreen(
     onSaved: () -> Unit,
@@ -32,45 +36,76 @@ fun SnippetEditorScreen(
         if (state.saved) onSaved()
     }
 
-    Column(modifier = Modifier.fillMaxSize().background(DevLedgerColors.BgDeep)) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(DevLedgerColors.BgDeep),
+    ) {
         DevLedgerTopBar(
-            title = stringResource(if (state.snippetId == null) R.string.editor_title_new else R.string.editor_title_edit),
+            title = stringResource(
+                if (state.snippetId == null) {
+                    R.string.editor_title_new
+                } else {
+                    R.string.editor_title_edit
+                },
+            ),
             onBack = onBack,
         )
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp),
         ) {
+            if (state.isLoading) {
+                LinearProgressIndicator(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp),
+                )
+            }
+
+            state.errorMessage?.let { message ->
+                Text(
+                    text = message,
+                    color = DevLedgerColors.ErrorRed,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(bottom = 12.dp),
+                )
+            }
+
             DevLedgerTextField(
                 value = state.title,
                 onValueChange = viewModel::onTitleChange,
                 label = stringResource(R.string.editor_field_title),
                 modifier = Modifier.padding(bottom = 12.dp),
             )
+
             DevLedgerTextField(
                 value = state.language,
                 onValueChange = viewModel::onLanguageChange,
                 label = stringResource(R.string.editor_field_language),
                 modifier = Modifier.padding(bottom = 12.dp),
             )
+
             DevLedgerTextField(
                 value = state.tags,
                 onValueChange = viewModel::onTagsChange,
-                label = stringResource(R.string.editor_field_tags) + " (comma-separated)",
+                label = stringResource(R.string.editor_field_tags) +
+                        " (comma-separated)",
                 modifier = Modifier.padding(bottom = 12.dp),
             )
+
             DevLedgerTextField(
                 value = state.content,
                 onValueChange = viewModel::onContentChange,
                 label = stringResource(R.string.editor_field_code),
                 singleLine = false,
                 minLines = 8,
-                isError = state.errorMessage != null,
-                supportingText = state.errorMessage,
                 modifier = Modifier.padding(bottom = 12.dp),
             )
+
             DevLedgerTextField(
                 value = state.description,
                 onValueChange = viewModel::onDescriptionChange,
@@ -79,9 +114,11 @@ fun SnippetEditorScreen(
                 minLines = 2,
                 modifier = Modifier.padding(bottom = 20.dp),
             )
+
             DevLedgerPrimaryButton(
                 text = stringResource(R.string.editor_save),
                 onClick = viewModel::save,
+                enabled = !state.isLoading && !state.saved,
                 loading = state.isSaving,
             )
         }

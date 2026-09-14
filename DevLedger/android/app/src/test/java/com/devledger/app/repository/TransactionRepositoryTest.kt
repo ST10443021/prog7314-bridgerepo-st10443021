@@ -1,13 +1,21 @@
 package com.devledger.app.repository
 
+import android.content.Context
 import com.devledger.app.data.local.dao.TransactionDao
 import com.devledger.app.data.local.entity.SyncStatus
+import com.devledger.app.data.repository.SettingsRepository
 import com.devledger.app.data.repository.TransactionRepository
+import com.devledger.app.sync.SyncScheduler
 import com.google.common.truth.Truth.assertThat
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 
@@ -15,12 +23,40 @@ import org.junit.Test
 class TransactionRepositoryTest {
 
     private lateinit var dao: TransactionDao
+    private lateinit var settingsRepository: SettingsRepository
+    private lateinit var context: Context
     private lateinit var repository: TransactionRepository
 
     @Before
     fun setUp() {
         dao = mockk(relaxed = true)
-        repository = TransactionRepository(dao)
+        settingsRepository = mockk(relaxed = true)
+        context = mockk(relaxed = true)
+
+        every {
+            settingsRepository.wifiOnlySync
+        } returns flowOf(false)
+
+        mockkObject(SyncScheduler)
+
+        every {
+            SyncScheduler.schedulePeriodicSync(any(), any())
+        } returns Unit
+
+        every {
+            SyncScheduler.syncNow(any(), any())
+        } returns Unit
+
+        repository = TransactionRepository(
+            dao = dao,
+            settingsRepository = settingsRepository,
+            context = context,
+        )
+    }
+
+    @After
+    fun tearDown() {
+        unmockkObject(SyncScheduler)
     }
 
     @Test
@@ -38,7 +74,10 @@ class TransactionRepositoryTest {
         assertThat(tx.type).isEqualTo("EXPENSE")
         assertThat(tx.amount).isEqualTo(450.0)
         assertThat(tx.syncStatus).isEqualTo(SyncStatus.PENDING)
-        coVerify(exactly = 1) { dao.upsert(any()) }
+
+        coVerify(exactly = 1) {
+            dao.upsert(any())
+        }
     }
 
     @Test
@@ -52,13 +91,21 @@ class TransactionRepositoryTest {
             description = null,
             transactionDate = 1_700_000_000_000L,
         )
+
         assertThat(tx.type).isEqualTo("INCOME")
         assertThat(tx.amount).isGreaterThan(0.0)
+        assertThat(tx.syncStatus).isEqualTo(SyncStatus.PENDING)
     }
 
     @Test
     fun `markSynced updates the DAO sync status to SYNCED`() = runTest {
         repository.markSynced("tx-1")
-        coVerify(exactly = 1) { dao.updateSyncStatus("tx-1", SyncStatus.SYNCED) }
+
+        coVerify(exactly = 1) {
+            dao.updateSyncStatus(
+                "tx-1",
+                SyncStatus.SYNCED,
+            )
+        }
     }
 }

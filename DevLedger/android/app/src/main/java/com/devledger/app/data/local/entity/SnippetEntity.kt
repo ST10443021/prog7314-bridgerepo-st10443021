@@ -12,6 +12,7 @@ import kotlinx.serialization.Serializable
  * required here because SyncWorker encodes this entity directly to JSON for the
  * `/api/sync/batch` payload (JetBrains, n.d.).
  */
+
 @Serializable
 @Entity(tableName = "snippets")
 data class SnippetEntity(

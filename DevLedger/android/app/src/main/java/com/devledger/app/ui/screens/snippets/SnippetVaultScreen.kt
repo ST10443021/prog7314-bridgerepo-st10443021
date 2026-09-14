@@ -27,6 +27,8 @@ import com.devledger.app.data.local.entity.SnippetEntity
 import com.devledger.app.ui.components.DevLedgerCard
 import com.devledger.app.ui.components.DevLedgerTextField
 import com.devledger.app.ui.theme.DevLedgerColors
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.TextButton
 
 /** Snippet Vault list: search, favourite toggle and swipe-to-archive — Screen 3 in the
  *  Part 1 design doc. Backed live by Room so it works fully offline. */
@@ -41,6 +43,29 @@ fun SnippetVaultScreen(
         Text(stringResource(R.string.vault_title), color = DevLedgerColors.TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         Text(stringResource(R.string.vault_subtitle), color = DevLedgerColors.TextMuted, fontSize = 12.sp, modifier = Modifier.padding(bottom = 16.dp))
 
+        TextButton(
+            onClick = viewModel::refresh,
+            enabled = !state.isRefreshing,
+        ) {
+            Text(if (state.isRefreshing) "Refreshing..." else "Refresh")
+        }
+
+        if (state.isRefreshing) {
+            LinearProgressIndicator(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp),
+            )
+        }
+
+        state.errorMessage?.let { message ->
+            Text(
+                text = message,
+                color = DevLedgerColors.ErrorRed,
+                modifier = Modifier.padding(bottom = 12.dp),
+            )
+        }
+
         DevLedgerTextField(
             value = state.query,
             onValueChange = viewModel::onQueryChange,
@@ -48,7 +73,7 @@ fun SnippetVaultScreen(
             modifier = Modifier.padding(bottom = 16.dp),
         )
 
-        if (state.snippets.isEmpty()) {
+        if (state.snippets.isEmpty() && !state.isRefreshing) {
             Box(modifier = Modifier.fillMaxWidth().padding(top = 48.dp), contentAlignment = Alignment.Center) {
                 Text(stringResource(R.string.vault_empty), color = DevLedgerColors.TextMuted, fontSize = 13.sp)
             }
