@@ -12,6 +12,8 @@ import com.devledger.app.util.DevLedgerResult
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.devledger.app.data.remote.dto.UpdateUserProfileRequest
+import com.devledger.app.data.remote.dto.UserProfileDto
 
 /**
  * Handles SSO / email authentication against the DevLedger REST API and persists the
@@ -91,6 +93,92 @@ class AuthRepository @Inject constructor(
             deviceRegistrar.registerCurrentToken()
             user
         }
+
+    suspend fun refreshProfile(): DevLedgerResult<UserEntity> =
+        DevLedgerResult.safeCall {
+            val response = api.getProfile()
+
+            if (!response.isSuccessful) {
+                when (response.code()) {
+                    401 -> error(
+                        "Your session has expired. Please sign in again."
+                    )
+
+                    404 -> error("Your profile could not be found.")
+
+                    else -> error(
+                        "Profile request failed: HTTP ${response.code()}"
+                    )
+                }
+            }
+
+            val profile = response.body()
+                ?: error("The profile response was empty.")
+
+            val user = profile.toUserEntity()
+            userDao.replaceCurrentUser(user)
+
+            user
+        }
+
+    suspend fun updateProfile(
+        fullName: String,
+    ): DevLedgerResult<UserEntity> =
+        DevLedgerResult.safeCall {
+            val cleanedName = fullName.trim()
+
+            require(cleanedName.isNotBlank()) {
+                "Full name is required."
+            }
+
+            require(cleanedName.length <= 100) {
+                "Full name cannot exceed 100 characters."
+            }
+
+            val response = api.updateProfile(
+                UpdateUserProfileRequest(
+                    fullName = cleanedName,
+                )
+            )
+
+            if (!response.isSuccessful) {
+                when (response.code()) {
+                    400 -> error(
+                        "Please enter a valid full name."
+                    )
+
+                    401 -> error(
+                        "Your session has expired. Please sign in again."
+                    )
+
+                    404 -> error("Your profile could not be found.")
+
+                    else -> error(
+                        "Profile update failed: HTTP ${response.code()}"
+                    )
+                }
+            }
+
+            val profile = response.body()
+                ?: error("The profile response was empty.")
+
+            val user = profile.toUserEntity()
+            userDao.replaceCurrentUser(user)
+
+            user
+        }
+
+    private fun UserProfileDto.toUserEntity(): UserEntity {
+        return UserEntity(
+            userId = userId,
+            email = email.lowercase().trim(),
+            fullName = fullName,
+            ssoProvider = ssoProvider,
+            preferredLanguage = preferredLanguage,
+            biometricEnabled = biometricEnabled,
+            baseCurrency = baseCurrency,
+        )
+    }
 
     suspend fun signOut() {
         tokenManager.clear()
