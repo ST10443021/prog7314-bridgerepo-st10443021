@@ -22,6 +22,30 @@ namespace DevLedger.Api.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("DevLedger.Api.Models.Folder", b =>
+                {
+                    b.Property<Guid>("FolderId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("ParentFolderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("FolderId");
+
+                    b.ToTable("Folders");
+                });
+
             modelBuilder.Entity("DevLedger.Api.Models.NotificationToken", b =>
                 {
                     b.Property<Guid>("Id")
