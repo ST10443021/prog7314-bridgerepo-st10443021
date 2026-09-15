@@ -164,6 +164,16 @@ fun DevLedgerNavHost(navController: NavHostController) {
                     onOpenNotifications = {
                         navController.navigate(DevLedgerDestinations.NOTIFICATIONS)
                     },
+                    onCreateSnippet = {
+                        navController.navigate(
+                            DevLedgerDestinations.snippetEditorRoute()
+                        )
+                    },
+                    onAddTransaction = {
+                        navController.navigate(
+                            DevLedgerDestinations.ADD_TRANSACTION
+                        )
+                    },
                 )
             }
         }
@@ -196,6 +206,9 @@ fun DevLedgerNavHost(navController: NavHostController) {
         }
         composable(DevLedgerDestinations.SETTINGS) {
             SettingsScreen(
+                onBack = {
+                    navController.popBackStack()
+                },
                 onSignedOut = {
                     navController.navigate(DevLedgerDestinations.AUTH) {
                         popUpTo(0) { inclusive = true }
