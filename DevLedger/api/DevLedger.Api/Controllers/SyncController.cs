@@ -3,7 +3,6 @@ using System.Text.Json;
 using DevLedger.Api.Data;
 using DevLedger.Api.DTOs;
 using DevLedger.Api.Models;
-using DevLedger.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -11,8 +10,9 @@ using Microsoft.EntityFrameworkCore;
 namespace DevLedger.Api.Controllers;
 
 /// <summary>
-/// Persists queued snippet and transaction upserts for the authenticated user —
-/// "/api/sync/batch" in the Part 1 endpoint specification.
+/// Persists queued offline changes for the authenticated user.
+/// Currently supports snippet and financial-transaction upserts.
+/// Unsupported operations are rejected rather than falsely acknowledged.
 /// </summary>
 [ApiController]
 [Route("api/sync")]
@@ -20,11 +20,14 @@ namespace DevLedger.Api.Controllers;
 public class SyncController : ControllerBase
 {
     private readonly DevLedgerDbContext _db;
-    private readonly BudgetAlertService _budgetAlertService;
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
-    public SyncController(DevLedgerDbContext db, BudgetAlertService budgetAlertService) =>
-        (_db, _budgetAlertService) = (db, budgetAlertService);
+    private static readonly JsonSerializerOptions JsonOptions =
+        new(JsonSerializerDefaults.Web);
+
+    public SyncController(DevLedgerDbContext db)
+    {
+        _db = db;
+    }
 
     [HttpPost("batch")]
     public async Task<ActionResult<SyncBatchResponse>> Batch(
@@ -38,8 +41,11 @@ public class SyncController : ControllerBase
             return Unauthorized();
 
         if (!await _db.Users.AnyAsync(
-                user => user.UserId == userId, cancellationToken))
+                user => user.UserId == userId,
+                cancellationToken))
+        {
             return Unauthorized();
+        }
 
         if (request.Operations is null)
             return BadRequest("An operations list is required.");
@@ -47,178 +53,294 @@ public class SyncController : ControllerBase
         if (request.Operations.Count > 100)
             return BadRequest("Send at most 100 operations per batch.");
 
-        if (request.Operations.Any(operation =>
-                operation is null ||
-                operation.Action != "upsert" ||
-                (operation.Entity != "snippet" && operation.Entity != "transaction")))
-        {
-            return BadRequest("This endpoint supports snippet and transaction upserts only.");
-        }
+        var applied = new List<string>();
 
-        var snippetPayloads = new List<SnippetSyncPayload>();
-        var transactionPayloads = new List<TransactionSyncPayload>();
-        var seenSnippetIds = new HashSet<Guid>();
-        var seenTransactionIds = new HashSet<Guid>();
+        var seenOperations = new HashSet<string>(
+            StringComparer.OrdinalIgnoreCase);
 
-        // Pass 1: validate every payload before touching the database
         foreach (var operation in request.Operations)
         {
+            if (operation is null)
+                return BadRequest("A sync operation cannot be null.");
+
+            if (operation.Action != "upsert")
+            {
+                return BadRequest(
+                    "This endpoint currently supports upsert operations only.");
+            }
+
             if (string.IsNullOrWhiteSpace(operation.Payload))
-                return BadRequest("A payload is required for every operation.");
+                return BadRequest("A sync payload is required.");
 
-            if (operation.Entity == "snippet")
+            switch (operation.Entity)
             {
-                SnippetSyncPayload? payload;
-                try
+                case "snippet":
                 {
-                    payload = JsonSerializer.Deserialize<SnippetSyncPayload>(operation.Payload, JsonOptions);
-                }
-                catch (JsonException)
-                {
-                    return BadRequest("A snippet payload contains invalid JSON or values.");
+                    SnippetSyncPayload? payload;
+
+                    try
+                    {
+                        payload = JsonSerializer.Deserialize<SnippetSyncPayload>(
+                            operation.Payload,
+                            JsonOptions);
+                    }
+                    catch (JsonException)
+                    {
+                        return BadRequest(
+                            "A snippet payload contains invalid JSON or values.");
+                    }
+
+                    if (payload is null || payload.SnippetId == Guid.Empty)
+                        return BadRequest("A valid snippet ID is required.");
+
+                    if (payload.UserId != userId)
+                        return Forbid();
+
+                    var operationKey = $"snippet:{payload.SnippetId}";
+
+                    if (!seenOperations.Add(operationKey))
+                    {
+                        return BadRequest(
+                            "A batch cannot contain duplicate snippet IDs.");
+                    }
+
+                    if (string.IsNullOrWhiteSpace(payload.Title) ||
+                        string.IsNullOrWhiteSpace(payload.Content) ||
+                        string.IsNullOrWhiteSpace(payload.Language))
+                    {
+                        return BadRequest(
+                            "Each snippet requires a title, content and language.");
+                    }
+
+                    if (payload.UpdatedAt != operation.ClientTimestamp ||
+                        payload.CreatedAt < 0 ||
+                        payload.UpdatedAt < payload.CreatedAt)
+                    {
+                        return BadRequest(
+                            "The snippet timestamps are invalid.");
+                    }
+
+                    try
+                    {
+                        _ = DateTimeOffset.FromUnixTimeMilliseconds(
+                            payload.CreatedAt);
+
+                        _ = DateTimeOffset.FromUnixTimeMilliseconds(
+                            payload.UpdatedAt);
+                    }
+                    catch (ArgumentOutOfRangeException)
+                    {
+                        return BadRequest(
+                            "The snippet timestamps are outside the supported range.");
+                    }
+
+                    var snippet = await _db.Snippets.SingleOrDefaultAsync(
+                        item => item.SnippetId == payload.SnippetId,
+                        cancellationToken);
+
+                    if (snippet is not null &&
+                        snippet.UserId != userId)
+                    {
+                        return Forbid();
+                    }
+
+                    if (snippet is not null)
+                    {
+                        var serverTimestamp =
+                            new DateTimeOffset(snippet.UpdatedAt)
+                                .ToUnixTimeMilliseconds();
+
+                        if (serverTimestamp > payload.UpdatedAt ||
+                            (serverTimestamp == payload.UpdatedAt &&
+                             !HasSameSnippetContent(snippet, payload)))
+                        {
+                            return Conflict(
+                                new SyncBatchResponse(
+                                    Applied: new List<string>(),
+                                    Conflicts: new List<string>
+                                    {
+                                        payload.SnippetId.ToString()
+                                    }));
+                        }
+                    }
+                    else
+                    {
+                        snippet = new Snippet
+                        {
+                            SnippetId = payload.SnippetId,
+                            UserId = userId,
+                            CreatedAt = DateTimeOffset
+                                .FromUnixTimeMilliseconds(payload.CreatedAt)
+                                .UtcDateTime,
+                        };
+
+                        _db.Snippets.Add(snippet);
+                    }
+
+                    snippet.FolderId = payload.FolderId;
+                    snippet.Title = payload.Title!;
+                    snippet.Content = payload.Content!;
+                    snippet.Language = payload.Language!;
+                    snippet.Description = payload.Description;
+                    snippet.TagsCsv = payload.TagsCsv ?? string.Empty;
+                    snippet.IsFavourite = payload.IsFavourite;
+                    snippet.IsArchived = payload.IsArchived;
+                    snippet.UpdatedAt = DateTimeOffset
+                        .FromUnixTimeMilliseconds(payload.UpdatedAt)
+                        .UtcDateTime;
+
+                    applied.Add(payload.SnippetId.ToString());
+
+                    break;
                 }
 
-                if (payload is null || payload.SnippetId == Guid.Empty)
-                    return BadRequest("A valid snippet ID is required.");
-                if (payload.UserId != userId)
-                    return Forbid();
-                if (!seenSnippetIds.Add(payload.SnippetId))
-                    return BadRequest("A batch cannot contain duplicate snippet IDs.");
-                if (string.IsNullOrWhiteSpace(payload.Title) || string.IsNullOrWhiteSpace(payload.Content) || string.IsNullOrWhiteSpace(payload.Language))
-                    return BadRequest("Each snippet requires a title, content and language.");
-                if (payload.UpdatedAt != operation.ClientTimestamp || payload.CreatedAt < 0 || payload.UpdatedAt < payload.CreatedAt)
-                    return BadRequest("The snippet timestamps are invalid.");
+                case "transaction":
+                {
+                    TransactionSyncPayload? payload;
 
-                try
-                {
-                    _ = DateTimeOffset.FromUnixTimeMilliseconds(payload.CreatedAt);
-                    _ = DateTimeOffset.FromUnixTimeMilliseconds(payload.UpdatedAt);
-                }
-                catch (ArgumentOutOfRangeException)
-                {
-                    return BadRequest("The snippet timestamps are outside the supported range.");
+                    try
+                    {
+                        payload =
+                            JsonSerializer.Deserialize<TransactionSyncPayload>(
+                                operation.Payload,
+                                JsonOptions);
+                    }
+                    catch (JsonException)
+                    {
+                        return BadRequest(
+                            "A transaction payload contains invalid JSON or values.");
+                    }
+
+                    if (payload is null ||
+                        payload.TransactionId == Guid.Empty)
+                    {
+                        return BadRequest(
+                            "A valid transaction ID is required.");
+                    }
+
+                    if (payload.UserId != userId)
+                        return Forbid();
+
+                    var operationKey =
+                        $"transaction:{payload.TransactionId}";
+
+                    if (!seenOperations.Add(operationKey))
+                    {
+                        return BadRequest(
+                            "A batch cannot contain duplicate transaction IDs.");
+                    }
+
+                    if (payload.Type is not ("INCOME" or "EXPENSE"))
+                    {
+                        return BadRequest(
+                            "Transaction type must be INCOME or EXPENSE.");
+                    }
+
+                    if (payload.Amount <= 0)
+                    {
+                        return BadRequest(
+                            "Transaction amount must be greater than zero.");
+                    }
+
+                    if (string.IsNullOrWhiteSpace(payload.Currency) ||
+                        payload.Currency.Trim().Length != 3)
+                    {
+                        return BadRequest(
+                            "A valid three-letter currency code is required.");
+                    }
+
+                    if (string.IsNullOrWhiteSpace(payload.Category))
+                    {
+                        return BadRequest(
+                            "Transaction category is required.");
+                    }
+
+                    if (payload.CreatedAt != operation.ClientTimestamp)
+                    {
+                        return BadRequest(
+                            "The transaction client timestamp is invalid.");
+                    }
+
+                    DateTime createdAt;
+                    DateTime transactionDate;
+
+                    try
+                    {
+                        createdAt = DateTimeOffset
+                            .FromUnixTimeMilliseconds(payload.CreatedAt)
+                            .UtcDateTime;
+
+                        transactionDate = DateTimeOffset
+                            .FromUnixTimeMilliseconds(payload.TransactionDate)
+                            .UtcDateTime;
+                    }
+                    catch (ArgumentOutOfRangeException)
+                    {
+                        return BadRequest(
+                            "The transaction timestamps are outside the supported range.");
+                    }
+
+                    var transaction =
+                        await _db.Transactions.SingleOrDefaultAsync(
+                            item =>
+                                item.TransactionId ==
+                                payload.TransactionId,
+                            cancellationToken);
+
+                    if (transaction is not null &&
+                        transaction.UserId != userId)
+                    {
+                        return Forbid();
+                    }
+
+                    if (transaction is null)
+                    {
+                        transaction = new Transaction
+                        {
+                            TransactionId = payload.TransactionId,
+                            UserId = userId,
+                            CreatedAt = createdAt,
+                        };
+
+                        _db.Transactions.Add(transaction);
+                    }
+
+                    transaction.Type = payload.Type;
+                    transaction.Amount = payload.Amount;
+                    transaction.Currency =
+                        payload.Currency.Trim().ToUpperInvariant();
+                    transaction.Category = payload.Category.Trim();
+                    transaction.Description =
+                        string.IsNullOrWhiteSpace(payload.Description)
+                            ? null
+                            : payload.Description.Trim();
+                    transaction.TransactionDate = transactionDate;
+
+                    applied.Add(
+                        payload.TransactionId.ToString());
+
+                    break;
                 }
 
-                snippetPayloads.Add(payload);
-            }
-            else // "transaction"
-            {
-                TransactionSyncPayload? payload;
-                try
-                {
-                    payload = JsonSerializer.Deserialize<TransactionSyncPayload>(operation.Payload, JsonOptions);
-                }
-                catch (JsonException)
-                {
-                    return BadRequest("A transaction payload contains invalid JSON or values.");
-                }
-
-                if (payload is null || payload.TransactionId == Guid.Empty)
-                    return BadRequest("A valid transaction ID is required.");
-                if (payload.UserId != userId)
-                    return Forbid();
-                if (!seenTransactionIds.Add(payload.TransactionId))
-                    return BadRequest("A batch cannot contain duplicate transaction IDs.");
-                if (payload.Type != "INCOME" && payload.Type != "EXPENSE")
-                    return BadRequest("Each transaction requires type INCOME or EXPENSE.");
-                if (payload.Amount <= 0 || string.IsNullOrWhiteSpace(payload.Category) || string.IsNullOrWhiteSpace(payload.Currency))
-                    return BadRequest("Each transaction requires a positive amount, category and currency.");
-                if (payload.CreatedAt != operation.ClientTimestamp || payload.CreatedAt < 0 || payload.TransactionDate < 0)
-                    return BadRequest("The transaction timestamps are invalid.");
-
-                try
-                {
-                    _ = DateTimeOffset.FromUnixTimeMilliseconds(payload.CreatedAt);
-                    _ = DateTimeOffset.FromUnixTimeMilliseconds(payload.TransactionDate);
-                }
-                catch (ArgumentOutOfRangeException)
-                {
-                    return BadRequest("The transaction timestamps are outside the supported range.");
-                }
-
-                transactionPayloads.Add(payload);
+                default:
+                    return BadRequest(
+                        $"Unsupported sync entity '{operation.Entity}'.");
             }
         }
 
-        var applied = new List<string>();
-        var conflicts = new List<string>();
-
-        // Pass 2: apply snippets (Last-Write-Wins based on client timestamp)
-        foreach (var payload in snippetPayloads)
-        {
-            var snippet = await _db.Snippets.FirstOrDefaultAsync(s => s.SnippetId == payload.SnippetId, cancellationToken);
-            if (snippet != null)
-            {
-                var payloadUpdatedAtUtc = DateTimeOffset.FromUnixTimeMilliseconds(payload.UpdatedAt).UtcDateTime;
-                if (snippet.UpdatedAt > payloadUpdatedAtUtc && !HasSameContent(snippet, payload))
-                {
-                    conflicts.Add(payload.SnippetId.ToString());
-                    continue;
-                }
-            }
-            else
-            {
-                snippet = new Snippet
-                {
-                    SnippetId = payload.SnippetId,
-                    UserId = userId,
-                    CreatedAt = DateTimeOffset.FromUnixTimeMilliseconds(payload.CreatedAt).UtcDateTime,
-                };
-                _db.Snippets.Add(snippet);
-            }
-
-            snippet.FolderId = payload.FolderId;
-            snippet.Title = payload.Title!;
-            snippet.Content = payload.Content!;
-            snippet.Language = payload.Language!;
-            snippet.Description = payload.Description;
-            snippet.TagsCsv = payload.TagsCsv ?? string.Empty;
-            snippet.IsFavourite = payload.IsFavourite;
-            snippet.IsArchived = payload.IsArchived;
-            snippet.UpdatedAt = DateTimeOffset.FromUnixTimeMilliseconds(payload.UpdatedAt).UtcDateTime;
-
-            applied.Add(payload.SnippetId.ToString());
-        }
-
-        if (conflicts.Count > 0)
-        {
-            return Ok(new SyncBatchResponse(Applied: new List<string>(), Conflicts: conflicts));
-        }
-
-        // Pass 3: apply transactions
-        foreach (var payload in transactionPayloads)
-        {
-            var alreadyExists = await _db.Transactions.AnyAsync(t => t.TransactionId == payload.TransactionId, cancellationToken);
-            if (alreadyExists)
-            {
-                applied.Add(payload.TransactionId.ToString());
-                continue;
-            }
-
-            _db.Transactions.Add(new Transaction
-            {
-                TransactionId = payload.TransactionId,
-                UserId = userId,
-                Type = payload.Type,
-                Amount = payload.Amount,
-                Currency = payload.Currency,
-                Category = payload.Category,
-                Description = payload.Description,
-                TransactionDate = DateTimeOffset.FromUnixTimeMilliseconds(payload.TransactionDate).UtcDateTime,
-                CreatedAt = DateTimeOffset.FromUnixTimeMilliseconds(payload.CreatedAt).UtcDateTime,
-            });
-            applied.Add(payload.TransactionId.ToString());
-        }
-
+        // EF Core commits the complete batch atomically.
+        // IDs are acknowledged only after persistence succeeds.
         await _db.SaveChangesAsync(cancellationToken);
 
-        if (transactionPayloads.Count > 0)
-            await _budgetAlertService.CheckAndNotifyAsync(userId);
-
-        return Ok(new SyncBatchResponse(Applied: applied, Conflicts: new List<string>()));
+        return Ok(
+            new SyncBatchResponse(
+                Applied: applied,
+                Conflicts: new List<string>()));
     }
 
-    private static bool HasSameContent(Snippet snippet, SnippetSyncPayload payload) =>
+    private static bool HasSameSnippetContent(
+        Snippet snippet,
+        SnippetSyncPayload payload) =>
         snippet.FolderId == payload.FolderId &&
         snippet.Title == payload.Title &&
         snippet.Content == payload.Content &&
@@ -229,10 +351,27 @@ public class SyncController : ControllerBase
         snippet.IsArchived == payload.IsArchived;
 
     public sealed record SnippetSyncPayload(
-        Guid SnippetId, Guid UserId, Guid? FolderId, string? Title, string? Content, string? Language,
-        string? Description, string? TagsCsv, bool IsFavourite, bool IsArchived, long CreatedAt, long UpdatedAt);
+        Guid SnippetId,
+        Guid UserId,
+        Guid? FolderId,
+        string? Title,
+        string? Content,
+        string? Language,
+        string? Description,
+        string? TagsCsv,
+        bool IsFavourite,
+        bool IsArchived,
+        long CreatedAt,
+        long UpdatedAt);
 
     public sealed record TransactionSyncPayload(
-        Guid TransactionId, Guid UserId, string Type, decimal Amount, string Currency, string Category,
-        string? Description, long TransactionDate, long CreatedAt);
+        Guid TransactionId,
+        Guid UserId,
+        string Type,
+        decimal Amount,
+        string Currency,
+        string Category,
+        string? Description,
+        long TransactionDate,
+        long CreatedAt);
 }

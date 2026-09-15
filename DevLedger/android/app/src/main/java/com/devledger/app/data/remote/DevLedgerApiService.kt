@@ -31,6 +31,14 @@ interface DevLedgerApiService {
         @Body settings: UserSettingsDto
     ): Response<UserSettingsDto>
 
+    @GET("api/users/me")
+    suspend fun getProfile(): Response<UserProfileDto>
+
+    @PUT("api/users/me")
+    suspend fun updateProfile(
+        @Body request: UpdateUserProfileRequest,
+    ): Response<UserProfileDto>
+
     @GET("api/snippets")
     suspend fun getSnippets(): Response<List<SnippetDto>>
 
