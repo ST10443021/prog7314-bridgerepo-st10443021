@@ -58,8 +58,19 @@ class SyncWorker @AssistedInject constructor(
                 transactionRepository.getPendingSyncForUser(user.userId)
 
             if (pendingSnippets.isEmpty() && pendingTransactions.isEmpty()) {
-                return Result.success()
+                return success()
             }
+
+            val totalItems =
+                pendingSnippets.size + pendingTransactions.size
+
+            var processedItems = 0
+
+            publishProgress(
+                processed = processedItems,
+                total = totalItems,
+                currentEntity = "Preparing",
+            )
 
             var changedDuringUpload = false
 
@@ -119,6 +130,14 @@ class SyncWorker @AssistedInject constructor(
                         changedDuringUpload = true
                     }
                 }
+
+                processedItems += batch.size
+
+                publishProgress(
+                    processed = processedItems,
+                    total = totalItems,
+                    currentEntity = "Snippets",
+                )
             }
 
             // ---- Financial transactions ----------------------------------
@@ -189,6 +208,14 @@ class SyncWorker @AssistedInject constructor(
                         transaction.transactionId
                     )
                 }
+
+                processedItems += batch.size
+
+                publishProgress(
+                    processed = processedItems,
+                    total = totalItems,
+                    currentEntity = "Transactions",
+                )
             }
 
             // A snippet modified while its previous version was uploading must
@@ -196,7 +223,7 @@ class SyncWorker @AssistedInject constructor(
             if (changedDuringUpload) {
                 Result.retry()
             } else {
-                Result.success()
+                success()
             }
         } catch (cancelled: CancellationException) {
             throw cancelled
@@ -244,12 +271,39 @@ class SyncWorker @AssistedInject constructor(
         }
     }
 
+    private suspend fun publishProgress(
+        processed: Int,
+        total: Int,
+        currentEntity: String,
+    ) {
+        setProgress(
+            workDataOf(
+                KEY_PROCESSED_ITEMS to processed,
+                KEY_TOTAL_ITEMS to total,
+                KEY_CURRENT_ENTITY to currentEntity,
+            )
+        )
+    }
+
+    private fun success(): Result {
+        return Result.success(
+            workDataOf(
+                KEY_COMPLETED_AT to System.currentTimeMillis(),
+            )
+        )
+    }
+
     private fun failure(message: String): Result =
         Result.failure(
-            workDataOf("sync_error" to message)
-        )
+            workDataOf(KEY_SYNC_ERROR to message)        )
 
     companion object {
         const val WORK_NAME = "devledger_sync_work"
+
+        const val KEY_PROCESSED_ITEMS = "processed_items"
+        const val KEY_TOTAL_ITEMS = "total_items"
+        const val KEY_CURRENT_ENTITY = "current_entity"
+        const val KEY_COMPLETED_AT = "completed_at"
+        const val KEY_SYNC_ERROR = "sync_error"
     }
 }
