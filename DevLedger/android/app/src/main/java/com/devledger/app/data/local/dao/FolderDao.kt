@@ -8,9 +8,18 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface FolderDao {
-    @Query("SELECT * FROM folders ORDER BY name ASC")
-    fun observeAll(): Flow<List<FolderEntity>>
+    @Query("SELECT * FROM folders WHERE userId = :userId ORDER BY name ASC")
+    fun observeForUser(userId: String): Flow<List<FolderEntity>>
+
+    @Query("SELECT * FROM folders WHERE folderId = :id LIMIT 1")
+    suspend fun getById(id: String): FolderEntity?
 
     @Upsert
     suspend fun upsert(folder: FolderEntity)
+
+    @Query("DELETE FROM folders WHERE folderId = :id")
+    suspend fun delete(id: String)
+
+    @Query("DELETE FROM folders WHERE userId = :userId")
+    suspend fun clearForUser(userId: String)
 }

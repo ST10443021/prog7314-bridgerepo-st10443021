@@ -19,6 +19,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import com.devledger.app.data.remote.dto.SnippetSyncPayload
 import com.devledger.app.data.remote.dto.TransactionSyncPayload
 
 /**
@@ -73,7 +74,22 @@ class SyncWorker @AssistedInject constructor(
                     SyncOperation(
                         entity = "snippet",
                         action = "upsert",
-                        payload = json.encodeToString(snippet),
+                        payload = json.encodeToString(
+                            SnippetSyncPayload(
+                                snippetId = snippet.snippetId,
+                                userId = snippet.userId,
+                                folderId = snippet.folderId,
+                                title = snippet.title,
+                                content = snippet.content,
+                                language = snippet.language,
+                                description = snippet.description,
+                                tags = snippet.tagsCsv.split(",").map(String::trim).filter(String::isNotEmpty),
+                                isFavourite = snippet.isFavourite,
+                                isArchived = snippet.isArchived,
+                                createdAt = snippet.createdAt,
+                                updatedAt = snippet.updatedAt,
+                            )
+                        ),
                         clientTimestamp = snippet.updatedAt,
                     )
                 }

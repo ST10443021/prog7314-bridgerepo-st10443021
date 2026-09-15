@@ -3,6 +3,7 @@ package com.devledger.app.di
 import com.devledger.app.BuildConfig
 import com.devledger.app.data.remote.DevLedgerApiService
 import com.devledger.app.data.remote.auth.AuthInterceptor
+import com.devledger.app.data.remote.auth.TokenAuthenticator
 import com.devledger.app.data.remote.auth.TokenManager
 import dagger.Module
 import dagger.Provides
@@ -25,12 +26,16 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(tokenManager: TokenManager): OkHttpClient {
+    fun provideOkHttpClient(
+        tokenManager: TokenManager,
+        authenticator: TokenAuthenticator
+    ): OkHttpClient {
         val logging = HttpLoggingInterceptor().apply {
             level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY else HttpLoggingInterceptor.Level.NONE
         }
         return OkHttpClient.Builder()
             .addInterceptor(AuthInterceptor(tokenManager))
+            .authenticator(authenticator)
             .addInterceptor(logging)
             .connectTimeout(20, TimeUnit.SECONDS)
             .readTimeout(20, TimeUnit.SECONDS)

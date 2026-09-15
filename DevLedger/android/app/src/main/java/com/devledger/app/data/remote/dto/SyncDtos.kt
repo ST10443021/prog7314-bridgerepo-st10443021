@@ -11,6 +11,22 @@ data class SyncOperation(
 )
 
 @Serializable
+data class SnippetSyncPayload(
+    val snippetId: String,
+    val userId: String,
+    val folderId: String? = null,
+    val title: String,
+    val content: String,
+    val language: String,
+    val description: String? = null,
+    val tags: List<String> = emptyList(),
+    val isFavourite: Boolean = false,
+    val isArchived: Boolean = false,
+    val createdAt: Long,
+    val updatedAt: Long,
+)
+
+@Serializable
 data class TransactionSyncPayload(
     val transactionId: String,
     val userId: String,

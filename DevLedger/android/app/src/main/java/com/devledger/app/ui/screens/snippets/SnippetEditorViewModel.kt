@@ -4,14 +4,13 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.devledger.app.data.local.entity.FolderEntity
 import com.devledger.app.data.repository.AuthRepository
+import com.devledger.app.data.repository.FolderRepository
 import com.devledger.app.data.repository.SnippetRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -21,34 +20,32 @@ data class SnippetEditorUiState(
     val content: String = "",
     val language: String = "Kotlin",
     val description: String = "",
-    val tags: String = "",
+    val tags: List<String> = emptyList(),
+    val folderId: String? = null,
     val isSaving: Boolean = false,
     val errorMessage: String? = null,
     val saved: Boolean = false,
     val isLoading: Boolean = false,
-    val folderId: String? = null,
 )
 
-/**
- * Loads and saves snippets belonging to the signed-in user.
- * Saves to Room first; pending records require cloud synchronisation.
- */
+val SnippetLanguages = listOf("Kotlin", "Java", "Swift", "JavaScript", "TypeScript", "Python", "C#", "SQL", "JSON", "YAML", "Bash", "Other")
+
+/** Loads and saves snippets belonging to the signed-in user. Saves to Room first;
+ *  pending records require cloud synchronisation. */
 @HiltViewModel
 class SnippetEditorViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val authRepository: AuthRepository,
     private val snippetRepository: SnippetRepository,
+    private val folderRepository: FolderRepository,
 ) : ViewModel() {
 
     private val initialId = savedStateHandle.get<String>("snippetId")
-
-    private val _uiState = MutableStateFlow(
-SnippetEditorUiState(
-            snippetId = initialId,
-            isLoading = initialId != null,
-        ),
-    )
+    private val _uiState = MutableStateFlow(SnippetEditorUiState(snippetId = initialId, isLoading = initialId != null))
     val uiState: StateFlow<SnippetEditorUiState> = _uiState.asStateFlow()
+
+    val folders: StateFlow<List<FolderEntity>> = folderRepository.observeFolders()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private var loadFailed = false
 
@@ -56,7 +53,7 @@ SnippetEditorUiState(
         if (initialId != null) {
             viewModelScope.launch {
                 try {
-check(authRepository.isLoggedIn()) { "Sign in before opening a snippet." }
+                    check(authRepository.isLoggedIn()) { "Sign in before opening a snippet." }
                     val user = authRepository.currentUser.first() ?: error("Your account could not be loaded. Sign in again.")
                     val snippet = snippetRepository.getById(initialId) ?: error("This snippet could not be found.")
                     check(snippet.userId == user.userId) { "This snippet does not belong to your account." }
@@ -67,7 +64,7 @@ check(authRepository.isLoggedIn()) { "Sign in before opening a snippet." }
                         content = snippet.content,
                         language = snippet.language,
                         description = snippet.description ?: "",
-                        tags = snippet.tagsCsv,
+                        tags = snippet.tagsCsv.split(",").map(String::trim).filter(String::isNotEmpty),
                         folderId = snippet.folderId,
                         isLoading = false,
                     )
@@ -76,10 +73,7 @@ check(authRepository.isLoggedIn()) { "Sign in before opening a snippet." }
                 } catch (error: Exception) {
                     Log.e(TAG, "Failed to load snippet $initialId", error)
                     loadFailed = true
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        errorMessage = error.message ?: "Could not load this snippet. Go back and retry.",
-                    )
+                    _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = error.message ?: "Could not load this snippet. Go back and retry.")
                 }
             }
         }
@@ -95,7 +89,13 @@ check(authRepository.isLoggedIn()) { "Sign in before opening a snippet." }
     fun onContentChange(v: String) = edit { it.copy(content = v) }
     fun onLanguageChange(v: String) = edit { it.copy(language = v) }
     fun onDescriptionChange(v: String) = edit { it.copy(description = v) }
-    fun onTagsChange(v: String) = edit { it.copy(tags = v) }
+    fun onFolderChange(folderId: String?) = edit { it.copy(folderId = folderId) }
+
+    fun addTag(tag: String) = edit {
+        val trimmed = tag.trim()
+        if (trimmed.isEmpty() || it.tags.any { existing -> existing.equals(trimmed, ignoreCase = true) }) it else it.copy(tags = it.tags + trimmed)
+    }
+    fun removeTag(tag: String) = edit { it.copy(tags = it.tags - tag) }
 
     fun save() {
         val state = _uiState.value
@@ -107,11 +107,7 @@ check(authRepository.isLoggedIn()) { "Sign in before opening a snippet." }
             state.language.isBlank() -> "Select a language."
             else -> null
         }
-
-        if (validationError != null) {
-            _uiState.value = state.copy(errorMessage = validationError)
-            return
-        }
+        if (validationError != null) { _uiState.value = state.copy(errorMessage = validationError); return }
 
         _uiState.value = state.copy(isSaving = true, errorMessage = null)
 
@@ -123,16 +119,10 @@ check(authRepository.isLoggedIn()) { "Sign in before opening a snippet." }
                 Log.i(TAG, "Saving snippet '${state.title}' (id=${state.snippetId ?: "new"}) for user ${user.userId}")
 
                 val snippet = snippetRepository.createOrUpdate(
-                    userId = user.userId,
-                    id = state.snippetId,
-                    title = state.title,
-                    content = state.content,
-                    language = state.language,
-                    description = state.description.ifBlank { null },
-                    tags = state.tags.split(","),
-                    folderId = state.folderId,
+                    userId = user.userId, id = state.snippetId, title = state.title, content = state.content,
+                    language = state.language, description = state.description.ifBlank { null },
+                    tags = state.tags, folderId = state.folderId,
                 )
-
                 _uiState.value = _uiState.value.copy(snippetId = snippet.snippetId, isSaving = false, saved = true)
             } catch (cancelled: CancellationException) {
                 throw cancelled
@@ -143,7 +133,5 @@ check(authRepository.isLoggedIn()) { "Sign in before opening a snippet." }
         }
     }
 
-    private companion object {
-        const val TAG = "SnippetEditorViewModel"
-    }
+    private companion object { const val TAG = "SnippetEditorViewModel" }
 }

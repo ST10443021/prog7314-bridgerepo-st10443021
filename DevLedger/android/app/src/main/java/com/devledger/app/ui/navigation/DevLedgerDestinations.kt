@@ -10,6 +10,9 @@ object DevLedgerDestinations {
     const val SNIPPET_VAULT = "snippet_vault"
     const val SNIPPET_EDITOR = "snippet_editor?snippetId={snippetId}"
     const val SNIPPET_DETAIL = "snippet_detail/{snippetId}"
+    fun snippetDetailRoute(snippetId: String) = "snippet_detail/$snippetId"
+    const val FOLDERS_TAGS = "folders_tags"
+
     const val FINANCE = "finance"
     const val ADD_TRANSACTION = "add_transaction"
     const val NOTIFICATIONS = "notifications"
@@ -23,5 +26,4 @@ object DevLedgerDestinations {
     fun snippetEditorRoute(snippetId: String? = null) =
         if (snippetId == null) "snippet_editor" else "snippet_editor?snippetId=$snippetId"
 
-    fun snippetDetailRoute(snippetId: String) = "snippet_detail/$snippetId"
 }
