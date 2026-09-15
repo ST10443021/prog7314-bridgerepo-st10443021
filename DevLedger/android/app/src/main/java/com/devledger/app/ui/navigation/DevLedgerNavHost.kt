@@ -46,6 +46,8 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import androidx.lifecycle.viewModelScope
+import com.devledger.app.ui.screens.folders.FoldersTagsScreen
+import com.devledger.app.ui.screens.snippets.SnippetDetailScreen
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -180,10 +182,27 @@ fun DevLedgerNavHost(navController: NavHostController) {
         composable(DevLedgerDestinations.SNIPPET_VAULT) {
             MainScaffold(navController, BottomNavTab.SNIPPETS) {
                 SnippetVaultScreen(
-                    onOpenSnippet = { id -> navController.navigate(DevLedgerDestinations.snippetEditorRoute(id)) },
+                    onOpenSnippet = { id -> navController.navigate(DevLedgerDestinations.snippetDetailRoute(id)) },
+                    onOpenFoldersAndTags = { navController.navigate(DevLedgerDestinations.FOLDERS_TAGS) },
+                    onOpenNotifications = { navController.navigate(DevLedgerDestinations.NOTIFICATIONS) },
+                    onOpenDrawer = { /* Drawer not implemented */ }
                 )
             }
         }
+        composable(
+            route = DevLedgerDestinations.SNIPPET_DETAIL,
+            arguments = listOf(navArgument("snippetId") { type = NavType.StringType }),
+        ) {
+            SnippetDetailScreen(
+                onBack = { navController.popBackStack() },
+                onEdit = { id -> navController.navigate(DevLedgerDestinations.snippetEditorRoute(id)) },
+                onDuplicated = { newId -> navController.navigate(DevLedgerDestinations.snippetDetailRoute(newId)) { popUpTo(DevLedgerDestinations.SNIPPET_VAULT) } },
+            )
+        }
+        composable(DevLedgerDestinations.FOLDERS_TAGS) {
+            FoldersTagsScreen(onBack = { navController.popBackStack() })
+        }
+
         composable(DevLedgerDestinations.FINANCE) {
             MainScaffold(navController, BottomNavTab.FINANCE) {
                 FinancialTrackerScreen(onAddTransaction = { navController.navigate(DevLedgerDestinations.ADD_TRANSACTION) })

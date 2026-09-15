@@ -218,6 +218,8 @@ All sources are cited in the IIE Harvard referencing style.
 - Google Developers, n.d.i. *Set up a Firebase Cloud Messaging client app on Android.* [Online] Available at: https://firebase.google.com/docs/cloud-messaging/android/client [Accessed 14 September 2026].
 - Google Developers, n.d.j. *Cloud Messaging architectural overview.* [Online] Available at: https://firebase.google.com/docs/cloud-messaging/fcm-architecture [Accessed 14 September 2026].
 - Google Developers, n.d.k. *Authenticate with Google on Android.* [Online] Available at: https://developers.google.com/identity/sign-in/android [Accessed 14 September 2026].
+- Google Developers, n.d.l. *Save data in a local database using Room*. [Online] Available at: https://developer.android.com/training/data-storage/room [Accessed 14 September 2026].
+- Google Developers, n.d.m. *Material Design 3 for Android — Text fields*. [Online] Available at: https://m3.material.io/components/text-fields/overview [Accessed 14 September 2026].
 - Kapeli, n.d. *Dash for macOS — API Documentation Browser, Snippet Manager.* [Online] Available at: https://kapeli.com/dash [Accessed 1 August 2026].
 - Microsoft Learn, n.d. *ASP.NET Core documentation.* [Online] Available at: https://learn.microsoft.com/en-us/aspnet/core/ [Accessed 1 August 2026].
 - Npgsql, n.d. *Npgsql Entity Framework Core Provider.* [Online] Available at: https://www.npgsql.org/efcore/ [Accessed 14 September 2026].

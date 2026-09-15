@@ -16,6 +16,7 @@ public class DevLedgerDbContext : DbContext
     public DbSet<Snippet> Snippets => Set<Snippet>();
     public DbSet<Transaction> Transactions => Set<Transaction>();
     public DbSet<NotificationToken> NotificationTokens => Set<NotificationToken>();
+    public DbSet<Folder> Folders => Set<Folder>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
