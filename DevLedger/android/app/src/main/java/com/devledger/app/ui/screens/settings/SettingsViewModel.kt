@@ -17,6 +17,7 @@ import retrofit2.HttpException
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withTimeout
 
+
 data class SettingsUiState(
     val language: String = "en",
     val biometricEnabled: Boolean = true,
@@ -110,25 +111,46 @@ class SettingsViewModel @Inject constructor(
 
     fun saveSettings() {
         val current = _uiState.value
-        if (current.isSaving || !current.hasChanges) return
+
+        if (!current.isLoaded ||
+            current.isLoading ||
+            current.isSaving ||
+            !current.hasChanges
+        ) return
 
         _uiState.update {
-            it.copy(isSaving = true, error = null, message = null)
+            it.copy(
+                isSaving = true,
+                error = null,
+                message = null,
+            )
         }
 
         viewModelScope.launch {
             try {
-                val saved = settingsRepository.saveToApi(
-                    language = current.language,
-                    biometricEnabled = current.biometricEnabled,
-                    wifiOnlySync = current.wifiOnlySync,
-                    baseCurrency = current.baseCurrency,
+                val saved = withTimeout(10_000L) {
+                    settingsRepository.saveToApi(
+                        language = current.language,
+                        biometricEnabled = current.biometricEnabled,
+                        wifiOnlySync = current.wifiOnlySync,
+                        baseCurrency = current.baseCurrency,
+                    )
+                }
+
+                acceptServerSettings(
+                    settings = saved,
+                    message = "Settings saved.",
                 )
-                acceptServerSettings(saved, "Settings saved.")
+            } catch (timeout: TimeoutCancellationException) {
+                _uiState.update {
+                    it.copy(
+                        isSaving = false,
+                        error = "Saving took too long. Check your connection and retry.",
+                    )
+                }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
-                // Keep the user's edits so they can retry saving.
                 _uiState.update {
                     it.copy(
                         isSaving = false,
