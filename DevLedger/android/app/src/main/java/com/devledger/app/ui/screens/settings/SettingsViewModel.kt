@@ -14,6 +14,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withTimeout
 
 data class SettingsUiState(
     val language: String = "en",
@@ -47,23 +49,26 @@ class SettingsViewModel @Inject constructor(
         if (_uiState.value.isSaving) return
 
         _uiState.update {
-            it.copy(isLoading = true, error = null, message = null)
+            it.copy(
+                isLoading = true,
+                error = null,
+                message = null,
+            )
         }
 
         viewModelScope.launch {
             try {
-                val settings = settingsRepository.loadFromApi()
+                val settings = withTimeout(10_000L) {
+                    settingsRepository.loadFromApi()
+                }
 
-                if (_uiState.value.hasChanges) {
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            isLoaded = true,
-                            error = null,
-                        )
-                    }
-                } else {
-                    acceptServerSettings(settings)
+                acceptServerSettings(settings)
+            } catch (timeout: TimeoutCancellationException) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = "Settings took too long to load. Check your connection and retry.",
+                    )
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled
