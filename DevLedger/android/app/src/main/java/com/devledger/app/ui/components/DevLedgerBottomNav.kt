@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -69,7 +70,7 @@ fun DevLedgerBottomNav(
             NavItem(Icons.Filled.AttachMoney, stringRes(R.string.nav_finance), active == BottomNavTab.FINANCE) {
                 onNavigate(BottomNavTab.FINANCE)
             }
-            NavItem(Icons.Filled.Notifications, stringRes(R.string.nav_notifications), active == BottomNavTab.NOTIFICATIONS) {
+            NavItem(Icons.Filled.Description, "Reports", active == BottomNavTab.NOTIFICATIONS) {
                 onNavigate(BottomNavTab.NOTIFICATIONS)
             }
         }

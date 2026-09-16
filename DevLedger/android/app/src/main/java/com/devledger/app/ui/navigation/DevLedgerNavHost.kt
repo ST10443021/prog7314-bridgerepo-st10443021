@@ -246,7 +246,11 @@ fun DevLedgerNavHost(navController: NavHostController) {
         }
 
         composable(DevLedgerDestinations.FINANCE) {
-            MainScaffold(navController, BottomNavTab.FINANCE) {
+            MainScaffold(
+                navController = navController,
+                active = BottomNavTab.FINANCE,
+                onFabClick = { navController.navigate(DevLedgerDestinations.ADD_TRANSACTION) }
+            ) {
                 FinancialTrackerScreen(
                     onAddTransaction = { navController.navigate(DevLedgerDestinations.ADD_TRANSACTION) },
                     onViewIncome = { navController.navigate(DevLedgerDestinations.transactionListRoute("INCOME")) },
