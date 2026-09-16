@@ -1,5 +1,6 @@
 package com.devledger.app.data.repository
 
+import com.devledger.app.data.local.PinStorage
 import com.devledger.app.data.local.dao.UserDao
 import com.devledger.app.data.local.entity.UserEntity
 import com.devledger.app.data.remote.DevLedgerApiService
@@ -26,6 +27,7 @@ class AuthRepository @Inject constructor(
     private val tokenManager: TokenManager,
     private val userDao: UserDao,
     private val deviceRegistrar: DeviceRegistrar,
+    private val pinStorage: PinStorage,
 ) {
     val currentUser: Flow<UserEntity?> = userDao.observeCurrentUser()
 
@@ -45,7 +47,14 @@ class AuthRepository @Inject constructor(
                 email = body.email.lowercase().trim(),
                 fullName = body.fullName,
                 ssoProvider = provider,
+                pinHash = body.pinHash,
+                pinSalt = body.pinSalt,
+                biometricEnabled = body.biometricEnabled ?: true
             )
+            // Sync PIN to local storage if present in response and missing locally
+            if (body.pinHash != null && body.pinSalt != null) {
+                pinStorage.syncFromBackend(body.email, body.pinHash, body.pinSalt, body.biometricEnabled ?: true)
+            }
             userDao.replaceCurrentUser(user)
             deviceRegistrar.registerCurrentToken()
             user
@@ -67,8 +76,14 @@ class AuthRepository @Inject constructor(
                 userId = body.userId, 
                 email = body.email.lowercase().trim(), 
                 fullName = body.fullName, 
-                ssoProvider = null
+                ssoProvider = null,
+                pinHash = body.pinHash,
+                pinSalt = body.pinSalt,
+                biometricEnabled = body.biometricEnabled ?: true
             )
+            if (body.pinHash != null && body.pinSalt != null) {
+                pinStorage.syncFromBackend(body.email, body.pinHash, body.pinSalt, body.biometricEnabled ?: true)
+            }
             userDao.replaceCurrentUser(user)
             deviceRegistrar.registerCurrentToken()
             user
@@ -87,8 +102,14 @@ class AuthRepository @Inject constructor(
                 userId = body.userId, 
                 email = body.email.lowercase().trim(), 
                 fullName = body.fullName, 
-                ssoProvider = null
+                ssoProvider = null,
+                pinHash = body.pinHash,
+                pinSalt = body.pinSalt,
+                biometricEnabled = body.biometricEnabled ?: true
             )
+            if (body.pinHash != null && body.pinSalt != null) {
+                pinStorage.syncFromBackend(body.email, body.pinHash, body.pinSalt, body.biometricEnabled ?: true)
+            }
             userDao.replaceCurrentUser(user)
             deviceRegistrar.registerCurrentToken()
             user
@@ -116,6 +137,9 @@ class AuthRepository @Inject constructor(
                 ?: error("The profile response was empty.")
 
             val user = profile.toUserEntity()
+            if (profile.pinHash != null && profile.pinSalt != null) {
+                pinStorage.syncFromBackend(profile.email, profile.pinHash, profile.pinSalt, profile.biometricEnabled)
+            }
             userDao.replaceCurrentUser(user)
 
             user
@@ -163,8 +187,31 @@ class AuthRepository @Inject constructor(
                 ?: error("The profile response was empty.")
 
             val user = profile.toUserEntity()
+            if (profile.pinHash != null && profile.pinSalt != null) {
+                pinStorage.syncFromBackend(profile.email, profile.pinHash, profile.pinSalt, profile.biometricEnabled)
+            }
             userDao.replaceCurrentUser(user)
 
+            user
+        }
+
+    suspend fun saveSecurityProfile(
+        pinHash: String,
+        pinSalt: String,
+        biometricEnabled: Boolean
+    ): DevLedgerResult<UserEntity> =
+        DevLedgerResult.safeCall {
+            val response = api.updateProfile(
+                UpdateUserProfileRequest(
+                    pinHash = pinHash,
+                    pinSalt = pinSalt,
+                    biometricEnabled = biometricEnabled
+                )
+            )
+            if (!response.isSuccessful) error("Failed to sync security profile to backend: HTTP ${response.code()}")
+            val profile = response.body() ?: error("Empty profile response")
+            val user = profile.toUserEntity()
+            userDao.replaceCurrentUser(user)
             user
         }
 
@@ -176,6 +223,8 @@ class AuthRepository @Inject constructor(
             ssoProvider = ssoProvider,
             preferredLanguage = preferredLanguage,
             biometricEnabled = biometricEnabled,
+            pinHash = pinHash,
+            pinSalt = pinSalt,
             baseCurrency = baseCurrency,
         )
     }

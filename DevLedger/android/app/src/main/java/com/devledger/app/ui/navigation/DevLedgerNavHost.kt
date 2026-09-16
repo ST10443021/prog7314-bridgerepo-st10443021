@@ -68,18 +68,22 @@ fun DevLedgerNavHost(navController: NavHostController) {
                 isLoggedIn = isLoggedIn,
                 onNavigateNext = { loggedIn ->
                     scope.launch {
-                        val destination = if (loggedIn) {
-                            // If logged in, check if a PIN is available (local or synced)
-                            if (authViewModelHolder.hasLocalPin()) {
-                                DevLedgerDestinations.BIOMETRIC 
+                        if (loggedIn) {
+                            // For logged-in users, always verify identity.
+                            // If they somehow have no security set up at all, force setup.
+                            if (authViewModelHolder.needsSecuritySetup()) {
+                                navController.navigate(DevLedgerDestinations.SECURITY_SETUP) {
+                                    popUpTo(DevLedgerDestinations.SPLASH) { inclusive = true }
+                                }
                             } else {
-                                DevLedgerDestinations.DASHBOARD
+                                navController.navigate(DevLedgerDestinations.BIOMETRIC) {
+                                    popUpTo(DevLedgerDestinations.SPLASH) { inclusive = true }
+                                }
                             }
                         } else {
-                            DevLedgerDestinations.AUTH
-                        }
-                        navController.navigate(destination) {
-                            popUpTo(DevLedgerDestinations.SPLASH) { inclusive = true }
+                            navController.navigate(DevLedgerDestinations.AUTH) {
+                                popUpTo(DevLedgerDestinations.SPLASH) { inclusive = true }
+                            }
                         }
                     }
                 },
@@ -91,15 +95,16 @@ fun DevLedgerNavHost(navController: NavHostController) {
             AuthScreen(
                 onAuthenticated = {
                     scope.launch {
-                        // After login, check if a PIN was synced from the backend.
-                        // If yes, verify. If no, go to dashboard.
-                        val destination = if (authViewModelHolder.hasLocalPin()) {
-                            DevLedgerDestinations.BIOMETRIC 
+                        // After successful login, determine if it's a new account needing setup
+                        // or an existing one that just needs verification.
+                        if (authViewModelHolder.needsSecuritySetup()) {
+                            navController.navigate(DevLedgerDestinations.SECURITY_SETUP) {
+                                popUpTo(DevLedgerDestinations.AUTH) { inclusive = true }
+                            }
                         } else {
-                            DevLedgerDestinations.DASHBOARD
-                        }
-                        navController.navigate(destination) {
-                            popUpTo(DevLedgerDestinations.AUTH) { inclusive = true }
+                            navController.navigate(DevLedgerDestinations.BIOMETRIC) {
+                                popUpTo(DevLedgerDestinations.AUTH) { inclusive = true }
+                            }
                         }
                     }
                 },
@@ -343,6 +348,24 @@ class AuthEntryPoint @Inject constructor(
     fun isLoggedIn(): Boolean = authRepository.isLoggedIn()
 
     /** 
+     * Determines if the current user (if logged in) needs to configure their PIN.
+     * This is true for "new" accounts that have no PIN record in the backend database.
+     */
+    suspend fun needsSecuritySetup(): Boolean {
+        if (!isLoggedIn()) return false
+        return try {
+            // Wait for user data (and synced PIN hash from backend) to resolve
+            val user = withTimeoutOrNull(5000) {
+                authRepository.currentUser.first { it != null }
+            }
+            // If pinHash is null, it's a new account (or security was never set up)
+            user?.pinHash == null
+        } catch (_: Exception) {
+            true // Default to safety
+        }
+    }
+
+    /** 
      * Checks if the current user has a PIN configured (either locally or recently synced).
      */
     suspend fun hasLocalPin(): Boolean {
@@ -359,8 +382,7 @@ class AuthEntryPoint @Inject constructor(
             val hasPin = pinStorage.hasPin(user.email)
             Log.i("AuthEntryPoint", "hasLocalPin: email=${user.email}, hasPin=$hasPin")
             hasPin
-        } catch (e: Exception) {
-            Log.e("AuthEntryPoint", "hasLocalPin: Failed", e)
+        } catch (_: Exception) {
             false
         }
     }
