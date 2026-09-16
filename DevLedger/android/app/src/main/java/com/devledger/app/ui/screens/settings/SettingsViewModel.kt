@@ -52,7 +52,19 @@ class SettingsViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                acceptServerSettings(settingsRepository.loadFromApi())
+                val settings = settingsRepository.loadFromApi()
+
+                if (_uiState.value.hasChanges) {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            isLoaded = true,
+                            error = null,
+                        )
+                    }
+                } else {
+                    acceptServerSettings(settings)
+                }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
@@ -77,9 +89,12 @@ class SettingsViewModel @Inject constructor(
     fun setBaseCurrency(currency: String) =
         edit { it.copy(baseCurrency = currency) }
 
-    private fun edit(change: (SettingsUiState) -> SettingsUiState) {
+    private fun edit(
+        change: (SettingsUiState) -> SettingsUiState,
+    ) {
         val current = _uiState.value
-        if (!current.isLoaded || current.isLoading || current.isSaving) return
+
+        if (current.isSaving) return
 
         _uiState.value = change(current).copy(
             hasChanges = true,
@@ -90,9 +105,7 @@ class SettingsViewModel @Inject constructor(
 
     fun saveSettings() {
         val current = _uiState.value
-        if (!current.isLoaded || current.isLoading ||
-            current.isSaving || !current.hasChanges
-        ) return
+        if (current.isSaving || !current.hasChanges) return
 
         _uiState.update {
             it.copy(isSaving = true, error = null, message = null)

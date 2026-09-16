@@ -96,7 +96,7 @@ fun SettingsScreen(
         onSyncNow = {
             SyncScheduler.syncNow(
                 context = context,
-                wifiOnly = state.appliedWifiOnlySync ?: true,
+                wifiOnly = state.wifiOnlySync,
             )
         },
         onBaseCurrencyChange = viewModel::setBaseCurrency,
@@ -270,10 +270,7 @@ fun SettingsScreenContent(
             DevLedgerPrimaryButton(
                 text = "Save changes",
                 onClick = onSaveChanges,
-                enabled = state.isLoaded &&
-                        !state.isLoading &&
-                        !state.isSaving &&
-                        state.hasChanges,
+                enabled = !state.isSaving && state.hasChanges,
                 loading = state.isSaving,
             )
         }
