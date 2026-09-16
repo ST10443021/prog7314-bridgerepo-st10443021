@@ -1,5 +1,6 @@
 package com.devledger.app.ui.screens.dashboard
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.devledger.app.data.local.entity.SnippetEntity
@@ -56,50 +57,55 @@ class DashboardViewModel @Inject constructor(
         transactions,
         settingsRepository.baseCurrency,
     ) { user, snippets, transactions, currency ->
+        try {
+            val (monthStart, nextMonthStart) = currentMonthBounds()
 
-        val (monthStart, nextMonthStart) = currentMonthBounds()
+            val monthlyTransactions = transactions
+                .filter {
+                    it.transactionDate >= monthStart &&
+                            it.transactionDate < nextMonthStart
+                }
+                .sortedBy { it.transactionDate }
 
-        val monthlyTransactions = transactions
-            .filter {
-                it.transactionDate >= monthStart &&
-                        it.transactionDate < nextMonthStart
-            }
-            .sortedBy { it.transactionDate }
+            val monthlyIncome = monthlyTransactions
+                .filter { it.type.equals("INCOME", ignoreCase = true) }
+                .sumOf {
+                    CurrencyConverter.convert(
+                        amount = it.amount,
+                        from = it.currency,
+                        to = currency,
+                    )
+                }
 
-        val monthlyIncome = monthlyTransactions
-            .filter { it.type.equals("INCOME", ignoreCase = true) }
-            .sumOf {
-                CurrencyConverter.convert(
-                    amount = it.amount,
-                    from = it.currency,
-                    to = currency,
-                )
-            }
+            val monthlyExpenses = monthlyTransactions
+                .filter { it.type.equals("EXPENSE", ignoreCase = true) }
+                .sumOf {
+                    CurrencyConverter.convert(
+                        amount = it.amount,
+                        from = it.currency,
+                        to = currency,
+                    )
+                }
 
-        val monthlyExpenses = monthlyTransactions
-            .filter { it.type.equals("EXPENSE", ignoreCase = true) }
-            .sumOf {
-                CurrencyConverter.convert(
-                    amount = it.amount,
-                    from = it.currency,
-                    to = currency,
-                )
-            }
-
-        DashboardUiState(
-            user = user,
-            baseCurrency = currency,
-            totalSnippets = snippets.size,
-            monthlyIncome = monthlyIncome,
-            monthlyExpenses = monthlyExpenses,
-            monthlyTransactions = monthlyTransactions,
-            recentTransactions = transactions
-                .sortedByDescending { it.transactionDate }
-                .take(3),
-            recentSnippets = snippets
-                .sortedByDescending { it.updatedAt }
-                .take(3),
-        )
+            DashboardUiState(
+                user = user,
+                baseCurrency = currency,
+                totalSnippets = snippets.size,
+                monthlyIncome = monthlyIncome,
+                monthlyExpenses = monthlyExpenses,
+                monthlyTransactions = monthlyTransactions,
+                recentTransactions = transactions
+                    .sortedByDescending { it.transactionDate }
+                    .take(3),
+                recentSnippets = snippets
+                    .sortedByDescending { it.updatedAt }
+                    .take(3),
+            )
+        } catch (e: Exception) {
+            // Log and return fallback state to prevent crash
+            Log.e("DashboardViewModel", "Error calculating dashboard state", e)
+            DashboardUiState(user = user, baseCurrency = currency)
+        }
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),

@@ -65,7 +65,24 @@ class PinStorage @Inject constructor(
 
     fun hasPin(email: String? = null): Boolean {
         val suffix = if (email.isNullOrBlank()) "" else "_${email.lowercase()}"
-        return preferences.contains(KEY_PIN_SALT + suffix)
+        if (preferences.contains(KEY_PIN_SALT + suffix)) return true
+        
+        // Migration: If we have an unsuffixed PIN, migrate it to the new suffixed key
+        if (!email.isNullOrBlank() && preferences.contains(KEY_PIN_SALT)) {
+            val salt = preferences.getString(KEY_PIN_SALT, null)
+            val hash = preferences.getString(KEY_PIN_HASH, null)
+            val fingerprint = preferences.getBoolean("fingerprint_registered", false)
+            
+            if (salt != null && hash != null) {
+                preferences.edit()
+                    .putString(KEY_PIN_SALT + suffix, salt)
+                    .putString(KEY_PIN_HASH + suffix, hash)
+                    .putBoolean("fingerprint_registered" + suffix, fingerprint)
+                    .apply()
+                return true
+            }
+        }
+        return false
     }
 
     fun isFingerprintRegistered(email: String? = null): Boolean {

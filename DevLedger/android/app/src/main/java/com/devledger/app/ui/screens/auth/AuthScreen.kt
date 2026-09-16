@@ -206,7 +206,10 @@ fun AuthScreen(
         Button(
             onClick = { 
                 viewModel.onGoogleSignInClicked()
-                googleSignInLauncher.launch(googleSignInClient.signInIntent) 
+                // Force sign out first to ensure account selection and a fresh ID token
+                googleSignInClient.signOut().addOnCompleteListener {
+                    googleSignInLauncher.launch(googleSignInClient.signInIntent) 
+                }
             },
             colors = ButtonDefaults.buttonColors(containerColor = Color.White),
             modifier = Modifier.fillMaxWidth().height(52.dp),

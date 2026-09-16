@@ -9,6 +9,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -62,29 +63,44 @@ fun DevLedgerNavHost(navController: NavHostController) {
     NavHost(navController = navController, startDestination = DevLedgerDestinations.SPLASH) {
 
         composable(DevLedgerDestinations.SPLASH) {
+            val scope = rememberCoroutineScope()
             SplashScreen(
                 isLoggedIn = isLoggedIn,
                 onNavigateNext = { loggedIn ->
-                    val destination = if (loggedIn) {
-                        if (authViewModelHolder.needsSecuritySetupSync()) DevLedgerDestinations.SECURITY_SETUP 
-                        else DevLedgerDestinations.BIOMETRIC
-                    } else {
-                        DevLedgerDestinations.AUTH
-                    }
-                    navController.navigate(destination) {
-                        popUpTo(DevLedgerDestinations.SPLASH) { inclusive = true }
+                    scope.launch {
+                        val destination = if (loggedIn) {
+                            // If logged in, check if a PIN is available (local or synced)
+                            if (authViewModelHolder.hasLocalPin()) {
+                                DevLedgerDestinations.BIOMETRIC 
+                            } else {
+                                DevLedgerDestinations.DASHBOARD
+                            }
+                        } else {
+                            DevLedgerDestinations.AUTH
+                        }
+                        navController.navigate(destination) {
+                            popUpTo(DevLedgerDestinations.SPLASH) { inclusive = true }
+                        }
                     }
                 },
             )
         }
 
         composable(DevLedgerDestinations.AUTH) {
+            val scope = rememberCoroutineScope()
             AuthScreen(
                 onAuthenticated = {
-                    val destination = if (authViewModelHolder.needsSecuritySetupSync()) DevLedgerDestinations.SECURITY_SETUP 
-                                    else DevLedgerDestinations.BIOMETRIC
-                    navController.navigate(destination) {
-                        popUpTo(DevLedgerDestinations.AUTH) { inclusive = true }
+                    scope.launch {
+                        // After login, check if a PIN was synced from the backend.
+                        // If yes, verify. If no, go to dashboard.
+                        val destination = if (authViewModelHolder.hasLocalPin()) {
+                            DevLedgerDestinations.BIOMETRIC 
+                        } else {
+                            DevLedgerDestinations.DASHBOARD
+                        }
+                        navController.navigate(destination) {
+                            popUpTo(DevLedgerDestinations.AUTH) { inclusive = true }
+                        }
                     }
                 },
                 onNavigateToRegister = {
@@ -327,30 +343,24 @@ class AuthEntryPoint @Inject constructor(
     fun isLoggedIn(): Boolean = authRepository.isLoggedIn()
 
     /** 
-     * Determines if the current user (if logged in) needs to configure their PIN.
-     * Uses runBlocking briefly to resolve the current user from the local cache.
+     * Checks if the current user has a PIN configured (either locally or recently synced).
      */
-    fun needsSecuritySetupSync(): Boolean {
+    suspend fun hasLocalPin(): Boolean {
         if (!isLoggedIn()) return false
         return try {
-            runBlocking {
-                // Wait for the user cache to populate.
-                val user = withTimeoutOrNull(10000) {
-                    authRepository.currentUser.first { it != null }
-                }
-                val email = user?.email
-                if (user == null) {
-                    Log.w("AuthEntryPoint", "needsSecuritySetupSync: User timed out in local cache")
-                    return@runBlocking false
-                }
-                // Case-insensitive check to ensure reliable account matching
-                val normalizedEmail = email?.lowercase()?.trim()
-                val hasPin = pinStorage.hasPin(normalizedEmail)
-                Log.i("AuthEntryPoint", "needsSecuritySetupSync: email=$normalizedEmail, hasPin=$hasPin")
-                !hasPin
+            // Wait briefly for the user cache to populate.
+            val user = withTimeoutOrNull(5000) {
+                authRepository.currentUser.first { it != null }
             }
+            if (user == null) {
+                Log.w("AuthEntryPoint", "hasLocalPin: User timeout, assuming no PIN")
+                return false
+            }
+            val hasPin = pinStorage.hasPin(user.email)
+            Log.i("AuthEntryPoint", "hasLocalPin: email=${user.email}, hasPin=$hasPin")
+            hasPin
         } catch (e: Exception) {
-            Log.e("AuthEntryPoint", "needsSecuritySetupSync: Failed", e)
+            Log.e("AuthEntryPoint", "hasLocalPin: Failed", e)
             false
         }
     }

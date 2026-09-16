@@ -225,6 +225,9 @@ public class AuthController : ControllerBase
         RefreshToken: _tokenService.GenerateRefreshToken(),
         UserId: user.UserId.ToString(),
         FullName: user.FullName,
-        Email: user.Email
+        Email: user.Email,
+        PinHash: user.PinHash,
+        PinSalt: user.PinSalt,
+        BiometricEnabled: user.BiometricEnabled
     );
 }

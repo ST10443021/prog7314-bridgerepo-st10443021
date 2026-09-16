@@ -18,7 +18,7 @@ import com.devledger.app.data.local.entity.*
         FolderEntity::class,
         UserEntity::class,
     ],
-    version = 1,
+    version = 4,
     exportSchema = true,
 )
 abstract class DevLedgerDatabase : RoomDatabase() {

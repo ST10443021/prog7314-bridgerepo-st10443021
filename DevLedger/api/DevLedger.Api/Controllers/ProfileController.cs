@@ -41,28 +41,6 @@ public class ProfileController : ControllerBase
     public async Task<ActionResult<UserProfileDto>> UpdateProfile(
         [FromBody] UpdateUserProfileRequest request)
     {
-        var fullName = request.FullName?.Trim();
-
-        if (string.IsNullOrWhiteSpace(fullName))
-        {
-            ModelState.AddModelError(
-                nameof(request.FullName),
-                "Full name is required."
-            );
-
-            return ValidationProblem(ModelState);
-        }
-
-        if (fullName.Length > 100)
-        {
-            ModelState.AddModelError(
-                nameof(request.FullName),
-                "Full name cannot exceed 100 characters."
-            );
-
-            return ValidationProblem(ModelState);
-        }
-
         var user = await _db.Users.FindAsync(CurrentUserId);
 
         if (user is null)
@@ -70,7 +48,20 @@ public class ProfileController : ControllerBase
             return NotFound();
         }
 
-        user.FullName = fullName;
+        if (request.FullName != null)
+        {
+            var fullName = request.FullName.Trim();
+            if (string.IsNullOrWhiteSpace(fullName))
+            {
+                ModelState.AddModelError(nameof(request.FullName), "Full name is required.");
+                return ValidationProblem(ModelState);
+            }
+            user.FullName = fullName;
+        }
+
+        if (request.PinHash != null) user.PinHash = request.PinHash;
+        if (request.PinSalt != null) user.PinSalt = request.PinSalt;
+        if (request.BiometricEnabled.HasValue) user.BiometricEnabled = request.BiometricEnabled.Value;
 
         await _db.SaveChangesAsync();
 
@@ -88,6 +79,8 @@ public class ProfileController : ControllerBase
             user.PreferredLanguage,
             user.BaseCurrency,
             user.BiometricEnabled,
+            user.PinHash,
+            user.PinSalt,
             user.CreatedAt
         );
     }
