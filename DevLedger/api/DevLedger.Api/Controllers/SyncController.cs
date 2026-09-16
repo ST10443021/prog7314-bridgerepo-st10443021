@@ -273,7 +273,6 @@ public class SyncController : ControllerBase
 
                     if (transaction is null)
                     {
-                        // THIS IS THE CONSTRUCTION BLOCK:
                         transaction = new Transaction
                         {
                             TransactionId = payload.TransactionId,
@@ -325,10 +324,13 @@ public class SyncController : ControllerBase
 
                     break;
                 }
+
+                default:
+                    return BadRequest($"Unsupported sync entity '{operation.Entity}'.");
+            }
         }
 
         // EF Core commits the complete batch atomically.
-        // IDs are acknowledged only after persistence succeeds.
         await _db.SaveChangesAsync(cancellationToken);
 
         return Ok(
