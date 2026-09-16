@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -24,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -89,11 +91,13 @@ fun AddTransactionScreen(
             }
 
             FieldLabel("Amount *")
-            DevLedgerTextField(
-                value = state.amount, onValueChange = viewModel::onAmountChange,
-                label = "", placeholder = "0.00",
-                leadingIcon = Icons.Default.CurrencyExchange,
-                modifier = Modifier.padding(bottom = 20.dp),
+            CurrencyAmountField(
+                amount = state.amount,
+                currency = state.currency,
+                availableCurrencies = state.availableCurrencies,
+                onAmountChange = viewModel::onAmountChange,
+                onCurrencyChange = viewModel::onCurrencyChange,
+                modifier = Modifier.padding(bottom = 20.dp)
             )
 
             Row(modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -134,7 +138,12 @@ fun AddTransactionScreen(
                 }
                 Column(Modifier.weight(1f)) {
                     FieldLabel("Related Project")
-                    ProjectAutocomplete(state.relatedProject, state.projectSuggestions, viewModel::onRelatedProjectChange)
+                    ProjectSelector(
+                        value = state.relatedProject, 
+                        suggestions = state.projectSuggestions, 
+                        onSelect = viewModel::onRelatedProjectChange,
+                        onCreateNew = viewModel::createFolderAndSelect
+                    )
                 }
             }
 
@@ -278,6 +287,184 @@ private fun CategoryDropdown(options: List<String>, selected: String, icon: Imag
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CurrencyAmountField(
+    amount: String,
+    currency: String,
+    availableCurrencies: List<String>,
+    onAmountChange: (String) -> Unit,
+    onCurrencyChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+    
+    OutlinedTextField(
+        value = amount,
+        onValueChange = onAmountChange,
+        placeholder = { Text("0.00", color = DevLedgerColors.TextMuted) },
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Decimal
+        ),
+        leadingIcon = {
+            Box {
+                Row(
+                    modifier = Modifier
+                        .clickable { expanded = true }
+                        .padding(start = 12.dp, end = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = currency,
+                        color = DevLedgerColors.AccentBlue,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                    Icon(
+                        Icons.Default.ArrowDropDown,
+                        contentDescription = null,
+                        tint = DevLedgerColors.TextMuted,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Box(modifier = Modifier.width(1.dp).height(24.dp).background(DevLedgerColors.Border))
+                }
+                
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                    modifier = Modifier.background(DevLedgerColors.SurfaceCard)
+                ) {
+                    availableCurrencies.forEach { code ->
+                        DropdownMenuItem(
+                            text = { Text(code, color = Color.White) },
+                            onClick = {
+                                onCurrencyChange(code)
+                                expanded = false
+                            }
+                        )
+                    }
+                }
+            }
+        },
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = DevLedgerColors.AccentBlue,
+            unfocusedBorderColor = DevLedgerColors.Border,
+            unfocusedTextColor = Color.White,
+            focusedTextColor = Color.White,
+            unfocusedContainerColor = DevLedgerColors.BgDeep,
+            focusedContainerColor = DevLedgerColors.BgDeep
+        )
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ProjectSelector(
+    value: String,
+    suggestions: List<String>,
+    onSelect: (String) -> Unit,
+    onCreateNew: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    var showNewFolderDialog by remember { mutableStateOf(false) }
+    var newFolderName by remember { mutableStateOf("") }
+
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = { onSelect(it) },
+            placeholder = { Text("Select project", color = DevLedgerColors.TextMuted) },
+            leadingIcon = { Icon(Icons.Default.FolderOpen, contentDescription = null, tint = DevLedgerColors.TextMuted, modifier = Modifier.size(20.dp)) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier.menuAnchor().fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = DevLedgerColors.AccentBlue,
+                unfocusedBorderColor = DevLedgerColors.Border,
+                unfocusedTextColor = Color.White,
+                focusedTextColor = Color.White,
+                unfocusedContainerColor = DevLedgerColors.BgDeep,
+                focusedContainerColor = DevLedgerColors.BgDeep
+            )
+        )
+        
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.background(DevLedgerColors.SurfaceCard)
+        ) {
+            DropdownMenuItem(
+                text = { 
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Add, contentDescription = null, tint = DevLedgerColors.AccentBlue, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Create New Folder", color = DevLedgerColors.AccentBlue, fontWeight = FontWeight.Bold)
+                    }
+                },
+                onClick = {
+                    expanded = false
+                    showNewFolderDialog = true
+                }
+            )
+            
+            if (suggestions.isNotEmpty()) {
+                HorizontalDivider(color = DevLedgerColors.Border, modifier = Modifier.padding(vertical = 4.dp))
+                suggestions.forEach { option ->
+                    DropdownMenuItem(
+                        text = { Text(option, color = Color.White) },
+                        onClick = {
+                            onSelect(option)
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+    if (showNewFolderDialog) {
+        AlertDialog(
+            onDismissRequest = { showNewFolderDialog = false },
+            title = { Text("New Folder", color = Color.White) },
+            text = {
+                OutlinedTextField(
+                    value = newFolderName,
+                    onValueChange = { newFolderName = it },
+                    label = { Text("Folder Name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        unfocusedTextColor = Color.White,
+                        focusedTextColor = Color.White
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (newFolderName.isNotBlank()) {
+                            onCreateNew(newFolderName)
+                            newFolderName = ""
+                            showNewFolderDialog = false
+                        }
+                    }
+                ) {
+                    Text("Create", color = DevLedgerColors.AccentBlue)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showNewFolderDialog = false }) {
+                    Text("Cancel", color = DevLedgerColors.TextMuted)
+                }
+            },
+            containerColor = DevLedgerColors.SurfaceCard
+        )
+    }
+}
+
 @Composable
 private fun DateField(millis: Long, onClick: () -> Unit) {
     val formatted = remember(millis) { SimpleDateFormat("d MMM yyyy", Locale.getDefault()).format(Date(millis)) }
@@ -296,42 +483,6 @@ private fun DateField(millis: Long, onClick: () -> Unit) {
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ProjectAutocomplete(value: String, suggestions: List<String>, onChange: (String) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-    val filtered = remember(value, suggestions) { suggestions.filter { it.contains(value, ignoreCase = true) && it != value } }
-    ExposedDropdownMenuBox(expanded = expanded && filtered.isNotEmpty(), onExpandedChange = { expanded = it }) {
-        OutlinedTextField(
-            value = value, onValueChange = { onChange(it); expanded = true }, placeholder = { Text("Select project", color = DevLedgerColors.TextMuted) },
-            leadingIcon = { Icon(Icons.Default.FolderOpen, contentDescription = null, tint = DevLedgerColors.TextMuted, modifier = Modifier.size(20.dp)) },
-            trailingIcon = { Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, tint = DevLedgerColors.TextMuted) },
-            modifier = Modifier.menuAnchor().fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = DevLedgerColors.AccentBlue,
-                unfocusedBorderColor = DevLedgerColors.Border,
-                unfocusedTextColor = Color.White,
-                focusedTextColor = Color.White,
-                unfocusedContainerColor = DevLedgerColors.BgDeep,
-                focusedContainerColor = DevLedgerColors.BgDeep
-            )
-        )
-        ExposedDropdownMenu(
-            expanded = expanded && filtered.isNotEmpty(), 
-            onDismissRequest = { expanded = false },
-            modifier = Modifier.background(DevLedgerColors.SurfaceCard)
-        ) {
-            filtered.forEach { option -> 
-                DropdownMenuItem(
-                    text = { Text(option, color = Color.White) }, 
-                    onClick = { onChange(option); expanded = false },
-                    modifier = Modifier.background(DevLedgerColors.SurfaceCard)
-                ) 
-            }
-        }
-    }
-}
 
 @Composable
 private fun RecurringSection(state: AddTransactionUiState, onToggle: (Boolean) -> Unit, onFrequencyChange: (String) -> Unit, onDateChange: (Long) -> Unit) {
