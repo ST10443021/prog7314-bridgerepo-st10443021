@@ -75,9 +75,9 @@ fun SettingsScreen(
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    LaunchedEffect(state.language, state.isLoaded) {
-        if (state.isLoaded) {
-            applyAppLocale(context, state.language)
+    LaunchedEffect(state.appliedLanguage) {
+        state.appliedLanguage?.let { languageTag ->
+            applyAppLocale(context, languageTag)
         }
     }
 
@@ -270,7 +270,10 @@ fun SettingsScreenContent(
             DevLedgerPrimaryButton(
                 text = "Save changes",
                 onClick = onSaveChanges,
-                enabled = !state.isSaving && state.hasChanges,
+                enabled = state.isLoaded &&
+                        !state.isLoading &&
+                        !state.isSaving &&
+                        state.hasChanges,
                 loading = state.isSaving,
             )
         }

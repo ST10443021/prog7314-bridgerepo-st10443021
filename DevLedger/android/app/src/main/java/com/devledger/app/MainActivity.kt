@@ -2,7 +2,6 @@ package com.devledger.app
 
 import android.content.Intent
 import android.os.Bundle
-import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
@@ -19,6 +18,8 @@ import com.devledger.app.ui.theme.DevLedgerColors
 import com.devledger.app.ui.theme.DevLedgerTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
+import androidx.appcompat.app.AppCompatActivity
+
 
 /**
  * Single-activity host for the whole DevLedger Compose UI. Navigation between all
@@ -31,7 +32,7 @@ import kotlinx.coroutines.launch
  * [onNewIntent] fires instead of a second MainActivity instance being created.
  */
 @AndroidEntryPoint
-class MainActivity : FragmentActivity() {
+class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()

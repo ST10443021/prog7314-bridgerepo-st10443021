@@ -100,7 +100,7 @@ class SettingsViewModel @Inject constructor(
     ) {
         val current = _uiState.value
 
-        if (current.isSaving) return
+        if (!current.isLoaded || current.isLoading || current.isSaving) return
 
         _uiState.value = change(current).copy(
             hasChanges = true,
