@@ -79,10 +79,11 @@ fun DashboardScreen(
     onOpenFinance: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenNotifications: () -> Unit,
+    onOpenProfile: () -> Unit,
     onCreateSnippet: () -> Unit = onOpenSnippets,
     onAddTransaction: () -> Unit = onOpenFinance,
     viewModel: DashboardViewModel = hiltViewModel(),
-) {
+){
     val state by viewModel.uiState.collectAsState()
 
     DashboardScreenContent(
@@ -91,6 +92,7 @@ fun DashboardScreen(
         onOpenFinance = onOpenFinance,
         onOpenSettings = onOpenSettings,
         onOpenNotifications = onOpenNotifications,
+        onOpenProfile = onOpenProfile,
         onCreateSnippet = onCreateSnippet,
         onAddTransaction = onAddTransaction,
     )
@@ -105,6 +107,7 @@ fun DashboardScreenContent(
     onOpenNotifications: () -> Unit,
     onCreateSnippet: () -> Unit = onOpenSnippets,
     onAddTransaction: () -> Unit = onOpenFinance,
+    onOpenProfile: () -> Unit,
 ) {
     val currencyFormat = remember(state.baseCurrency) {
         NumberFormat.getCurrencyInstance(
@@ -134,6 +137,7 @@ fun DashboardScreenContent(
         item {
             DashboardHeader(
                 onOpenNotifications = onOpenNotifications,
+                onOpenProfile = onOpenProfile,
             )
         }
 
@@ -187,6 +191,7 @@ fun DashboardScreenContent(
 @Composable
 private fun DashboardHeader(
     onOpenNotifications: () -> Unit,
+    onOpenProfile: () -> Unit,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -257,12 +262,17 @@ private fun DashboardHeader(
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        Icon(
-            imageVector = Icons.Filled.AccountCircle,
-            contentDescription = null,
-            tint = DevLedgerColors.AccentBlue,
+        IconButton(
+            onClick = onOpenProfile,
             modifier = Modifier.size(42.dp),
-        )
+        ) {
+            Icon(
+                imageVector = Icons.Filled.AccountCircle,
+                contentDescription = "Open profile",
+                tint = DevLedgerColors.AccentBlue,
+                modifier = Modifier.size(42.dp),
+            )
+        }
     }
 }
 
@@ -1092,6 +1102,7 @@ private fun DashboardScreenPreview() {
 
     DevLedgerTheme {
         DashboardScreenContent(
+            onOpenProfile = {},
             state = DashboardUiState(
                 user = UserEntity(
                     userId = "user123",

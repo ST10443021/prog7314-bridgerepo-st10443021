@@ -52,6 +52,7 @@ import com.devledger.app.ui.screens.folders.FoldersTagsScreen
 import com.devledger.app.ui.screens.snippets.SnippetDetailScreen
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import com.devledger.app.ui.screens.profile.ProfileScreen
 
 @Composable
 fun DevLedgerNavHost(navController: NavHostController) {
@@ -152,12 +153,30 @@ fun DevLedgerNavHost(navController: NavHostController) {
             PrivacyPolicyScreen(onBack = { navController.popBackStack() })
         }
 
+        composable(DevLedgerDestinations.PROFILE) {
+            ProfileScreen(
+                onBack = {
+                    navController.popBackStack()
+                },
+                onOpenSettings = {
+                    navController.navigate(DevLedgerDestinations.SETTINGS)
+                },
+            )
+        }
+
+        composable(DevLedgerDestinations.DASHBOARD) {
+            // Existing dashboard code
+        }
+
         // Main, bottom-nav-hosted screens
         composable(DevLedgerDestinations.DASHBOARD) {
             MainScaffold(navController, BottomNavTab.DASHBOARD) {
                 DashboardScreen(
                     onOpenSnippets = {
                         navController.navigate(DevLedgerDestinations.SNIPPET_VAULT)
+                    },
+                    onOpenProfile = {
+                        navController.navigate(DevLedgerDestinations.PROFILE)
                     },
                     onOpenFinance = {
                         navController.navigate(DevLedgerDestinations.FINANCE)

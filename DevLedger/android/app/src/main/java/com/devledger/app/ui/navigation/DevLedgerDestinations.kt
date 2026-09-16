@@ -12,7 +12,7 @@ object DevLedgerDestinations {
     const val SNIPPET_DETAIL = "snippet_detail/{snippetId}"
     fun snippetDetailRoute(snippetId: String) = "snippet_detail/$snippetId"
     const val FOLDERS_TAGS = "folders_tags"
-
+    const val PROFILE = "profile"
     const val FINANCE = "finance"
     const val ADD_TRANSACTION = "add_transaction"
     const val NOTIFICATIONS = "notifications"
