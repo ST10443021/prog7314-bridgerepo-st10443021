@@ -634,14 +634,21 @@ private fun StatusMessage(
     }
 }
 
-private fun applyAppLocale(
-    context: Context,
-    languageTag: String,
-) {
+private fun applyAppLocale(context: Context, languageTag: String) {
+    val currentLanguage =
+        androidx.appcompat.app.AppCompatDelegate
+            .getApplicationLocales()[0]
+            ?.language
+
+    if (currentLanguage == languageTag) {
+        return
+    }
+
     val localeList = LocaleListCompat.forLanguageTags(languageTag)
 
-    androidx.appcompat.app.AppCompatDelegate
-        .setApplicationLocales(localeList)
+    androidx.appcompat.app.AppCompatDelegate.setApplicationLocales(
+        localeList
+    )
 }
 
 @Preview(
