@@ -104,6 +104,28 @@ class PinStorage @Inject constructor(
             .apply()
     }
 
+    fun syncFromBackend(email: String, hash: String, salt: String, biometricEnabled: Boolean = false) {
+        val suffix = "_${email.lowercase().trim()}"
+        // Only sync if we don't already have a local PIN for this user
+        if (!preferences.contains(KEY_PIN_SALT + suffix)) {
+            preferences.edit()
+                .putString(KEY_PIN_SALT + suffix, salt)
+                .putString(KEY_PIN_HASH + suffix, hash)
+                .putBoolean("fingerprint_registered" + suffix, biometricEnabled)
+                .apply()
+        }
+    }
+
+    fun getLocalHash(email: String?): String? {
+        val suffix = if (email.isNullOrBlank()) "" else "_${email.lowercase()}"
+        return preferences.getString(KEY_PIN_HASH + suffix, null)
+    }
+
+    fun getLocalSalt(email: String?): String? {
+        val suffix = if (email.isNullOrBlank()) "" else "_${email.lowercase()}"
+        return preferences.getString(KEY_PIN_SALT + suffix, null)
+    }
+
     private fun hashPin(
         pin: String,
         salt: ByteArray

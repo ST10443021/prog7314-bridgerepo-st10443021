@@ -11,10 +11,15 @@ data class UserProfileDto(
     val preferredLanguage: String,
     val baseCurrency: String,
     val biometricEnabled: Boolean,
+    val pinHash: String? = null,
+    val pinSalt: String? = null,
     val createdAt: String,
 )
 
 @Serializable
 data class UpdateUserProfileRequest(
-    val fullName: String,
+    val fullName: String? = null,
+    val pinHash: String? = null,
+    val pinSalt: String? = null,
+    val biometricEnabled: Boolean? = null,
 )

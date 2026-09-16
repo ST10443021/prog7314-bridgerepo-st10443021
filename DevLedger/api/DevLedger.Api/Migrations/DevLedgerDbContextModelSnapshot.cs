@@ -219,6 +219,12 @@ namespace DevLedger.Api.Migrations
                     b.Property<string>("PasswordHash")
                         .HasColumnType("text");
 
+                    b.Property<string>("PinHash")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PinSalt")
+                        .HasColumnType("text");
+
                     b.Property<string>("PreferredLanguage")
                         .IsRequired()
                         .HasColumnType("text");
