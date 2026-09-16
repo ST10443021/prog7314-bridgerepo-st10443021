@@ -10,33 +10,32 @@ import com.devledger.app.util.CurrencyConverter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.util.Calendar
 import javax.inject.Inject
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.*
+
+data class MonthlyStat(val total: Double, val percentChangeVsPrevMonth: Double?, val topCategories: List<Pair<String, Double>>)
+data class DailyPoint(val dayOfMonth: Int, val income: Double, val expenses: Double)
 
 data class FinanceUiState(
-    val transactions: List<TransactionEntity> = emptyList(),
-    val totalIncome: Double = 0.0,
-    val totalExpenses: Double = 0.0,
-    val monthlyExpenses: Double = 0.0,
+    val selectedYear: Int = Calendar.getInstance().get(Calendar.YEAR),
+    val selectedMonth: Int = Calendar.getInstance().get(Calendar.MONTH), // 0-based, matches java.util.Calendar
+    val incomeStat: MonthlyStat = MonthlyStat(0.0, null, emptyList()),
+    val expenseStat: MonthlyStat = MonthlyStat(0.0, null, emptyList()),
+    val netBalance: Double = 0.0,
+    val netBalancePercentChange: Double? = null,
     val baseCurrency: String = "ZAR",
-    val monthlyBudget: Double = 5000.0,
+    val dailyPoints: List<DailyPoint> = emptyList(),
+    val recentTransactions: List<TransactionEntity> = emptyList(),
 ) {
-    val netBalance: Double
-        get() = totalIncome - totalExpenses
-
-    val budgetUsedFraction: Double
-        get() = if (monthlyBudget <= 0.0) {
-            0.0
-        } else {
-            (monthlyExpenses / monthlyBudget).coerceIn(0.0, 1.0)
-        }
+    val monthLabel: String
+        get() = java.text.SimpleDateFormat("MMMM yyyy", java.util.Locale.getDefault())
+            .format(Calendar.getInstance().apply { set(selectedYear, selectedMonth, 1) }.time)
 }
 
+/** Backs the Financial Tracker dashboard — month selector, income/expense cards with
+ *  month-over-month % change and top categories, a daily chart, and recent activity.
+ *  Everything here is computed from the local RoomDB-backed transaction list rather
+ *  than a dedicated report endpoint, so the dashboard stays accurate offline. */
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class FinanceViewModel @Inject constructor(
@@ -45,82 +44,72 @@ class FinanceViewModel @Inject constructor(
     authRepository: AuthRepository,
 ) : ViewModel() {
 
-    private val transactions =
-        authRepository.currentUser.flatMapLatest { user ->
-            if (user == null) {
-                flowOf(emptyList())
-            } else {
-                transactionRepository.observeAllForUser(user.userId)
-            }
+    private val selectedYearMonth = MutableStateFlow(Calendar.getInstance().get(Calendar.YEAR) to Calendar.getInstance().get(Calendar.MONTH))
+
+    private val allTransactions = authRepository.currentUser.flatMapLatest { user ->
+        if (user == null) flowOf(emptyList()) else transactionRepository.observeAllForUser(user.userId)
+    }
+
+    val uiState: StateFlow<FinanceUiState> = combine(allTransactions, settingsRepository.baseCurrency, selectedYearMonth) { transactions, currency, (year, month) ->
+        buildState(transactions, currency, year, month)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), FinanceUiState())
+
+    fun onPreviousMonth() {
+        val (year, month) = selectedYearMonth.value
+        selectedYearMonth.value = if (month == 0) (year - 1) to 11 else year to (month - 1)
+    }
+
+    fun onNextMonth() {
+        val (year, month) = selectedYearMonth.value
+        selectedYearMonth.value = if (month == 11) (year + 1) to 0 else year to (month + 1)
+    }
+
+    private fun buildState(transactions: List<TransactionEntity>, currency: String, year: Int, month: Int): FinanceUiState {
+        val (monthStart, monthEnd) = monthBounds(year, month)
+        val (prevStart, prevEnd) = monthBounds(if (month == 0) year - 1 else year, if (month == 0) 11 else month - 1)
+
+        fun converted(list: List<TransactionEntity>) = list.sumOf { CurrencyConverter.convert(it.amount, it.currency, currency) }
+        fun inMonth(start: Long, end: Long) = transactions.filter { it.transactionDate in start until end }
+
+        val thisMonth = inMonth(monthStart, monthEnd)
+        val prevMonth = inMonth(prevStart, prevEnd)
+
+        fun stat(type: String): MonthlyStat {
+            val current = converted(thisMonth.filter { it.type == type })
+            val previous = converted(prevMonth.filter { it.type == type })
+            val change = if (previous > 0.0) ((current - previous) / previous) * 100.0 else null
+            val topCategories = thisMonth.filter { it.type == type }
+                .groupBy { it.category }
+                .mapValues { (_, list) -> converted(list) }
+                .toList().sortedByDescending { it.second }.take(3)
+            return MonthlyStat(current, change, topCategories)
         }
 
-    val uiState: StateFlow<FinanceUiState> = combine(
-        transactions,
-        settingsRepository.baseCurrency,
-    ) { transactions, currency ->
+        val incomeStat = stat("INCOME")
+        val expenseStat = stat("EXPENSE")
+        val netBalance = incomeStat.total - expenseStat.total
+        val prevNet = converted(prevMonth.filter { it.type == "INCOME" }) - converted(prevMonth.filter { it.type == "EXPENSE" })
+        val netChange = if (prevNet != 0.0) ((netBalance - prevNet) / kotlin.math.abs(prevNet)) * 100.0 else null
 
-        val totalIncome = transactions
-            .filter { it.type == "INCOME" }
-            .sumOf {
-                CurrencyConverter.convert(
-                    amount = it.amount,
-                    from = it.currency,
-                    to = currency,
-                )
-            }
+        val calendar = Calendar.getInstance().apply { set(year, month, 1, 0, 0, 0) }
+        val daysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
+        val dailyPoints = (1..daysInMonth).map { day ->
+            val dayStart = Calendar.getInstance().apply { set(year, month, day, 0, 0, 0) }.timeInMillis
+            val dayEnd = dayStart + 24L * 60 * 60 * 1000
+            val dayTx = thisMonth.filter { it.transactionDate in dayStart until dayEnd }
+            DailyPoint(day, converted(dayTx.filter { it.type == "INCOME" }), converted(dayTx.filter { it.type == "EXPENSE" }))
+        }
 
-        val totalExpenses = transactions
-            .filter { it.type == "EXPENSE" }
-            .sumOf {
-                CurrencyConverter.convert(
-                    amount = it.amount,
-                    from = it.currency,
-                    to = currency,
-                )
-            }
-
-        val (monthStart, nextMonthStart) = currentMonthBounds()
-
-        val monthlyExpenses = transactions
-            .filter {
-                it.type == "EXPENSE" &&
-                        it.transactionDate >= monthStart &&
-                        it.transactionDate < nextMonthStart
-            }
-            .sumOf {
-                CurrencyConverter.convert(
-                    amount = it.amount,
-                    from = it.currency,
-                    to = currency,
-                )
-            }
-
-        FinanceUiState(
-            transactions = transactions,
-            totalIncome = totalIncome,
-            totalExpenses = totalExpenses,
-            monthlyExpenses = monthlyExpenses,
-            baseCurrency = currency,
+        return FinanceUiState(
+            selectedYear = year, selectedMonth = month, incomeStat = incomeStat, expenseStat = expenseStat,
+            netBalance = netBalance, netBalancePercentChange = netChange, baseCurrency = currency,
+            dailyPoints = dailyPoints, recentTransactions = transactions.sortedByDescending { it.transactionDate }.take(5),
         )
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = FinanceUiState(),
-    )
-}
-
-private fun currentMonthBounds(): Pair<Long, Long> {
-    val start = Calendar.getInstance().apply {
-        set(Calendar.DAY_OF_MONTH, 1)
-        set(Calendar.HOUR_OF_DAY, 0)
-        set(Calendar.MINUTE, 0)
-        set(Calendar.SECOND, 0)
-        set(Calendar.MILLISECOND, 0)
     }
 
-    val end = (start.clone() as Calendar).apply {
-        add(Calendar.MONTH, 1)
+    private fun monthBounds(year: Int, month: Int): Pair<Long, Long> {
+        val start = Calendar.getInstance().apply { set(year, month, 1, 0, 0, 0); set(Calendar.MILLISECOND, 0) }
+        val end = (start.clone() as Calendar).apply { add(Calendar.MONTH, 1) }
+        return start.timeInMillis to end.timeInMillis
     }
-
-    return start.timeInMillis to end.timeInMillis
 }

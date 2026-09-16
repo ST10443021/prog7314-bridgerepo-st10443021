@@ -130,7 +130,17 @@ namespace DevLedger.Api.Migrations
                     b.Property<decimal>("Amount")
                         .HasColumnType("numeric");
 
+                    b.Property<string>("AttachmentBase64")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AttachmentFileName")
+                        .HasColumnType("text");
+
                     b.Property<string>("Category")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ClientOrFrom")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -142,6 +152,24 @@ namespace DevLedger.Api.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsRecurring")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("NextOccurrenceDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PaymentMethod")
+                        .HasColumnType("text");
+
+                    b.Property<string>("RecurringFrequency")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ReferenceNumber")
+                        .HasColumnType("text");
+
+                    b.Property<string>("RelatedProject")
                         .HasColumnType("text");
 
                     b.Property<DateTime>("TransactionDate")

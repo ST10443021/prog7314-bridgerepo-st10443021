@@ -46,6 +46,8 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import androidx.lifecycle.viewModelScope
+import com.devledger.app.ui.screens.finance.TransactionDetailScreen
+import com.devledger.app.ui.screens.finance.TransactionListScreen
 import com.devledger.app.ui.screens.folders.FoldersTagsScreen
 import com.devledger.app.ui.screens.snippets.SnippetDetailScreen
 import kotlinx.coroutines.launch
@@ -205,9 +207,32 @@ fun DevLedgerNavHost(navController: NavHostController) {
 
         composable(DevLedgerDestinations.FINANCE) {
             MainScaffold(navController, BottomNavTab.FINANCE) {
-                FinancialTrackerScreen(onAddTransaction = { navController.navigate(DevLedgerDestinations.ADD_TRANSACTION) })
+                FinancialTrackerScreen(
+                    onAddTransaction = { navController.navigate(DevLedgerDestinations.ADD_TRANSACTION) },
+                    onViewIncome = { navController.navigate(DevLedgerDestinations.transactionListRoute("INCOME")) },
+                    onViewExpenses = { navController.navigate(DevLedgerDestinations.transactionListRoute("EXPENSE")) },
+                    onOpenTransaction = { id -> navController.navigate(DevLedgerDestinations.transactionDetailRoute(id)) },
+                )
             }
         }
+        composable(
+            route = DevLedgerDestinations.TRANSACTION_LIST,
+            arguments = listOf(navArgument("type") { type = NavType.StringType }),
+        ) {
+
+            TransactionListScreen(
+                onBack = { navController.popBackStack() },
+                onOpenTransaction = { id -> navController.navigate(DevLedgerDestinations.transactionDetailRoute(id)) },
+            )
+        }
+
+        composable(
+            route = DevLedgerDestinations.TRANSACTION_DETAIL,
+            arguments = listOf(navArgument("transactionId") { type = NavType.StringType }),
+        ) {
+            TransactionDetailScreen(onBack = { navController.popBackStack() })
+        }
+
         composable(DevLedgerDestinations.NOTIFICATIONS) {
             MainScaffold(navController, BottomNavTab.NOTIFICATIONS) {
                 NotificationsScreen()

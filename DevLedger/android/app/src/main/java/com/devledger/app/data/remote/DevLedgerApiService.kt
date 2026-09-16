@@ -63,23 +63,25 @@ interface DevLedgerApiService {
     @HTTP(method = "DELETE", path = "api/folders/{id}", hasBody = true)
     suspend fun deleteFolder(@Path("id") id: String, @Body request: DeleteFolderRequest): Response<Unit>
     @GET("api/transactions")
-    suspend fun getTransactions(): Response<List<TransactionDto>>
+    suspend fun getTransactions(@Query("type") type: String? = null, @Query("search") search: String? = null): Response<List<TransactionDto>>
+
+    @GET("api/transactions/{id}")
+    suspend fun getTransaction(@Path("id") id: String): Response<TransactionDto>
+
     @POST("api/transactions")
     suspend fun createTransaction(@Body request: CreateTransactionRequest): Response<TransactionDto>
 
-    @PUT("api/transactions/{id}")
-    suspend fun updateTransaction(
-        @Path("id") id: String,
-        @Body request: CreateTransactionRequest,
-    ): Response<TransactionDto>
-
-    @DELETE("api/transactions/{id}")
-    suspend fun deleteTransaction(
-        @Path("id") id: String,
-    ): Response<Unit>
-
     @GET("api/transactions/summary")
     suspend fun getTransactionSummary(): Response<TransactionSummaryDto>
+
+    @GET("api/transactions/daily-series")
+    suspend fun getDailySeries(@Query("year") year: Int, @Query("month") month: Int): Response<List<DailySeriesPointDto>>
+
+    @GET("api/transactions/category-breakdown")
+    suspend fun getCategoryBreakdown(@Query("type") type: String): Response<List<CategoryBreakdownDto>>
+
+    @GET("api/transactions/distinct-projects")
+    suspend fun getDistinctProjects(): Response<List<String>>
 
     @POST("api/sync/batch")
     suspend fun syncBatch(@Body request: SyncBatchRequest): Response<SyncBatchResponse>
