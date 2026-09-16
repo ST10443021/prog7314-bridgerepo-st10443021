@@ -1,10 +1,12 @@
 package com.devledger.app.ui.screens.finance
 
+import android.graphics.BitmapFactory
 import android.provider.OpenableColumns
 import android.util.Base64
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -22,11 +24,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -170,7 +175,12 @@ fun AddTransactionScreen(
 
             Spacer(Modifier.height(20.dp))
             
-            AttachmentSection(state.attachmentFileName, onUpload = { filePicker.launch("*/*") }, onRemove = viewModel::onAttachmentRemoved)
+            AttachmentSection(
+                fileName = state.attachmentFileName,
+                base64 = state.attachmentBase64,
+                onUpload = { filePicker.launch("image/*") }, // Restrict to images for prototype
+                onRemove = viewModel::onAttachmentRemoved
+            )
             if (state.attachmentTooLarge) {
                 Text("File is larger than 2MB — pick a smaller file.", color = DevLedgerColors.ErrorRed, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
             }
@@ -538,29 +548,55 @@ private fun RecurringSection(state: AddTransactionUiState, onToggle: (Boolean) -
 }
 
 @Composable
-private fun AttachmentSection(fileName: String?, onUpload: () -> Unit, onRemove: () -> Unit) {
+private fun AttachmentSection(fileName: String?, base64: String?, onUpload: () -> Unit, onRemove: () -> Unit) {
     Box(
         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(DevLedgerColors.SurfaceCard).border(1.dp, DevLedgerColors.Border, RoundedCornerShape(12.dp)).padding(16.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            Icon(Icons.Default.AttachFile, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text("Attachment (Optional)", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                Text(fileName ?: "Attach receipt or invoice", color = DevLedgerColors.TextMuted, fontSize = 12.sp, maxLines = 1)
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Default.AttachFile, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Attachment (Optional)", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Text(fileName ?: "Attach receipt or invoice", color = DevLedgerColors.TextMuted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                if (fileName != null) {
+                    TextButton(onClick = onRemove) { Text("Remove", color = DevLedgerColors.ErrorRed, fontSize = 13.sp, fontWeight = FontWeight.SemiBold) }
+                } else {
+                    Button(
+                        onClick = onUpload,
+                        colors = ButtonDefaults.buttonColors(containerColor = DevLedgerColors.SurfaceCardAlt),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                    ) {
+                        Icon(Icons.Default.FileUpload, contentDescription = null, tint = DevLedgerColors.AccentBlue, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Upload File", color = Color.White, fontSize = 13.sp)
+                    }
+                }
             }
-            if (fileName != null) {
-                TextButton(onClick = onRemove) { Text("Remove", color = DevLedgerColors.ErrorRed, fontSize = 13.sp, fontWeight = FontWeight.SemiBold) }
-            } else {
-                Button(
-                    onClick = onUpload,
-                    colors = ButtonDefaults.buttonColors(containerColor = DevLedgerColors.SurfaceCardAlt),
-                    shape = RoundedCornerShape(8.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
-                ) {
-                    Icon(Icons.Default.FileUpload, contentDescription = null, tint = DevLedgerColors.AccentBlue, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Upload File", color = Color.White, fontSize = 13.sp)
+
+            if (base64 != null) {
+                val bitmap = remember(base64) {
+                    try {
+                        val decodedString = Base64.decode(base64, Base64.DEFAULT)
+                        BitmapFactory.decodeByteArray(decodedString, 0, decodedString.size)
+                    } catch (e: Exception) {
+                        null
+                    }
+                }
+
+                if (bitmap != null) {
+                    Spacer(Modifier.height(12.dp))
+                    Image(
+                        bitmap = bitmap.asImageBitmap(),
+                        contentDescription = "Attachment Preview",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 200.dp)
+                            .clip(RoundedCornerShape(8.dp)),
+                        contentScale = ContentScale.Fit
+                    )
                 }
             }
         }
