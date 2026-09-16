@@ -75,9 +75,9 @@ fun SettingsScreen(
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    LaunchedEffect(state.appliedLanguage) {
-        state.appliedLanguage?.let {
-            applyAppLocale(context, it)
+    LaunchedEffect(state.language, state.isLoaded) {
+        if (state.isLoaded) {
+            applyAppLocale(context, state.language)
         }
     }
 
