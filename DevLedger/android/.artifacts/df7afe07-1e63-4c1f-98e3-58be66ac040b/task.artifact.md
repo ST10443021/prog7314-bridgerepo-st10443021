@@ -1,0 +1,4 @@
+- `[ ]` Extract `NotificationsContent` from `NotificationsScreen`
+- `[ ]` Add `NotificationsPreview` at the bottom of `NotificationsScreen.kt`
+- `[ ]` Verify changes with `analyze_file`
+- `[ ]` Verify changes with `render_compose_preview`
