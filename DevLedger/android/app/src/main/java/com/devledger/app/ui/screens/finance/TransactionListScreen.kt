@@ -26,6 +26,7 @@ import com.devledger.app.ui.theme.DevLedgerColors
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.*
@@ -56,6 +57,16 @@ class TransactionListViewModel @Inject constructor(
         query,
     ) { transactions, q -> TransactionListUiState(q, transactions) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), TransactionListUiState())
+
+    init {
+        viewModelScope.launch {
+            try {
+                transactionRepository.refreshFromApi()
+            } catch (e: Exception) {
+                // Ignore background refresh errors in prototype
+            }
+        }
+    }
 
     fun onQueryChange(value: String) { query.value = value }
 }

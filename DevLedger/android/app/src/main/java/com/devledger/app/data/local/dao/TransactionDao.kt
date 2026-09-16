@@ -3,6 +3,7 @@ package com.devledger.app.data.local.dao
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Upsert
 import com.devledger.app.data.local.entity.TransactionEntity
 import kotlinx.coroutines.flow.Flow
@@ -42,4 +43,19 @@ interface TransactionDao {
 
     @Delete
     suspend fun delete(transaction: TransactionEntity)
+
+    @Transaction
+    suspend fun mergeRemoteTransactions(userId: String, remoteTransactions: List<TransactionEntity>) {
+        for (remote in remoteTransactions) {
+            require(remote.userId == userId) { "The downloaded transaction belongs to a different account." }
+            val local = getById(remote.transactionId)
+            require(local == null || local.userId == userId) { "A transaction ID conflicts with another cached account." }
+            
+            if (local == null) {
+                upsert(remote)
+            } else if (local.syncStatus == "SYNCED") {
+                upsert(remote)
+            }
+        }
+    }
 }
