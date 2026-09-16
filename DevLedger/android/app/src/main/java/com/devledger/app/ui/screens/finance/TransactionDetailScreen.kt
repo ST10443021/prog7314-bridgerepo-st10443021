@@ -1,14 +1,27 @@
 package com.devledger.app.ui.screens.finance
 
+import android.graphics.BitmapFactory
+import android.util.Base64
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -79,7 +92,58 @@ fun TransactionDetailScreen(onBack: () -> Unit, viewModel: TransactionDetailView
                 DetailRow("Reference / Invoice #", transaction.referenceNumber ?: "—")
                 DetailRow("Date", dateFormat.format(Date(transaction.transactionDate)))
                 DetailRow("Recurring", if (transaction.isRecurring) "Yes — ${transaction.recurringFrequency?.lowercase()?.replaceFirstChar { it.uppercase() }}" else "No")
-                if (transaction.attachmentFileName != null) DetailRow("Attachment", transaction.attachmentFileName)
+                
+                if (transaction.attachmentFileName != null) {
+                    AttachmentPreview(transaction.attachmentFileName, transaction.attachmentBase64)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AttachmentPreview(fileName: String, base64: String?) {
+    Column(modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp)) {
+        Text("Attachment", color = DevLedgerColors.TextMuted, fontSize = 11.sp, modifier = Modifier.padding(bottom = 8.dp))
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(DevLedgerColors.SurfaceCard)
+                .border(1.dp, DevLedgerColors.Border, RoundedCornerShape(12.dp))
+                .padding(12.dp)
+        ) {
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.AttachFile, contentDescription = null, tint = DevLedgerColors.TextMuted, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(fileName, color = DevLedgerColors.TextPrimary, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+
+                if (base64 != null) {
+                    val bitmap = remember(base64) {
+                        try {
+                            val decodedString = Base64.decode(base64, Base64.DEFAULT)
+                            BitmapFactory.decodeByteArray(decodedString, 0, decodedString.size)
+                        } catch (e: Exception) {
+                            null
+                        }
+                    }
+
+                    if (bitmap != null) {
+                        Spacer(Modifier.height(12.dp))
+                        Image(
+                            bitmap = bitmap.asImageBitmap(),
+                            contentDescription = "Attachment Preview",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 400.dp)
+                                .clip(RoundedCornerShape(8.dp)),
+                            contentScale = ContentScale.Fit
+                        )
+                    }
+                }
             }
         }
     }
