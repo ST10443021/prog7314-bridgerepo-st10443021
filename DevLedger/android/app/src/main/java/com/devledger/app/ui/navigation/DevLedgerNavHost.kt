@@ -349,41 +349,36 @@ class AuthEntryPoint @Inject constructor(
 
     /** 
      * Determines if the current user (if logged in) needs to configure their PIN.
-     * This is true for "new" accounts that have no PIN record in the backend database.
+     * This is true ONLY for new accounts that have never set up security.
      */
     suspend fun needsSecuritySetup(): Boolean {
         if (!isLoggedIn()) return false
+        
         return try {
-            // Wait for user data (and synced PIN hash from backend) to resolve
+            // Load user data once with a reasonable timeout
             val user = withTimeoutOrNull(5000) {
                 authRepository.currentUser.first { it != null }
             }
-            // If pinHash is null, it's a new account (or security was never set up)
-            user?.pinHash == null
-        } catch (_: Exception) {
-            true // Default to safety
-        }
-    }
-
-    /** 
-     * Checks if the current user has a PIN configured (either locally or recently synced).
-     */
-    suspend fun hasLocalPin(): Boolean {
-        if (!isLoggedIn()) return false
-        return try {
-            // Wait briefly for the user cache to populate.
-            val user = withTimeoutOrNull(5000) {
-                authRepository.currentUser.first { it != null }
-            }
+            
             if (user == null) {
-                Log.w("AuthEntryPoint", "hasLocalPin: User timeout, assuming no PIN")
+                Log.w("AuthEntryPoint", "needsSecuritySetup: User timeout, assuming verification is enough")
                 return false
             }
-            val hasPin = pinStorage.hasPin(user.email)
-            Log.i("AuthEntryPoint", "hasLocalPin: email=${user.email}, hasPin=$hasPin")
-            hasPin
-        } catch (_: Exception) {
-            false
+
+            // 1. If we already have a local PIN on this device, no setup is needed.
+            if (pinStorage.hasPin(user.email)) {
+                Log.i("AuthEntryPoint", "needsSecuritySetup: Local PIN found for ${user.email}")
+                return false
+            }
+
+            // 2. If no local PIN, check if the cloud has one. 
+            // If pinHash is null, it's a new account that NEEDS setup.
+            val needsSetup = user.pinHash == null
+            Log.i("AuthEntryPoint", "needsSecuritySetup: email=${user.email}, needsSetup=$needsSetup")
+            needsSetup
+        } catch (e: Exception) {
+            Log.e("AuthEntryPoint", "needsSecuritySetup: Failed", e)
+            false // Fallback to verification screen rather than forced creation
         }
     }
 }
