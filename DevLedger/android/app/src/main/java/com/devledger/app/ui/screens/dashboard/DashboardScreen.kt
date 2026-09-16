@@ -862,11 +862,13 @@ private fun RecentActivitySection(
                             ->
                             TransactionActivityRow(
                                 transaction = transaction,
-                                convertedAmount = CurrencyConverter.convert(
-                                    amount = transaction.amount,
-                                    from = transaction.currency,
-                                    to = state.baseCurrency,
-                                ),
+                                convertedAmount = runCatching {
+                                    CurrencyConverter.convert(
+                                        amount = transaction.amount,
+                                        from = transaction.currency,
+                                        to = state.baseCurrency,
+                                    )
+                                }.getOrDefault(transaction.amount),
                                 currencyFormat = currencyFormat,
                                 onClick = onOpenFinance,
                             )

@@ -1,6 +1,7 @@
 package com.devledger.app.sync
 
 import android.content.Context
+import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
@@ -26,9 +27,14 @@ class RecurringTransactionWorker @AssistedInject constructor(
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
-        val due = transactionRepository.getDueRecurring()
-        due.forEach { transactionRepository.rollForwardRecurring(it) }
-        return Result.success()
+        return try {
+            val due = transactionRepository.getDueRecurring()
+            due.forEach { transactionRepository.rollForwardRecurring(it) }
+            Result.success()
+        } catch (e: Exception) {
+            Log.e("RecurringWorker", "Failed to process recurring transactions", e)
+            Result.retry()
+        }
     }
 
     companion object {
