@@ -4,12 +4,16 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.devledger.app.data.repository.AuthRepository
+import com.devledger.app.data.repository.FolderRepository
 import com.devledger.app.data.repository.TransactionRepository
+import com.devledger.app.util.CurrencyConverter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -38,6 +42,7 @@ data class AddTransactionUiState(
     val attachmentBase64: String? = null,
     val attachmentTooLarge: Boolean = false,
     val projectSuggestions: List<String> = emptyList(),
+    val availableCurrencies: List<String> = CurrencyConverter.supportedCurrencies(),
     val isSaving: Boolean = false,
     val errorMessage: String? = null,
     val saved: Boolean = false,
@@ -52,6 +57,7 @@ data class AddTransactionUiState(
 class AddTransactionViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val transactionRepository: TransactionRepository,
+    private val folderRepository: FolderRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddTransactionUiState())
@@ -59,9 +65,17 @@ class AddTransactionViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            val user = authRepository.currentUser.first() ?: return@launch
-            val suggestions = transactionRepository.getDistinctProjects(user.userId)
-            _uiState.value = _uiState.value.copy(projectSuggestions = suggestions)
+            val user = authRepository.currentUser.first { it != null } ?: return@launch
+            
+            // Combine project suggestions from existing transactions AND folders
+            folderRepository.observeFolders().collectLatest { folders ->
+                val folderNames = folders.map { it.name }
+                val transactionProjects = transactionRepository.getDistinctProjects(user.userId)
+                
+                _uiState.value = _uiState.value.copy(
+                    projectSuggestions = (folderNames + transactionProjects).distinct().sorted()
+                )
+            }
         }
     }
 
@@ -73,6 +87,7 @@ class AddTransactionViewModel @Inject constructor(
 
     fun onTypeChange(type: String) = edit { it.copy(type = type, category = "") }
     fun onAmountChange(v: String) = edit { it.copy(amount = v) }
+    fun onCurrencyChange(v: String) = edit { it.copy(currency = v) }
     fun onCategoryChange(v: String) = edit { it.copy(category = v) }
     fun onDescriptionChange(v: String) = edit { if (v.length <= 200) it.copy(description = v) else it }
     fun onClientOrFromChange(v: String) = edit { it.copy(clientOrFrom = v) }
@@ -82,6 +97,19 @@ class AddTransactionViewModel @Inject constructor(
     fun onDateChange(millis: Long) = edit { it.copy(transactionDateMillis = millis) }
     fun onRecurringToggle(enabled: Boolean) = edit { it.copy(isRecurring = enabled) }
     fun onRecurringFrequencyChange(freq: String) = edit { it.copy(recurringFrequency = freq) }
+
+    fun createFolderAndSelect(name: String) {
+        viewModelScope.launch {
+            try {
+                folderRepository.create(name)
+                // The observeFolders collector will update suggestions.
+                // We select it immediately in the UI state.
+                edit { it.copy(relatedProject = name) }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to create folder", e)
+            }
+        }
+    }
 
     /** [fileSizeBytes] is checked here so the UI can show a rejection immediately,
      *  before spending memory holding an oversized base64 string in state. */

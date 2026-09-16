@@ -12,10 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -229,7 +226,9 @@ fun FinancialTrackerScreen(
 
         item {
             MonthlySummarySection(
-                points = state.dailyPoints
+                points = state.dailyPoints,
+                currentRange = state.summaryRange,
+                onRangeChange = viewModel::onSummaryRangeChanged
             )
         }
 
@@ -530,8 +529,12 @@ private fun NetBalanceCard(
 
 @Composable
 private fun MonthlySummarySection(
-    points: List<DailyPoint>
+    points: List<DailyPoint>,
+    currentRange: SummaryRange,
+    onRangeChange: (SummaryRange) -> Unit
 ) {
+    var showRangeMenu by remember { mutableStateOf(false) }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -551,94 +554,103 @@ private fun MonthlySummarySection(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Monthly Summary",
+                    text = "Financial Summary",
                     color = Color.White,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
                 )
 
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(DevLedgerColors.SurfaceCardAlt)
-                        .padding(
-                            horizontal = 8.dp,
-                            vertical = 4.dp
-                        )
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
+                Box {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(DevLedgerColors.SurfaceCardAlt)
+                            .clickable { showRangeMenu = true }
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
-                        Text(
-                            text = "This Month",
-                            color = Color.White,
-                            fontSize = 12.sp
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            val rangeLabel = when(currentRange) {
+                                SummaryRange.WEEK -> "This Week"
+                                SummaryRange.MONTH -> "This Month"
+                                SummaryRange.YEAR -> "This Year"
+                            }
+                            Text(
+                                text = rangeLabel,
+                                color = Color.White,
+                                fontSize = 12.sp
+                            )
 
-                        Icon(
-                            imageVector = Icons.Default.KeyboardArrowDown,
-                            contentDescription = null,
-                            tint = DevLedgerColors.TextMuted,
-                            modifier = Modifier.size(14.dp)
-                        )
+                            Icon(
+                                imageVector = Icons.Default.KeyboardArrowDown,
+                                contentDescription = null,
+                                tint = DevLedgerColors.TextMuted,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+                    }
+
+                    DropdownMenu(
+                        expanded = showRangeMenu,
+                        onDismissRequest = { showRangeMenu = false },
+                        modifier = Modifier.background(DevLedgerColors.SurfaceCard)
+                    ) {
+                        SummaryRange.values().forEach { range ->
+                            val label = when(range) {
+                                SummaryRange.WEEK -> "This Week"
+                                SummaryRange.MONTH -> "This Month"
+                                SummaryRange.YEAR -> "This Year"
+                            }
+                            DropdownMenuItem(
+                                text = { Text(label, color = Color.White) },
+                                onClick = {
+                                    onRangeChange(range)
+                                    showRangeMenu = false
+                                }
+                            )
+                        }
                     }
                 }
             }
 
-            Spacer(
-                modifier = Modifier.height(16.dp)
-            )
+            Spacer(modifier = Modifier.height(16.dp))
 
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                LegendItem(
-                    label = "Income",
-                    color = DevLedgerColors.SuccessGreen
-                )
-
-                LegendItem(
-                    label = "Expenses",
-                    color = DevLedgerColors.ErrorRed
-                )
-
-                LegendItem(
-                    label = "Net Balance",
-                    color = DevLedgerColors.AccentBlue
-                )
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                LegendItem(label = "Income", color = DevLedgerColors.SuccessGreen)
+                LegendItem(label = "Expenses", color = DevLedgerColors.ErrorRed)
+                LegendItem(label = "Net Balance", color = DevLedgerColors.AccentBlue)
             }
 
-            Spacer(
-                modifier = Modifier.height(24.dp)
-            )
+            Spacer(modifier = Modifier.height(24.dp))
 
             MonthlySummaryChart(
                 points = points,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(160.dp)
+                modifier = Modifier.fillMaxWidth().height(160.dp)
             )
 
-            Spacer(
-                modifier = Modifier.height(8.dp)
-            )
+            Spacer(modifier = Modifier.height(8.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                listOf(
-                    "1 May",
-                    "8 May",
-                    "15 May",
-                    "22 May",
-                    "29 May"
-                ).forEach { label ->
-                    Text(
-                        text = label,
-                        color = DevLedgerColors.TextMuted,
-                        fontSize = 10.sp
-                    )
+                // Show labels from the data points if available, otherwise fallback
+                if (points.size >= 5) {
+                    val indices = listOf(0, points.size / 4, points.size / 2, 3 * points.size / 4, points.size - 1)
+                    indices.forEach { idx ->
+                        Text(
+                            text = points[idx].label,
+                            color = DevLedgerColors.TextMuted,
+                            fontSize = 10.sp
+                        )
+                    }
+                } else {
+                    points.forEach { point ->
+                        Text(
+                            text = point.label,
+                            color = DevLedgerColors.TextMuted,
+                            fontSize = 10.sp
+                        )
+                    }
                 }
             }
         }
