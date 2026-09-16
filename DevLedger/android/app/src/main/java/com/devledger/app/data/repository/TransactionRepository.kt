@@ -3,11 +3,15 @@ package com.devledger.app.data.repository
 import android.content.Context
 import android.util.Log
 import com.devledger.app.data.local.dao.TransactionDao
+import com.devledger.app.data.local.dao.UserDao
 import com.devledger.app.data.local.entity.SyncStatus
 import com.devledger.app.data.local.entity.TransactionEntity
+import com.devledger.app.data.remote.DevLedgerApiService
+import com.devledger.app.data.remote.auth.TokenManager
 import com.devledger.app.sync.SyncScheduler
 import com.devledger.app.util.IdGenerator
 import dagger.hilt.android.qualifiers.ApplicationContext
+import retrofit2.HttpException
 import java.util.Calendar
 import java.util.Locale
 import javax.inject.Inject
@@ -21,13 +25,54 @@ import kotlinx.coroutines.flow.first
 @Singleton
 class TransactionRepository @Inject constructor(
     private val dao: TransactionDao,
+    private val userDao: UserDao,
     private val settingsRepository: SettingsRepository,
+    private val api: DevLedgerApiService,
+    private val tokenManager: TokenManager,
     @ApplicationContext private val context: Context,
 ) {
     fun observeAllForUser(userId: String): Flow<List<TransactionEntity>> = dao.observeAllForUser(userId)
 
     fun observeByType(userId: String, type: String, query: String): Flow<List<TransactionEntity>> =
         dao.observeByTypeForUser(userId, type, query.trim())
+
+    suspend fun refreshFromApi() {
+        val token = tokenManager.getAccessToken()?.takeIf { it.isNotBlank() } ?: return
+        val user = userDao.getCurrentUser() ?: return
+        
+        val response = api.getTransactions()
+        if (!response.isSuccessful) throw HttpException(response)
+        
+        val remoteTransactions = response.body() ?: return
+        
+        // Ensure session hasn't changed
+        if (tokenManager.getAccessToken() != token) return
+        
+        val entities = remoteTransactions.map { remote ->
+            TransactionEntity(
+                transactionId = remote.transactionId,
+                userId = user.userId,
+                type = remote.type,
+                amount = remote.amount,
+                currency = remote.currency,
+                category = remote.category,
+                description = remote.description,
+                clientOrFrom = remote.clientOrFrom,
+                relatedProject = remote.relatedProject,
+                paymentMethod = remote.paymentMethod,
+                referenceNumber = remote.referenceNumber,
+                isRecurring = remote.isRecurring,
+                recurringFrequency = remote.recurringFrequency,
+                nextOccurrenceDate = remote.nextOccurrenceDate,
+                attachmentFileName = remote.attachmentFileName,
+                attachmentBase64 = null, // Backend doesn't return base64 in list; ideally separate call
+                transactionDate = remote.transactionDate,
+                createdAt = System.currentTimeMillis(), // We don't have remote createdAt in DTO
+                syncStatus = SyncStatus.SYNCED
+            )
+        }
+        dao.mergeRemoteTransactions(user.userId, entities)
+    }
 
     suspend fun getById(id: String): TransactionEntity? = dao.getById(id)
 
