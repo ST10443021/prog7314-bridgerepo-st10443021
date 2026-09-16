@@ -4,9 +4,9 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import kotlinx.serialization.Serializable
 
-/** Income/expense record — mirrors the `Transaction` schema from Part 1's data model.
- *  @Serializable is required so SyncWorker can encode this directly for the sync batch
- *  payload (JetBrains, n.d.). */
+/** Income/expense record — mirrors the extended Transaction schema. @Serializable is
+ *  required so SyncWorker can encode this directly for the sync batch payload
+ *  (JetBrains, n.d.). */
 @Serializable
 @Entity(tableName = "transactions")
 data class TransactionEntity(
@@ -17,6 +17,15 @@ data class TransactionEntity(
     val currency: String,
     val category: String,
     val description: String?,
+    val clientOrFrom: String,
+    val relatedProject: String?,
+    val paymentMethod: String?,
+    val referenceNumber: String?,
+    val isRecurring: Boolean = false,
+    val recurringFrequency: String? = null,
+    val nextOccurrenceDate: Long? = null,
+    val attachmentFileName: String? = null,
+    val attachmentBase64: String? = null,
     val transactionDate: Long,
     val createdAt: Long,
     val syncStatus: String = SyncStatus.PENDING,

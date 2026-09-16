@@ -22,7 +22,10 @@ object DevLedgerDestinations {
     const val PRIVACY_POLICY = "privacy_policy"
     const val PIN_VERIFICATION = "pin_verification"
     const val SECURITY_SETUP = "security_setup"
-
+    const val TRANSACTION_LIST = "transaction_list/{type}"
+    fun transactionListRoute(type: String) = "transaction_list/$type"
+    const val TRANSACTION_DETAIL = "transaction_detail/{transactionId}"
+    fun transactionDetailRoute(id: String) = "transaction_detail/$id"
     fun snippetEditorRoute(snippetId: String? = null) =
         if (snippetId == null) "snippet_editor" else "snippet_editor?snippetId=$snippetId"
 

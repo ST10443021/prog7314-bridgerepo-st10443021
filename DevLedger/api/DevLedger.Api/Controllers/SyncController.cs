@@ -200,65 +200,53 @@ public class SyncController : ControllerBase
 
                     try
                     {
-                        payload =
-                            JsonSerializer.Deserialize<TransactionSyncPayload>(
-                                operation.Payload,
-                                JsonOptions);
+                        payload = JsonSerializer.Deserialize<TransactionSyncPayload>(
+                            operation.Payload,
+                            JsonOptions);
                     }
                     catch (JsonException)
                     {
-                        return BadRequest(
-                            "A transaction payload contains invalid JSON or values.");
+                        return BadRequest("A transaction payload contains invalid JSON or values.");
                     }
 
-                    if (payload is null ||
-                        payload.TransactionId == Guid.Empty)
+                    if (payload is null || payload.TransactionId == Guid.Empty)
                     {
-                        return BadRequest(
-                            "A valid transaction ID is required.");
+                        return BadRequest("A valid transaction ID is required.");
                     }
 
                     if (payload.UserId != userId)
                         return Forbid();
 
-                    var operationKey =
-                        $"transaction:{payload.TransactionId}";
+                    var operationKey = $"transaction:{payload.TransactionId}";
 
                     if (!seenOperations.Add(operationKey))
                     {
-                        return BadRequest(
-                            "A batch cannot contain duplicate transaction IDs.");
+                        return BadRequest("A batch cannot contain duplicate transaction IDs.");
                     }
 
                     if (payload.Type is not ("INCOME" or "EXPENSE"))
                     {
-                        return BadRequest(
-                            "Transaction type must be INCOME or EXPENSE.");
+                        return BadRequest("Transaction type must be INCOME or EXPENSE.");
                     }
 
                     if (payload.Amount <= 0)
                     {
-                        return BadRequest(
-                            "Transaction amount must be greater than zero.");
+                        return BadRequest("Transaction amount must be greater than zero.");
                     }
 
-                    if (string.IsNullOrWhiteSpace(payload.Currency) ||
-                        payload.Currency.Trim().Length != 3)
+                    if (string.IsNullOrWhiteSpace(payload.Currency) || payload.Currency.Trim().Length != 3)
                     {
-                        return BadRequest(
-                            "A valid three-letter currency code is required.");
+                        return BadRequest("A valid three-letter currency code is required.");
                     }
 
                     if (string.IsNullOrWhiteSpace(payload.Category))
                     {
-                        return BadRequest(
-                            "Transaction category is required.");
+                        return BadRequest("Transaction category is required.");
                     }
 
                     if (payload.CreatedAt != operation.ClientTimestamp)
                     {
-                        return BadRequest(
-                            "The transaction client timestamp is invalid.");
+                        return BadRequest("The transaction client timestamp is invalid.");
                     }
 
                     DateTime createdAt;
@@ -266,66 +254,77 @@ public class SyncController : ControllerBase
 
                     try
                     {
-                        createdAt = DateTimeOffset
-                            .FromUnixTimeMilliseconds(payload.CreatedAt)
-                            .UtcDateTime;
-
-                        transactionDate = DateTimeOffset
-                            .FromUnixTimeMilliseconds(payload.TransactionDate)
-                            .UtcDateTime;
+                        createdAt = DateTimeOffset.FromUnixTimeMilliseconds(payload.CreatedAt).UtcDateTime;
+                        transactionDate = DateTimeOffset.FromUnixTimeMilliseconds(payload.TransactionDate).UtcDateTime;
                     }
                     catch (ArgumentOutOfRangeException)
                     {
-                        return BadRequest(
-                            "The transaction timestamps are outside the supported range.");
+                        return BadRequest("The transaction timestamps are outside the supported range.");
                     }
 
-                    var transaction =
-                        await _db.Transactions.SingleOrDefaultAsync(
-                            item =>
-                                item.TransactionId ==
-                                payload.TransactionId,
-                            cancellationToken);
+                    var transaction = await _db.Transactions.SingleOrDefaultAsync(
+                        item => item.TransactionId == payload.TransactionId,
+                        cancellationToken);
 
-                    if (transaction is not null &&
-                        transaction.UserId != userId)
+                    if (transaction is not null && transaction.UserId != userId)
                     {
                         return Forbid();
                     }
 
                     if (transaction is null)
                     {
+                        // THIS IS THE CONSTRUCTION BLOCK:
                         transaction = new Transaction
                         {
                             TransactionId = payload.TransactionId,
                             UserId = userId,
+                            Type = payload.Type,
+                            Amount = payload.Amount,
+                            Currency = payload.Currency.Trim().ToUpperInvariant(),
+                            Category = payload.Category.Trim(),
+                            Description = string.IsNullOrWhiteSpace(payload.Description) ? null : payload.Description.Trim(),
+                            ClientOrFrom = payload.ClientOrFrom,
+                            RelatedProject = payload.RelatedProject,
+                            PaymentMethod = payload.PaymentMethod,
+                            ReferenceNumber = payload.ReferenceNumber,
+                            IsRecurring = payload.IsRecurring,
+                            RecurringFrequency = payload.RecurringFrequency,
+                            NextOccurrenceDate = payload.NextOccurrenceDate is null
+                                ? null
+                                : DateTimeOffset.FromUnixTimeMilliseconds(payload.NextOccurrenceDate.Value).UtcDateTime,
+                            AttachmentFileName = payload.AttachmentFileName,
+                            AttachmentBase64 = payload.AttachmentBase64,
+                            TransactionDate = transactionDate,
                             CreatedAt = createdAt,
                         };
 
                         _db.Transactions.Add(transaction);
                     }
-
-                    transaction.Type = payload.Type;
-                    transaction.Amount = payload.Amount;
-                    transaction.Currency =
-                        payload.Currency.Trim().ToUpperInvariant();
-                    transaction.Category = payload.Category.Trim();
-                    transaction.Description =
-                        string.IsNullOrWhiteSpace(payload.Description)
+                    else
+                    {
+                        transaction.Type = payload.Type;
+                        transaction.Amount = payload.Amount;
+                        transaction.Currency = payload.Currency.Trim().ToUpperInvariant();
+                        transaction.Category = payload.Category.Trim();
+                        transaction.Description = string.IsNullOrWhiteSpace(payload.Description) ? null : payload.Description.Trim();
+                        transaction.ClientOrFrom = payload.ClientOrFrom;
+                        transaction.RelatedProject = payload.RelatedProject;
+                        transaction.PaymentMethod = payload.PaymentMethod;
+                        transaction.ReferenceNumber = payload.ReferenceNumber;
+                        transaction.IsRecurring = payload.IsRecurring;
+                        transaction.RecurringFrequency = payload.RecurringFrequency;
+                        transaction.NextOccurrenceDate = payload.NextOccurrenceDate is null
                             ? null
-                            : payload.Description.Trim();
-                    transaction.TransactionDate = transactionDate;
+                            : DateTimeOffset.FromUnixTimeMilliseconds(payload.NextOccurrenceDate.Value).UtcDateTime;
+                        transaction.AttachmentFileName = payload.AttachmentFileName;
+                        transaction.AttachmentBase64 = payload.AttachmentBase64;
+                        transaction.TransactionDate = transactionDate;
+                    }
 
-                    applied.Add(
-                        payload.TransactionId.ToString());
+                    applied.Add(payload.TransactionId.ToString());
 
                     break;
                 }
-
-                default:
-                    return BadRequest(
-                        $"Unsupported sync entity '{operation.Entity}'.");
-            }
         }
 
         // EF Core commits the complete batch atomically.
@@ -372,6 +371,15 @@ public class SyncController : ControllerBase
         string Currency,
         string Category,
         string? Description,
+        string ClientOrFrom,
+        string? RelatedProject,
+        string? PaymentMethod,
+        string? ReferenceNumber,
+        bool IsRecurring,
+        string? RecurringFrequency,
+        long? NextOccurrenceDate,
+        string? AttachmentFileName,
+        string? AttachmentBase64,
         long TransactionDate,
         long CreatedAt);
 }
