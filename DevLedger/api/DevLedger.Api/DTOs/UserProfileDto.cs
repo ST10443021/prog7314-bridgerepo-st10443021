@@ -12,12 +12,17 @@ public sealed record UserProfileDto(
     string PreferredLanguage,
     string BaseCurrency,
     bool BiometricEnabled,
+    string? PinHash,
+    string? PinSalt,
     DateTime CreatedAt
 );
 
 /// <summary>
-/// Fields that the user may update from the Profile screen.
+/// Fields that the user may update from the Profile screen or Security Setup.
 /// </summary>
 public sealed record UpdateUserProfileRequest(
-    string FullName
+    string? FullName = null,
+    string? PinHash = null,
+    string? PinSalt = null,
+    bool? BiometricEnabled = null
 );

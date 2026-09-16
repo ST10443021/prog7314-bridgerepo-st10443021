@@ -13,5 +13,7 @@ data class UserEntity(
     val ssoProvider: String?,     // "GOOGLE" | "GITHUB" | null (email/password)
     val preferredLanguage: String = "en",
     val biometricEnabled: Boolean = true,
+    val pinHash: String? = null,
+    val pinSalt: String? = null,
     val baseCurrency: String = "ZAR",
 )

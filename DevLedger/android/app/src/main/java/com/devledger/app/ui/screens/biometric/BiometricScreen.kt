@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import androidx.fragment.app.FragmentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.devledger.app.R
 import com.devledger.app.data.local.PinStorage
 import com.devledger.app.data.repository.AuthRepository
@@ -35,7 +36,7 @@ import com.devledger.app.ui.components.DevLedgerPrimaryButton
 import com.devledger.app.ui.theme.DevLedgerColors
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
@@ -43,10 +44,12 @@ class BiometricViewModel @Inject constructor(
     private val pinStorage: PinStorage,
     private val authRepository: AuthRepository,
 ) : ViewModel() {
-    fun isFingerprintRegistered(): Boolean {
-        return runBlocking {
-            val email = authRepository.currentUser.first()?.email
-            pinStorage.isFingerprintRegistered(email)
+    val isFingerprintRegistered = mutableStateOf<Boolean?>(null)
+
+    init {
+        viewModelScope.launch {
+            val email = authRepository.currentUser.first { it != null }?.email
+            isFingerprintRegistered.value = pinStorage.isFingerprintRegistered(email)
         }
     }
 }
@@ -60,7 +63,15 @@ fun BiometricScreen(
     val context = LocalContext.current
     val activity = context as? FragmentActivity
     var errorText by remember { mutableStateOf<String?>(null) }
-    val isRegistered = remember { viewModel.isFingerprintRegistered() }
+    val isRegistered = viewModel.isFingerprintRegistered.value
+
+    if (isRegistered == null) {
+        // Loading state
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = DevLedgerColors.AccentBlue)
+        }
+        return
+    }
 
     fun triggerBiometric() {
         if (!isRegistered) {

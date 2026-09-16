@@ -15,6 +15,8 @@ public class User
     public string PreferredLanguage { get; set; } = "en";
     public string BaseCurrency { get; set; } = "ZAR";
     public bool BiometricEnabled { get; set; } = true;
+    public string? PinHash { get; set; }
+    public string? PinSalt { get; set; }
     public bool SyncOnWifiOnly { get; set; } = false;
     public decimal? MonthlyBudget { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
