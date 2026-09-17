@@ -27,6 +27,7 @@ object DatabaseModule {
     @Provides fun provideNotificationDao(db: DevLedgerDatabase): NotificationDao = db.notificationDao()
     @Provides fun provideFolderDao(db: DevLedgerDatabase): FolderDao = db.folderDao()
     @Provides fun provideUserDao(db: DevLedgerDatabase): UserDao = db.userDao()
-    @Provides
-    fun provideSyncLogDao(db: DevLedgerDatabase) = db.syncLogDao()
+    @Provides fun provideSyncLogDao(db: DevLedgerDatabase): SyncLogDao = db.syncLogDao()
+    @Provides fun provideUserTagDao(db: DevLedgerDatabase): UserTagDao = db.userTagDao()
+    @Provides fun provideDeletedDao(db: DevLedgerDatabase): DeletedDao = db.deletedDao()
 }

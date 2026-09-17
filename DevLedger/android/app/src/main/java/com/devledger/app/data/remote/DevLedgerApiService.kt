@@ -83,6 +83,9 @@ interface DevLedgerApiService {
     @GET("api/transactions/distinct-projects")
     suspend fun getDistinctProjects(): Response<List<String>>
 
+    @GET("api/tags")
+    suspend fun getTags(): Response<List<UserTagDto>>
+
     @POST("api/sync/batch")
     suspend fun syncBatch(@Body request: SyncBatchRequest): Response<SyncBatchResponse>
 

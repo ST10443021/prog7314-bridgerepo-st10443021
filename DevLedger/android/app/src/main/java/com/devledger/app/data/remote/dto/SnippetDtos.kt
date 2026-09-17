@@ -26,3 +26,11 @@ data class CreateSnippetRequest(
     val description: String? = null,
     val tags: List<String> = emptyList(),
 )
+
+@Serializable
+data class UserTagDto(
+    val tagId: String,
+    val name: String,
+    val colorHex: String? = null,
+    val createdAt: Long,
+)

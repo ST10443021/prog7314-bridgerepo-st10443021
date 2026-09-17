@@ -49,6 +49,29 @@ data class TransactionSyncPayload(
 )
 
 @Serializable
+data class FolderSyncPayload(
+    val folderId: String,
+    val userId: String,
+    val name: String,
+    val parentFolderId: String? = null,
+    val createdAt: Long,
+)
+
+@Serializable
+data class UserTagSyncPayload(
+    val tagId: String,
+    val userId: String,
+    val name: String,
+    val colorHex: String? = null,
+    val createdAt: Long,
+)
+
+@Serializable
+data class DeleteSyncPayload(
+    val entityId: String,
+)
+
+@Serializable
 data class SyncBatchRequest(
     val operations: List<SyncOperation>,
 )

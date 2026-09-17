@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import android.content.Context
 import android.util.Log
+import com.devledger.app.data.local.dao.DeletedDao
+import com.devledger.app.data.local.entity.DeletedEntity
 import com.devledger.app.sync.SyncScheduler
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
@@ -24,13 +26,13 @@ import retrofit2.HttpException
 /**
  * Offline-first snippet vault repository. All writes land in Room immediately (so the UI
  * never blocks on network) and are flagged PENDING for [com.devledger.app.sync.SyncWorker]
- * to push to the REST API once connectivity returns — the pattern described in Section 5
- * ("Offline Mode with Synchronisation") of the Part 1 Planning and Design document.
+ * to push to the REST API once connectivity returns.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @Singleton
 class SnippetRepository @Inject constructor(
     private val dao: SnippetDao,
+    private val deletedDao: DeletedDao,
     private val userDao: UserDao,
     private val settingsRepository: SettingsRepository,
     private val api: DevLedgerApiService,
@@ -53,14 +55,9 @@ class SnippetRepository @Inject constructor(
     suspend fun refreshFromApi() {
         val startingToken = tokenManager.getAccessToken()
             ?.takeIf { it.isNotBlank() }
-            ?: error("Sign in before refreshing your vault.")
+            ?: return
 
-        val user = userDao.getCurrentUser()
-            ?: error("Your account could not be loaded. Sign in again.")
-
-        check(tokenManager.getAccessToken() == startingToken) {
-            "The account changed. Please retry."
-        }
+        val user = userDao.getCurrentUser() ?: return
 
         val response = api.getSnippets()
 
@@ -68,15 +65,9 @@ class SnippetRepository @Inject constructor(
             throw HttpException(response)
         }
 
-        val remoteSnippets = response.body()
-            ?: error("The API returned no snippet list.")
+        val remoteSnippets = response.body() ?: return
 
-        check(
-            tokenManager.getAccessToken() == startingToken &&
-                    userDao.getCurrentUser()?.userId == user.userId
-        ) {
-            "The account changed during refresh. Please retry."
-        }
+        if (tokenManager.getAccessToken() != startingToken) return
 
         val entities = remoteSnippets.map { remote ->
             SnippetEntity(
@@ -210,7 +201,18 @@ class SnippetRepository @Inject constructor(
         dao.setArchived(snippet.snippetId, archived)
         queueSync()
     }
-    suspend fun delete(snippet: SnippetEntity) = dao.delete(snippet)
+    
+    suspend fun delete(snippet: SnippetEntity) {
+        val user = userDao.getCurrentUser() ?: return
+        deletedDao.insert(DeletedEntity(
+            entityId = snippet.snippetId,
+            userId = user.userId,
+            entityType = "snippet"
+        ))
+        dao.delete(snippet)
+        queueSync()
+    }
+
     suspend fun getPendingSync() = dao.getPendingSync()
     suspend fun markSynced(id: String) = dao.updateSyncStatus(id, SyncStatus.SYNCED)
 
@@ -232,7 +234,6 @@ class SnippetRepository @Inject constructor(
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (error: Exception) {
-            // The local save remains valid and PENDING if scheduling fails.
             Log.e("SnippetRepository", "Could not schedule snippet sync.", error)
         }
     }

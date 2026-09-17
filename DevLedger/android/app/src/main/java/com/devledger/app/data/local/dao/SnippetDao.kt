@@ -115,6 +115,9 @@ interface SnippetDao {
 """)
     fun observeActiveCountForUser(userId: String): Flow<Int>
 
+    @Query("UPDATE snippets SET folderId = :newFolderId, syncStatus = 'PENDING', updatedAt = :now WHERE folderId = :oldFolderId")
+    suspend fun reassignFolder(oldFolderId: String, newFolderId: String?, now: Long = System.currentTimeMillis())
+
     @Transaction
     suspend fun mergeRemoteSnippets(
         userId: String,

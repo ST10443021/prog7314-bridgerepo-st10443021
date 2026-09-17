@@ -6,13 +6,13 @@ import androidx.lifecycle.asFlow
 import androidx.lifecycle.viewModelScope
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
+import com.devledger.app.data.local.dao.SyncLogDao
+import com.devledger.app.data.local.entity.FolderEntity
 import com.devledger.app.data.local.entity.SnippetEntity
 import com.devledger.app.data.local.entity.SyncLogEntity
 import com.devledger.app.data.local.entity.TransactionEntity
-import com.devledger.app.data.repository.AuthRepository
-import com.devledger.app.data.repository.SettingsRepository
-import com.devledger.app.data.repository.SnippetRepository
-import com.devledger.app.data.repository.TransactionRepository
+import com.devledger.app.data.local.entity.UserTagEntity
+import com.devledger.app.data.repository.*
 import com.devledger.app.sync.SyncScheduler
 import com.devledger.app.sync.SyncWorker
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -61,9 +61,11 @@ class SyncViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val authRepository: AuthRepository,
     private val settingsRepository: SettingsRepository,
-    snippetRepository: SnippetRepository,
-    transactionRepository: TransactionRepository,
-    syncLogDao: com.devledger.app.data.local.dao.SyncLogDao,
+    private val snippetRepository: SnippetRepository,
+    private val transactionRepository: TransactionRepository,
+    private val folderRepository: FolderRepository,
+    private val userTagRepository: UserTagRepository,
+    private val syncLogDao: SyncLogDao,
 ) : ViewModel() {
 
     private val workManager = WorkManager.getInstance(context)
@@ -74,6 +76,8 @@ class SyncViewModel @Inject constructor(
 
     private val snippets = userId.flatMapLatest { id -> if (id == null) flowOf(emptyList()) else snippetRepository.observeSnippets("") }
     private val transactions = userId.flatMapLatest { id -> if (id == null) flowOf<List<TransactionEntity>>(emptyList()) else transactionRepository.observeAllForUser(id) }
+    private val folders = userId.flatMapLatest { id -> if (id == null) flowOf(emptyList()) else folderRepository.observeFolders() }
+    private val tags = userId.flatMapLatest { id -> if (id == null) flowOf(emptyList()) else userTagRepository.observeTags() }
     private val syncLog = userId.flatMapLatest { id -> if (id == null) flowOf(emptyList()) else syncLogDao.observeForUser(id) }
 
     init {
@@ -84,25 +88,60 @@ class SyncViewModel @Inject constructor(
 
     private fun observeLocalData() {
         viewModelScope.launch {
-            combine(snippets, transactions, syncLog) { snippetList, txList, log -> Triple(snippetList, txList, log) }
-                .collect { (snippetList, txList, log) ->
-                    val folderCount = snippetList.mapNotNull { it.folderId }.distinct().size
-                    val tagCount = snippetList.flatMap { it.tagsCsv.split(",").map(String::trim).filter(String::isNotEmpty) }.distinctBy { it.lowercase() }.size
+            combine(
+                snippets, transactions, folders, tags, syncLog, 
+                _uiState.map { it.downloadInProgress }.distinctUntilChanged()
+            ) { args: Array<Any> ->
+                @Suppress("UNCHECKED_CAST")
+                DataSnapshot(
+                    snippets = args[0] as List<SnippetEntity>,
+                    transactions = args[1] as List<TransactionEntity>,
+                    folders = args[2] as List<FolderEntity>,
+                    tags = args[3] as List<UserTagEntity>,
+                    log = args[4] as List<SyncLogEntity>,
+                    downloading = args[5] as Boolean
+                )
+            }.collect { data ->
+                val uploadQueue = mutableListOf<QueueItem>()
+                
+                uploadQueue.addAll(data.snippets.filter { it.syncStatus == "PENDING" }
+                    .map { QueueItem(it.snippetId, "Snippet: \"${it.title}\"", "Snippet", "UPLOAD") })
+                
+                uploadQueue.addAll(data.transactions.filter { it.syncStatus == "PENDING" }
+                    .map { QueueItem(it.transactionId, "${it.type}: ${it.category}", "Transaction", "UPLOAD") })
+                
+                uploadQueue.addAll(data.folders.filter { it.syncStatus == "PENDING" }
+                    .map { QueueItem(it.folderId, "Folder: ${it.name}", "Folder", "UPLOAD") })
+                
+                uploadQueue.addAll(data.tags.filter { it.syncStatus == "PENDING" }
+                    .map { QueueItem(it.tagId, "Tag: ${it.name}", "Tag", "UPLOAD") })
 
-                    val uploadQueue = snippetList.filter { it.syncStatus.equals("PENDING", ignoreCase = true) }
-                        .map { QueueItem(it.snippetId, "Snippet: \"${it.title}\"", "Snippet", "UPLOAD") } +
-                            txList.filter { it.syncStatus.equals("PENDING", ignoreCase = true) }
-                                .map { QueueItem(it.transactionId, "${it.type.lowercase().replaceFirstChar { c -> c.uppercase() }}: ${it.category}", "Transaction", "UPLOAD") }
+                val downloadQueue = if (data.downloading) {
+                    listOf(QueueItem("dl-1", "Remote Updates", "Sync", "DOWNLOAD"))
+                } else emptyList()
 
-                    _uiState.update {
-                        it.copy(
-                            totalSnippets = snippetList.size, totalFolders = folderCount, totalTags = tagCount,
-                            totalTransactions = txList.size, uploadQueue = uploadQueue, recentLog = log,
-                        )
-                    }
+                _uiState.update {
+                    it.copy(
+                        totalSnippets = data.snippets.count { it.syncStatus == "SYNCED" },
+                        totalFolders = data.folders.count { it.syncStatus == "SYNCED" },
+                        totalTags = data.tags.count { it.syncStatus == "SYNCED" },
+                        totalTransactions = data.transactions.count { it.syncStatus == "SYNCED" },
+                        uploadQueue = uploadQueue + downloadQueue,
+                        recentLog = data.log,
+                    )
                 }
+            }
         }
     }
+
+    private data class DataSnapshot(
+        val snippets: List<SnippetEntity>,
+        val transactions: List<TransactionEntity>,
+        val folders: List<FolderEntity>,
+        val tags: List<UserTagEntity>,
+        val log: List<SyncLogEntity>,
+        val downloading: Boolean
+    )
 
     private fun observeSettings() {
         viewModelScope.launch {
@@ -143,12 +182,14 @@ class SyncViewModel @Inject constructor(
         val progress = when { state == SyncRunState.SUCCEEDED -> 1f; total > 0 -> (processed.toFloat() / total.toFloat()).coerceIn(0f, 1f); else -> 0f }
         val completedAt = workInfo.outputData.getLong(SyncWorker.KEY_COMPLETED_AT, 0L).takeIf { it > 0L }
         val error = workInfo.outputData.getString(SyncWorker.KEY_SYNC_ERROR)
+        val entity = workInfo.progress.getString(SyncWorker.KEY_CURRENT_ENTITY)
 
         _uiState.update {
             it.copy(
                 runState = state, progress = progress, processedItems = processed, totalItems = total,
-                currentEntity = workInfo.progress.getString(SyncWorker.KEY_CURRENT_ENTITY),
+                currentEntity = entity,
                 lastCompletedAt = completedAt ?: it.lastCompletedAt, error = error,
+                downloadInProgress = entity == "Downloading"
             )
         }
     }
@@ -157,12 +198,6 @@ class SyncViewModel @Inject constructor(
         if (_uiState.value.isSyncing) return
         _uiState.update { it.copy(runState = SyncRunState.QUEUED, progress = 0f, processedItems = 0, totalItems = 0, currentEntity = null, error = null) }
         SyncScheduler.syncNow(context, _uiState.value.wifiOnlySync, _uiState.value.chargingOnlySync)
-        // Also pull the latest remote state down, matching the mockup's "Downloading" queue entries.
-        viewModelScope.launch {
-            _uiState.update { it.copy(downloadInProgress = true) }
-            authRepository.currentUser.first() // ensures a session exists before refreshing
-            _uiState.update { it.copy(downloadInProgress = false) }
-        }
     }
 
     fun retryFailed() = syncNow()
