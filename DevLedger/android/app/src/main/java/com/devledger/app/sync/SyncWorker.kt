@@ -11,11 +11,7 @@ import com.devledger.app.data.local.entity.SyncLogEntity
 import com.devledger.app.data.remote.DevLedgerApiService
 import com.devledger.app.data.remote.auth.TokenManager
 import com.devledger.app.data.remote.dto.*
-import com.devledger.app.data.repository.AuthRepository
-import com.devledger.app.data.repository.FolderRepository
-import com.devledger.app.data.repository.SnippetRepository
-import com.devledger.app.data.repository.TransactionRepository
-import com.devledger.app.data.repository.UserTagRepository
+import com.devledger.app.data.repository.*
 import com.devledger.app.util.IdGenerator
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -69,8 +65,12 @@ class SyncWorker @AssistedInject constructor(
 
             if (pendingSnippets.isEmpty() && pendingTransactions.isEmpty() && 
                 pendingFolders.isEmpty() && pendingTags.isEmpty() && pendingDeletions.isEmpty()) {
-                // If nothing to upload, still try to download latest state
-                downloadLatest()
+                // If nothing to upload, still perform bidirectional sync (Download latest state)
+                ensureSameSession(startingToken, currentUserId, processedItems)?.let { return it }
+                snippetRepository.refreshFromApi()
+                transactionRepository.refreshFromApi()
+                folderRepository.refreshFromApi()
+                userTagRepository.refreshFromApi()
                 return success(itemsSynced = 0, userId = user.userId)
             }
 
@@ -82,12 +82,18 @@ class SyncWorker @AssistedInject constructor(
             // 2. Perform Batch Upload
             val operations = mutableListOf<SyncOperation>()
 
-            // Deletions first to avoid conflicts
+            // Deletions first. The API remembers deleted IDs, so older uploads cannot revive them.
             pendingDeletions.forEach { del ->
+                val payload = if (del.entityType == "snippet") {
+                    json.encodeToString(SnippetDeletePayload(del.entityId, user.userId))
+                } else {
+                    json.encodeToString(DeleteSyncPayload(del.entityId))
+                }
+                
                 operations.add(SyncOperation(
                     entity = del.entityType,
                     action = "delete",
-                    payload = json.encodeToString(DeleteSyncPayload(del.entityId)),
+                    payload = payload,
                     clientTimestamp = del.deletedAt
                 ))
             }
@@ -95,8 +101,12 @@ class SyncWorker @AssistedInject constructor(
             // Upserts
             pendingSnippets.forEach { s ->
                 operations.add(SyncOperation("snippet", "upsert", json.encodeToString(
-                    SnippetSyncPayload(s.snippetId, s.userId, s.folderId, s.title, s.content, s.language, s.description, 
-                                       s.tagsCsv.split(",").filter { it.isNotBlank() }, s.isFavourite, s.isArchived, s.createdAt, s.updatedAt)
+                    SnippetSyncPayload(
+                        snippetId = s.snippetId, userId = s.userId, folderId = s.folderId, title = s.title, 
+                        content = s.content, language = s.language, description = s.description, 
+                        tags = s.tagsCsv.split(",").filter { it.isNotBlank() }, // teammate's List<String> fix
+                        isFavourite = s.isFavourite, isArchived = s.isArchived, createdAt = s.createdAt, updatedAt = s.updatedAt
+                    )
                 ), s.updatedAt))
             }
 

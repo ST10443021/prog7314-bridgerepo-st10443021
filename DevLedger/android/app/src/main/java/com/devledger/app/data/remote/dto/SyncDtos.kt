@@ -19,7 +19,7 @@ data class SnippetSyncPayload(
     val content: String,
     val language: String,
     val description: String? = null,
-    val tags: List<String> = emptyList(),
+    val tags: List<String> = emptyList(), // Member's fix: use List<String> instead of CSV for API
     val isFavourite: Boolean = false,
     val isArchived: Boolean = false,
     val createdAt: Long,
@@ -69,6 +69,15 @@ data class UserTagSyncPayload(
 @Serializable
 data class DeleteSyncPayload(
     val entityId: String,
+)
+
+@Serializable
+data class SnippetDeletePayload(val snippetId: String, val userId: String)
+
+@Serializable
+data class SnippetSnapshotDto(
+    val snippets: List<SnippetDto>,
+    val deletedIds: List<String>,
 )
 
 @Serializable

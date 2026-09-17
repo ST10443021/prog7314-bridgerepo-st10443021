@@ -61,6 +61,9 @@ interface SnippetDao {
     @Delete
     suspend fun delete(snippet: SnippetEntity)
 
+    @Query("DELETE FROM snippets WHERE snippetId = :id AND userId = :userId")
+    suspend fun deleteById(userId: String, id: String)
+
     @Query("SELECT COUNT(*) FROM snippets WHERE isArchived = 0")
     fun observeActiveCount(): Flow<Int>
 
@@ -122,7 +125,13 @@ interface SnippetDao {
     suspend fun mergeRemoteSnippets(
         userId: String,
         remoteSnippets: List<SnippetEntity>,
+        deletedIds: List<String> = emptyList()
     ) {
+        // Remove locally cached snippets that the server says are deleted
+        for (id in deletedIds) {
+            deleteById(userId, id)
+        }
+
         for (remote in remoteSnippets) {
             require(remote.userId == userId) {
                 "The downloaded snippet belongs to a different account."

@@ -49,8 +49,8 @@ class SnippetRepository @Inject constructor(
         }
 
     /**
-     * Downloads active snippets for the current account.
-     * Pending local changes are preserved by the DAO's transactional merge.
+     * Downloads a full snapshot of snippets (active + deleted IDs) for the current account.
+     * This ensures local cleanup of snippets deleted on other devices.
      */
     suspend fun refreshFromApi() {
         val startingToken = tokenManager.getAccessToken()
@@ -59,17 +59,17 @@ class SnippetRepository @Inject constructor(
 
         val user = userDao.getCurrentUser() ?: return
 
-        val response = api.getSnippets()
+        val response = api.getSnippetSnapshot()
 
         if (!response.isSuccessful) {
             throw HttpException(response)
         }
 
-        val remoteSnippets = response.body() ?: return
+        val snapshot = response.body() ?: return
 
         if (tokenManager.getAccessToken() != startingToken) return
 
-        val entities = remoteSnippets.map { remote ->
+        val entities = snapshot.snippets.map { remote ->
             SnippetEntity(
                 snippetId = remote.snippetId,
                 userId = user.userId,
@@ -87,7 +87,7 @@ class SnippetRepository @Inject constructor(
             )
         }
 
-        dao.mergeRemoteSnippets(user.userId, entities)
+        dao.mergeRemoteSnippets(user.userId, entities, snapshot.deletedIds)
     }
 
     fun observeArchived(): Flow<List<SnippetEntity>> =
