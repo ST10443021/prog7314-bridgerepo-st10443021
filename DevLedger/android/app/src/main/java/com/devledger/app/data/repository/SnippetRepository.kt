@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import android.content.Context
 import android.util.Log
+import com.devledger.app.data.local.dao.DeletedDao
+import com.devledger.app.data.local.entity.DeletedEntity
 import com.devledger.app.sync.SyncScheduler
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
@@ -24,13 +26,13 @@ import retrofit2.HttpException
 /**
  * Offline-first snippet vault repository. All writes land in Room immediately (so the UI
  * never blocks on network) and are flagged PENDING for [com.devledger.app.sync.SyncWorker]
- * to push to the REST API once connectivity returns — the pattern described in Section 5
- * ("Offline Mode with Synchronisation") of the Part 1 Planning and Design document.
+ * to push to the REST API once connectivity returns.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @Singleton
 class SnippetRepository @Inject constructor(
     private val dao: SnippetDao,
+    private val deletedDao: DeletedDao,
     private val userDao: UserDao,
     private val settingsRepository: SettingsRepository,
     private val api: DevLedgerApiService,
@@ -47,20 +49,17 @@ class SnippetRepository @Inject constructor(
         }
 
     /**
-     * Downloads active and archived snippets for the current account.
-     * Pending local changes are preserved by the DAO's transactional merge.
+     * Downloads a full snapshot of snippets (active + deleted IDs) for the current account.
+     * This ensures local cleanup of snippets deleted on other devices.
      */
     suspend fun refreshFromApi() {
         val startingToken = tokenManager.getAccessToken()
             ?.takeIf { it.isNotBlank() }
-            ?: error("Sign in before refreshing your vault.")
+            ?: return
 
-        val user = userDao.getCurrentUser()
-            ?: error("Your account could not be loaded. Sign in again.")
+        val user = userDao.getCurrentUser() ?: return
 
-        check(tokenManager.getAccessToken() == startingToken) {
-            "The account changed. Please retry."
-        }
+        check(tokenManager.getAccessToken() == startingToken) { "Account session changed." }
 
         val response = api.getSnippetSnapshot()
 
@@ -68,15 +67,9 @@ class SnippetRepository @Inject constructor(
             throw HttpException(response)
         }
 
-        val snapshot = response.body()
-            ?: error("The API returned no snippet list.")
+        val snapshot = response.body() ?: error("The API returned no snippet list.")
 
-        check(
-            tokenManager.getAccessToken() == startingToken &&
-                    userDao.getCurrentUser()?.userId == user.userId
-        ) {
-            "The account changed during refresh. Please retry."
-        }
+        if (tokenManager.getAccessToken() != startingToken) return
 
         val entities = snapshot.snippets.map { remote ->
             SnippetEntity(
@@ -132,64 +125,29 @@ class SnippetRepository @Inject constructor(
         tags: List<String>,
         folderId: String? = null,
     ): SnippetEntity {
-        require(userId.isNotBlank()) {
-            "Sign in before saving a snippet."
-        }
-        require(userDao.getCurrentUser()?.userId == userId) {
-            "The account changed. Reopen the editor and try again."
-        }
-        require(title.isNotBlank()) {
-            "Enter a snippet title."
-        }
-        require(content.isNotBlank()) {
-            "Enter some code or configuration content."
-        }
-        require(language.isNotBlank()) {
-            "Select a language."
-        }
+        require(userId.isNotBlank()) { "Sign in before saving a snippet." }
+        require(title.isNotBlank()) { "Enter a snippet title." }
+        require(content.isNotBlank()) { "Enter some code or configuration content." }
 
         val existing = id?.let { dao.getById(it) }
-
-        require(existing == null || existing.userId == userId) {
-            "You cannot edit another user's snippet."
-        }
+        require(existing == null || existing.userId == userId) { "Ownership mismatch." }
 
         val now = System.currentTimeMillis()
-        val updatedAt = if (existing != null) {
-            maxOf(now, existing.updatedAt + 1)
-        } else {
-            now
-        }
-
-        val tagsCsv = tags
-            .map { it.trim() }
-            .filter { it.isNotEmpty() }
-            .distinct()
-            .joinToString(",")
+        val updatedAt = if (existing != null) maxOf(now, existing.updatedAt + 1) else now
+        val tagsCsv = tags.map { it.trim() }.filter { it.isNotEmpty() }.distinct().joinToString(",")
 
         val snippet = if (existing != null) {
             existing.copy(
-                folderId = folderId,
-                title = title.trim(),
-                content = content,
-                language = language.trim(),
-                description = description?.trim()?.takeIf { it.isNotEmpty() },
-                tagsCsv = tagsCsv,
-                updatedAt = updatedAt,
-                syncStatus = SyncStatus.PENDING,
+                folderId = folderId, title = title.trim(), content = content,
+                language = language.trim(), description = description?.trim()?.takeIf { it.isNotEmpty() },
+                tagsCsv = tagsCsv, updatedAt = updatedAt, syncStatus = SyncStatus.PENDING,
             )
         } else {
             SnippetEntity(
-                snippetId = id ?: IdGenerator.newId(),
-                userId = userId,
-                folderId = folderId,
-                title = title.trim(),
-                content = content,
-                language = language.trim(),
+                snippetId = id ?: IdGenerator.newId(), userId = userId, folderId = folderId,
+                title = title.trim(), content = content, language = language.trim(),
                 description = description?.trim()?.takeIf { it.isNotEmpty() },
-                tagsCsv = tagsCsv,
-                createdAt = now,
-                updatedAt = updatedAt,
+                tagsCsv = tagsCsv, createdAt = now, updatedAt = updatedAt,
                 syncStatus = SyncStatus.PENDING,
             )
         }
@@ -210,6 +168,7 @@ class SnippetRepository @Inject constructor(
         dao.setArchived(snippet.snippetId, archived)
         queueSync()
     }
+
     suspend fun delete(snippet: SnippetEntity) {
         deleteArchived(listOf(snippet.snippetId))
     }
@@ -248,7 +207,6 @@ class SnippetRepository @Inject constructor(
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (error: Exception) {
-            // The local save remains valid and PENDING if scheduling fails.
             Log.e("SnippetRepository", "Could not schedule snippet sync.", error)
         }
     }

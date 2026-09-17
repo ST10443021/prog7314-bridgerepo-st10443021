@@ -2,8 +2,10 @@ package com.devledger.app.data.repository
 
 import android.content.Context
 import android.util.Log
+import com.devledger.app.data.local.dao.DeletedDao
 import com.devledger.app.data.local.dao.TransactionDao
 import com.devledger.app.data.local.dao.UserDao
+import com.devledger.app.data.local.entity.DeletedEntity
 import com.devledger.app.data.local.entity.SyncStatus
 import com.devledger.app.data.local.entity.TransactionEntity
 import com.devledger.app.data.remote.DevLedgerApiService
@@ -25,6 +27,7 @@ import kotlinx.coroutines.flow.first
 @Singleton
 class TransactionRepository @Inject constructor(
     private val dao: TransactionDao,
+    private val deletedDao: DeletedDao,
     private val userDao: UserDao,
     private val settingsRepository: SettingsRepository,
     private val api: DevLedgerApiService,
@@ -45,7 +48,6 @@ class TransactionRepository @Inject constructor(
         
         val remoteTransactions = response.body() ?: return
         
-        // Ensure session hasn't changed
         if (tokenManager.getAccessToken() != token) return
         
         val entities = remoteTransactions.map { remote ->
@@ -65,9 +67,9 @@ class TransactionRepository @Inject constructor(
                 recurringFrequency = remote.recurringFrequency,
                 nextOccurrenceDate = remote.nextOccurrenceDate,
                 attachmentFileName = remote.attachmentFileName,
-                attachmentBase64 = null, // Backend doesn't return base64 in list; ideally separate call
+                attachmentBase64 = null,
                 transactionDate = remote.transactionDate,
-                createdAt = System.currentTimeMillis(), // We don't have remote createdAt in DTO
+                createdAt = System.currentTimeMillis(),
                 syncStatus = SyncStatus.SYNCED
             )
         }
@@ -128,6 +130,17 @@ class TransactionRepository @Inject constructor(
         dao.upsert(tx)
         queueSync()
         return tx
+    }
+
+    suspend fun delete(transaction: TransactionEntity) {
+        val user = userDao.getCurrentUser() ?: return
+        deletedDao.insert(DeletedEntity(
+            entityId = transaction.transactionId,
+            userId = user.userId,
+            entityType = "transaction"
+        ))
+        dao.delete(transaction)
+        queueSync()
     }
 
     /** Called by [com.devledger.app.sync.RecurringTransactionWorker]: creates the next

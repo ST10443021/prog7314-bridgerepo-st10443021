@@ -113,31 +113,26 @@ interface SnippetDao {
 """)
     fun observeActiveCountForUser(userId: String): Flow<Int>
 
+    @Query("UPDATE snippets SET folderId = :newFolderId, syncStatus = 'PENDING', updatedAt = :now WHERE folderId = :oldFolderId")
+    suspend fun reassignFolder(oldFolderId: String, newFolderId: String?, now: Long = System.currentTimeMillis())
+
     @Transaction
     suspend fun mergeRemoteSnippets(
         userId: String,
         remoteSnippets: List<SnippetEntity>,
         deletedIds: List<String> = emptyList(),
     ) {
+        // Ghosting protection: Ensure items the server says are deleted remain marked as DELETED locally
         for (id in deletedIds) markDeleted(userId, id)
+
         for (remote in remoteSnippets) {
             if (remote.snippetId in deletedIds) continue
-            require(remote.userId == userId) {
-                "The downloaded snippet belongs to a different account."
-            }
+            require(remote.userId == userId) { "The downloaded snippet belongs to a different account." }
 
             val local = getById(remote.snippetId)
-
-            require(local == null || local.userId == userId) {
-                "A snippet ID conflicts with another cached account."
-            }
-
             if (local == null) {
                 upsert(remote)
-            } else if (
-                local.syncStatus == "SYNCED" &&
-                remote.updatedAt > local.updatedAt
-            ) {
+            } else if (local.syncStatus == "SYNCED" && remote.updatedAt > local.updatedAt) {
                 upsert(remote)
             }
         }

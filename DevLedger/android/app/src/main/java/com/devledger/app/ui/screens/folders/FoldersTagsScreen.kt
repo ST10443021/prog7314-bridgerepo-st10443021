@@ -66,7 +66,8 @@ class FoldersTagsViewModel @Inject constructor(
 
     fun createFolder(name: String) { viewModelScope.launch { folderRepository.create(name) } }
     fun renameFolder(id: String, name: String) { viewModelScope.launch { folderRepository.rename(id, name) } }
-    fun deleteFolder(id: String, reassignToFolderId: String?) { viewModelScope.launch { folderRepository.delete(id, reassignToFolderId) } }
+    fun deleteFolder(id: String, reassignToFolderId: String?) { viewModelScope.launch { folderRepository.delete(id,
+        reassignToFolderId) } }
 }
 
 /** 

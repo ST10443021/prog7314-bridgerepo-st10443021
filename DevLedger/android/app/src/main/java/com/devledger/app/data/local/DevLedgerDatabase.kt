@@ -17,9 +17,11 @@ import com.devledger.app.data.local.entity.*
         NotificationEntity::class,
         FolderEntity::class,
         UserEntity::class,
-        SyncLogEntity::class
+        SyncLogEntity::class,
+        UserTagEntity::class,
+        DeletedEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 abstract class DevLedgerDatabase : RoomDatabase() {
@@ -29,6 +31,9 @@ abstract class DevLedgerDatabase : RoomDatabase() {
     abstract fun folderDao(): FolderDao
     abstract fun userDao(): UserDao
     abstract fun syncLogDao(): SyncLogDao
+    abstract fun userTagDao(): UserTagDao
+    abstract fun deletedDao(): DeletedDao
+
     companion object {
         const val DATABASE_NAME = "devledger.db"
     }

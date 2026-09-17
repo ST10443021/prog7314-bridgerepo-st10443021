@@ -19,7 +19,7 @@ data class SnippetSyncPayload(
     val content: String,
     val language: String,
     val description: String? = null,
-    val tagsCsv: String = "",
+    val tags: List<String> = emptyList(), // Member's fix: use List<String> instead of CSV for API
     val isFavourite: Boolean = false,
     val isArchived: Boolean = false,
     val createdAt: Long,
@@ -49,6 +49,38 @@ data class TransactionSyncPayload(
 )
 
 @Serializable
+data class FolderSyncPayload(
+    val folderId: String,
+    val userId: String,
+    val name: String,
+    val parentFolderId: String? = null,
+    val createdAt: Long,
+)
+
+@Serializable
+data class UserTagSyncPayload(
+    val tagId: String,
+    val userId: String,
+    val name: String,
+    val colorHex: String? = null,
+    val createdAt: Long,
+)
+
+@Serializable
+data class DeleteSyncPayload(
+    val entityId: String,
+)
+
+@Serializable
+data class SnippetDeletePayload(val snippetId: String, val userId: String)
+
+@Serializable
+data class SnippetSnapshotDto(
+    val snippets: List<SnippetDto>,
+    val deletedIds: List<String>,
+)
+
+@Serializable
 data class SyncBatchRequest(
     val operations: List<SyncOperation>,
 )
@@ -72,13 +104,4 @@ data class UserSettingsDto(
     val biometricEnabled: Boolean,
     val syncOnWifiOnly: Boolean,
     val monthlyBudget: Double? = null,
-)
-
-@Serializable
-data class SnippetDeletePayload(val snippetId: String, val userId: String)
-
-@Serializable
-data class SnippetSnapshotDto(
-    val snippets: List<SnippetDto>,
-    val deletedIds: List<String>,
 )
