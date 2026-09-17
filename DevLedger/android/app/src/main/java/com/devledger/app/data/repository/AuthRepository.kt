@@ -1,6 +1,7 @@
 package com.devledger.app.data.repository
 
 import com.devledger.app.data.local.PinStorage
+import android.util.Log
 import com.devledger.app.data.local.dao.UserDao
 import com.devledger.app.data.local.entity.UserEntity
 import com.devledger.app.data.remote.DevLedgerApiService
@@ -57,6 +58,28 @@ class AuthRepository @Inject constructor(
             }
             userDao.replaceCurrentUser(user)
             deviceRegistrar.registerCurrentToken()
+
+            // Safety: If the SSO response is missing security fields, try a full profile refresh
+            // to avoid sending existing users to the "Setup PIN" screen.
+            if (user.pinHash == null) {
+                Log.i("AuthRepository", "SSO response missing security fields, refreshing profile...")
+                try {
+                    val profileResponse = api.getProfile()
+                    if (profileResponse.isSuccessful) {
+                        profileResponse.body()?.let { profile ->
+                            val updatedUser = profile.toUserEntity()
+                            if (profile.pinHash != null && profile.pinSalt != null) {
+                                pinStorage.syncFromBackend(profile.email, profile.pinHash, profile.pinSalt, profile.biometricEnabled)
+                            }
+                            userDao.replaceCurrentUser(updatedUser)
+                            return@safeCall updatedUser
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.w("AuthRepository", "Failed to refresh profile after SSO login", e)
+                }
+            }
+
             user
         }
 
@@ -86,6 +109,28 @@ class AuthRepository @Inject constructor(
             }
             userDao.replaceCurrentUser(user)
             deviceRegistrar.registerCurrentToken()
+
+            // Safety: If the SSO response is missing security fields, try a full profile refresh
+            // to avoid sending existing users to the "Setup PIN" screen.
+            if (user.pinHash == null) {
+                Log.i("AuthRepository", "SSO response missing security fields, refreshing profile...")
+                try {
+                    val profileResponse = api.getProfile()
+                    if (profileResponse.isSuccessful) {
+                        profileResponse.body()?.let { profile ->
+                            val updatedUser = profile.toUserEntity()
+                            if (profile.pinHash != null && profile.pinSalt != null) {
+                                pinStorage.syncFromBackend(profile.email, profile.pinHash, profile.pinSalt, profile.biometricEnabled)
+                            }
+                            userDao.replaceCurrentUser(updatedUser)
+                            return@safeCall updatedUser
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.w("AuthRepository", "Failed to refresh profile after SSO login", e)
+                }
+            }
+            
             user
         }
 
@@ -112,6 +157,28 @@ class AuthRepository @Inject constructor(
             }
             userDao.replaceCurrentUser(user)
             deviceRegistrar.registerCurrentToken()
+
+            // Safety: If the SSO response is missing security fields, try a full profile refresh
+            // to avoid sending existing users to the "Setup PIN" screen.
+            if (user.pinHash == null) {
+                Log.i("AuthRepository", "SSO response missing security fields, refreshing profile...")
+                try {
+                    val profileResponse = api.getProfile()
+                    if (profileResponse.isSuccessful) {
+                        profileResponse.body()?.let { profile ->
+                            val updatedUser = profile.toUserEntity()
+                            if (profile.pinHash != null && profile.pinSalt != null) {
+                                pinStorage.syncFromBackend(profile.email, profile.pinHash, profile.pinSalt, profile.biometricEnabled)
+                            }
+                            userDao.replaceCurrentUser(updatedUser)
+                            return@safeCall updatedUser
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.w("AuthRepository", "Failed to refresh profile after SSO login", e)
+                }
+            }
+            
             user
         }
 

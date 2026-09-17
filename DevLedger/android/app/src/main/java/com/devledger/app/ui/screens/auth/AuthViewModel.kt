@@ -67,6 +67,13 @@ class AuthViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(isGitHubLoading = true, errorMessage = null)
     }
 
+    fun onGoogleSignInFailure(reason: String) {
+        _uiState.value = _uiState.value.copy(
+            isGoogleLoading = false,
+            errorMessage = reason
+        )
+    }
+
     fun signInWithGoogle(idToken: String) = performSso("GOOGLE", idToken = idToken)
     fun signInWithGitHub(code: String) = performSso("GITHUB", code = code)
 
