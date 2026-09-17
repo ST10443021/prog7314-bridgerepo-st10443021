@@ -29,6 +29,8 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.RestoreFromTrash
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -81,7 +83,8 @@ fun DashboardScreen(
     onOpenSettings: () -> Unit,
     onOpenNotifications: () -> Unit,
     onOpenProfile: () -> Unit,
-    onOpenSync: () -> Unit, // Added
+    onOpenSync: () -> Unit,
+    onOpenRecycle: () -> Unit,
     onCreateSnippet: () -> Unit = onOpenSnippets,
     onAddTransaction: () -> Unit = onOpenFinance,
     viewModel: DashboardViewModel = hiltViewModel(),
@@ -95,7 +98,8 @@ fun DashboardScreen(
         onOpenSettings = onOpenSettings,
         onOpenNotifications = onOpenNotifications,
         onOpenProfile = onOpenProfile,
-        onOpenSync = onOpenSync, // Added
+        onOpenSync = onOpenSync,
+        onOpenRecycle = onOpenRecycle,
         onCreateSnippet = onCreateSnippet,
         onAddTransaction = onAddTransaction,
     )
@@ -108,7 +112,8 @@ fun DashboardScreenContent(
     onOpenFinance: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenNotifications: () -> Unit,
-    onOpenSync: () -> Unit, // Added
+    onOpenSync: () -> Unit,
+    onOpenRecycle: () -> Unit,
     onCreateSnippet: () -> Unit = onOpenSnippets,
     onAddTransaction: () -> Unit = onOpenFinance,
     onOpenProfile: () -> Unit,
@@ -179,6 +184,7 @@ fun DashboardScreenContent(
                 onOpenSnippets = onOpenSnippets,
                 onOpenSettings = onOpenSettings,
                 onOpenSync = onOpenSync,
+                onOpenRecycle = onOpenRecycle,
             )
         }
 
@@ -707,6 +713,7 @@ private fun QuickActionsSection(
     onOpenSnippets: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenSync: () -> Unit,
+    onOpenRecycle: () -> Unit,
 ){
     Column {
         SectionHeading(
@@ -773,6 +780,31 @@ private fun QuickActionsSection(
                 iconColor = DevLedgerColors.SuccessGreen,
                 onClick = onOpenSync,
             )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            QuickActionTile(
+                modifier = Modifier.weight(1f),
+                icon = Icons.Filled.RestoreFromTrash,
+                label = "Recycle Bin",
+                iconColor = DevLedgerColors.ErrorRed,
+                onClick = onOpenRecycle,
+            )
+
+            QuickActionTile(
+                modifier = Modifier.weight(1f),
+                icon = Icons.Filled.Archive,
+                label = "Archive",
+                iconColor = DevLedgerColors.AccentPurple,
+                onClick = onOpenRecycle, // Both point to the same screen for now as RecycleScreen handles archived items
+            )
+
+            Spacer(modifier = Modifier.weight(1f)) 
         }
     }
 }
@@ -1200,6 +1232,7 @@ private fun DashboardScreenPreview() {
             onCreateSnippet = {},
             onAddTransaction = {},
             onOpenSync = {},
+            onOpenRecycle = {},
         )
     }
 }

@@ -37,6 +37,7 @@ import com.devledger.app.ui.screens.legal.PrivacyPolicyScreen
 import com.devledger.app.ui.screens.legal.TermsScreen
 import com.devledger.app.ui.screens.notifications.NotificationsScreen
 import com.devledger.app.ui.screens.profile.ProfileScreen
+import com.devledger.app.ui.screens.recycle.RecycleScreen
 import com.devledger.app.ui.screens.settings.SettingsScreen
 import com.devledger.app.ui.screens.snippets.SnippetDetailScreen
 import com.devledger.app.ui.screens.snippets.SnippetEditorScreen
@@ -197,6 +198,9 @@ fun DevLedgerNavHost(navController: NavHostController) {
                     onOpenSync = {
                         navController.navigate(DevLedgerDestinations.SYNC_STATUS)
                     },
+                    onOpenRecycle = {
+                        navController.navigate(DevLedgerDestinations.RECYCLE)
+                    },
                     onCreateSnippet = {
                         navController.navigate(
                             DevLedgerDestinations.snippetEditorRoute()
@@ -296,6 +300,9 @@ fun DevLedgerNavHost(navController: NavHostController) {
                 onOpenSync = {
                     navController.navigate(DevLedgerDestinations.SYNC_STATUS)
                 },
+                onOpenRecycle = {
+                    navController.navigate(DevLedgerDestinations.RECYCLE)
+                },
                 onSignedOut = {
                     navController.navigate(DevLedgerDestinations.AUTH) {
                         popUpTo(0) { inclusive = true }
@@ -306,6 +313,12 @@ fun DevLedgerNavHost(navController: NavHostController) {
 
         composable(DevLedgerDestinations.SYNC_STATUS) {
             SyncScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(DevLedgerDestinations.RECYCLE) {
+            RecycleScreen(
                 onBack = { navController.popBackStack() }
             )
         }

@@ -183,8 +183,8 @@ class SnippetRepository @Inject constructor(
     suspend fun getPendingDeletesForUser(userId: String): List<SnippetEntity> =
         dao.getPendingDeletesForUser(userId)
 
-    suspend fun acknowledgeDelete(snippet: SnippetEntity) =
-        dao.markDeleted(snippet.userId, snippet.snippetId)
+    suspend fun acknowledgeDelete(userId: String, id: String) =
+        dao.acknowledgeDeletion(userId, id)
 
     suspend fun getPendingSync() = dao.getPendingSync()
     suspend fun markSynced(id: String) = dao.updateSyncStatus(id, SyncStatus.SYNCED)
