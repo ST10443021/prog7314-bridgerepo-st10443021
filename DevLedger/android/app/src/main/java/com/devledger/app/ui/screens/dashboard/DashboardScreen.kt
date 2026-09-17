@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Code
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -80,10 +81,11 @@ fun DashboardScreen(
     onOpenSettings: () -> Unit,
     onOpenNotifications: () -> Unit,
     onOpenProfile: () -> Unit,
+    onOpenSync: () -> Unit, // Added
     onCreateSnippet: () -> Unit = onOpenSnippets,
     onAddTransaction: () -> Unit = onOpenFinance,
     viewModel: DashboardViewModel = hiltViewModel(),
-){
+) {
     val state by viewModel.uiState.collectAsState()
 
     DashboardScreenContent(
@@ -93,6 +95,7 @@ fun DashboardScreen(
         onOpenSettings = onOpenSettings,
         onOpenNotifications = onOpenNotifications,
         onOpenProfile = onOpenProfile,
+        onOpenSync = onOpenSync, // Added
         onCreateSnippet = onCreateSnippet,
         onAddTransaction = onAddTransaction,
     )
@@ -105,6 +108,7 @@ fun DashboardScreenContent(
     onOpenFinance: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenNotifications: () -> Unit,
+    onOpenSync: () -> Unit, // Added
     onCreateSnippet: () -> Unit = onOpenSnippets,
     onAddTransaction: () -> Unit = onOpenFinance,
     onOpenProfile: () -> Unit,
@@ -174,6 +178,7 @@ fun DashboardScreenContent(
                 onCreateSnippet = onCreateSnippet,
                 onOpenSnippets = onOpenSnippets,
                 onOpenSettings = onOpenSettings,
+                onOpenSync = onOpenSync,
             )
         }
 
@@ -701,7 +706,8 @@ private fun QuickActionsSection(
     onCreateSnippet: () -> Unit,
     onOpenSnippets: () -> Unit,
     onOpenSettings: () -> Unit,
-) {
+    onOpenSync: () -> Unit,
+){
     Column {
         SectionHeading(
             title = stringResource(R.string.dashboard_quick_actions),
@@ -760,7 +766,13 @@ private fun QuickActionsSection(
                 onClick = onOpenSettings,
             )
 
-            Spacer(modifier = Modifier.weight(1f))
+            QuickActionTile(
+                modifier = Modifier.weight(1f),
+                icon = Icons.Filled.Sync,
+                label = "Sync",
+                iconColor = DevLedgerColors.SuccessGreen,
+                onClick = onOpenSync,
+            )
         }
     }
 }
@@ -1187,6 +1199,7 @@ private fun DashboardScreenPreview() {
             onOpenNotifications = {},
             onCreateSnippet = {},
             onAddTransaction = {},
+            onOpenSync = {},
         )
     }
 }

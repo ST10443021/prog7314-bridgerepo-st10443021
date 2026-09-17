@@ -1,895 +1,268 @@
 package com.devledger.app.ui.screens.sync
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.AttachMoney
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Sync
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material.icons.filled.Wifi
-import androidx.compose.material.icons.outlined.Code
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.devledger.app.data.local.entity.SyncLogEntity
+import com.devledger.app.ui.components.DevLedgerCard
+import com.devledger.app.ui.components.DevLedgerTopBar
 import com.devledger.app.ui.theme.DevLedgerColors
-import com.devledger.app.ui.theme.DevLedgerTheme
-import java.text.DateFormat
-import java.util.Date
+import java.text.SimpleDateFormat
+import java.util.*
 
+private enum class QueueTab(val label: String) { ALL("All"), UPLOADING("Uploading"), COMPLETED("Completed"), ERRORS("Errors") }
+private val FrequencyOptions = listOf(15 to "15 minutes", 30 to "30 minutes", 60 to "1 hour")
+
+/** Sync Status screen — Screen behaviour from the Part 1 design doc: manual sync,
+ *  retry failed items, and preferences that drive [com.devledger.app.sync.SyncScheduler].
+ *  Pending changes retry automatically when connectivity returns via WorkManager's
+ *  built-in backoff (Google Developers, n.d.c). */
 @Composable
-fun SyncScreen(
-    onBack: () -> Unit,
-    onOpenSettings: () -> Unit,
-    viewModel: SyncViewModel = hiltViewModel(),
-) {
+fun SyncScreen(onBack: () -> Unit, viewModel: SyncViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsState()
+    var selectedTab by remember { mutableStateOf(QueueTab.ALL) }
 
-    SyncScreenContent(
-        state = state,
-        onBack = onBack,
-        onOpenSettings = onOpenSettings,
-        onSyncNow = viewModel::syncNow,
-        onRetry = viewModel::retrySync,
-    )
-}
+    Column(modifier = Modifier.fillMaxSize().background(DevLedgerColors.BgDeep)) {
+        DevLedgerTopBar(title = "Sync Status", onBack = onBack)
 
-@Composable
-fun SyncScreenContent(
-    state: SyncUiState,
-    onBack: () -> Unit,
-    onOpenSettings: () -> Unit,
-    onSyncNow: () -> Unit,
-    onRetry: () -> Unit,
-) {
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(DevLedgerColors.BgDeep)
-            .statusBarsPadding(),
-        contentPadding = PaddingValues(
-            start = 16.dp,
-            top = 10.dp,
-            end = 16.dp,
-            bottom = 28.dp,
-        ),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
-    ) {
-        item {
-            SyncHeader(onBack = onBack)
-        }
+        LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            item { Text("Monitor and manage your data synchronisation.", color = DevLedgerColors.TextMuted, fontSize = 12.sp) }
 
-        item {
-            OverallSyncCard(
-                state = state,
-                onSyncNow = onSyncNow,
-                onRetry = onRetry,
-            )
-        }
+            item { HeroStatusCard(state, onSyncNow = viewModel::syncNow) }
 
-        item {
-            SyncStatistics(
-                state = state,
-            )
-        }
-
-        item {
-            SectionLabel("Sync Queue")
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            SyncQueueCard(
-                state = state,
-                onRetry = onRetry,
-            )
-        }
-
-        item {
-            DataSafetyCard()
-        }
-
-        item {
-            SectionLabel("Sync Settings")
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            SyncSettingsCard(
-                wifiOnly = state.wifiOnlySync,
-                onOpenSettings = onOpenSettings,
-            )
-        }
-    }
-}
-
-@Composable
-private fun SyncHeader(
-    onBack: () -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        IconButton(
-            onClick = onBack,
-            modifier = Modifier
-                .size(40.dp)
-                .background(
-                    color = DevLedgerColors.SurfaceCard,
-                    shape = CircleShape,
-                ),
-        ) {
-            Icon(
-                imageVector = Icons.Filled.ArrowBack,
-                contentDescription = "Back",
-                tint = DevLedgerColors.TextSecondary,
-            )
-        }
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        Column {
-            Text(
-                text = "Sync Status",
-                color = DevLedgerColors.TextPrimary,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-            )
-
-            Text(
-                text = "Monitor and manage your data synchronisation.",
-                color = DevLedgerColors.TextMuted,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
-    }
-}
-
-@Composable
-private fun OverallSyncCard(
-    state: SyncUiState,
-    onSyncNow: () -> Unit,
-    onRetry: () -> Unit,
-) {
-    val visual = syncVisual(state)
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(
-            width = 1.dp,
-            color = DevLedgerColors.Border,
-        ),
-        colors = CardDefaults.cardColors(
-            containerColor = DevLedgerColors.SurfaceCard,
-        ),
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(72.dp)
-                        .background(
-                            color = visual.color.copy(alpha = 0.16f),
-                            shape = CircleShape,
-                        ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    if (state.isSyncing) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(48.dp),
-                            color = visual.color,
-                            strokeWidth = 3.dp,
-                        )
-                    }
-
-                    Icon(
-                        imageVector = visual.icon,
-                        contentDescription = null,
-                        tint = visual.color,
-                        modifier = Modifier.size(30.dp),
-                    )
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    StatChip(Icons.Filled.Description, "${state.totalSnippets}", "Snippets", DevLedgerColors.AccentBlue, Modifier.weight(1f))
+                    StatChip(Icons.Filled.Folder, "${state.totalFolders}", "Folders", DevLedgerColors.AccentPurple, Modifier.weight(1f))
+                    StatChip(Icons.Filled.Label, "${state.totalTags}", "Tags", DevLedgerColors.SuccessGreen, Modifier.weight(1f))
+                    StatChip(Icons.Filled.AttachMoney, "${state.totalTransactions}", "Transactions", DevLedgerColors.WarningAmber, Modifier.weight(1f))
                 }
+            }
 
-                Spacer(modifier = Modifier.width(16.dp))
+            item {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text("Sync Queue", color = DevLedgerColors.TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Auto Sync: ${if (state.autoSyncEnabled) "ON" else "OFF"}", color = DevLedgerColors.TextMuted, fontSize = 11.sp)
+                        Switch(checked = state.autoSyncEnabled, onCheckedChange = viewModel::onAutoSyncToggle,
+                            colors = SwitchDefaults.colors(checkedThumbColor = DevLedgerColors.SuccessGreen))
+                    }
+                }
+            }
 
-                Column(
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Text(
-                        text = visual.title,
-                        color = DevLedgerColors.TextPrimary,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                    )
-
-                    Text(
-                        text = visual.description,
-                        color = DevLedgerColors.TextMuted,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-
-                    state.lastCompletedAt?.let {
-                        Spacer(modifier = Modifier.height(5.dp))
-
-                        Text(
-                            text = "Last synced: ${formatDateTime(it)}",
-                            color = DevLedgerColors.SuccessGreen,
-                            style = MaterialTheme.typography.labelSmall,
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    QueueTab.entries.forEach { tab ->
+                        val count = when (tab) {
+                            QueueTab.ALL -> state.uploadQueue.size
+                            QueueTab.UPLOADING -> state.uploadQueue.size
+                            QueueTab.COMPLETED -> state.completedCount
+                            QueueTab.ERRORS -> state.errorCount
+                        }
+                        FilterChip(
+                            selected = selectedTab == tab, onClick = { selectedTab = tab },
+                            label = { Text("${tab.label} $count") },
+                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = DevLedgerColors.AccentBlue),
                         )
                     }
                 }
             }
 
-            if (state.isSyncing) {
-                Spacer(modifier = Modifier.height(14.dp))
-
-                LinearProgressIndicator(
-                    progress = { state.progress },
-                    modifier = Modifier.fillMaxWidth(),
-                    color = DevLedgerColors.AccentBlue,
-                    trackColor = DevLedgerColors.SurfaceCardAlt,
-                )
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                Text(
-                    text = progressDescription(state),
-                    color = DevLedgerColors.TextSecondary,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-
-            state.error?.let { error ->
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Text(
-                    text = error,
-                    color = DevLedgerColors.ErrorRed,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            Button(
-                onClick = if (
-                    state.runState == SyncRunState.FAILED
-                ) {
-                    onRetry
-                } else {
-                    onSyncNow
-                },
-                enabled = !state.isSyncing,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(11.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = DevLedgerColors.AccentBlue,
-                ),
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Sync,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                )
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                Text(
-                    text = when {
-                        state.isSyncing -> "Synchronising"
-                        state.runState == SyncRunState.FAILED ->
-                            "Retry Sync"
-                        else -> "Sync Now"
-                    },
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun SyncStatistics(
-    state: SyncUiState,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(7.dp),
-    ) {
-        SyncStatisticCard(
-            modifier = Modifier.weight(1f),
-            icon = Icons.Outlined.Code,
-            value = state.totalSnippets.toString(),
-            label = "Snippets",
-            pending = state.pendingSnippets,
-            color = DevLedgerColors.AccentBlue,
-        )
-
-        SyncStatisticCard(
-            modifier = Modifier.weight(1f),
-            icon = Icons.Filled.Folder,
-            value = state.totalFolders.toString(),
-            label = "Folders",
-            pending = 0,
-            color = DevLedgerColors.AccentPurple,
-        )
-
-        SyncStatisticCard(
-            modifier = Modifier.weight(1f),
-            icon = Icons.Outlined.Code,
-            value = state.totalTags.toString(),
-            label = "Tags",
-            pending = 0,
-            color = DevLedgerColors.SuccessGreen,
-        )
-
-        SyncStatisticCard(
-            modifier = Modifier.weight(1f),
-            icon = Icons.Filled.AttachMoney,
-            value = state.totalTransactions.toString(),
-            label = "Transactions",
-            pending = state.pendingTransactions,
-            color = Color(0xFFFFA726),
-        )
-    }
-}
-
-@Composable
-private fun SyncStatisticCard(
-    modifier: Modifier,
-    icon: ImageVector,
-    value: String,
-    label: String,
-    pending: Int,
-    color: Color,
-) {
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(13.dp),
-        border = BorderStroke(
-            width = 1.dp,
-            color = DevLedgerColors.Border,
-        ),
-        colors = CardDefaults.cardColors(
-            containerColor = DevLedgerColors.SurfaceCard,
-        ),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(
-                    horizontal = 5.dp,
-                    vertical = 12.dp,
-                ),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = color,
-                modifier = Modifier.size(21.dp),
-            )
-
-            Spacer(modifier = Modifier.height(5.dp))
-
-            Text(
-                text = value,
-                color = DevLedgerColors.TextPrimary,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-            )
-
-            Text(
-                text = label,
-                color = DevLedgerColors.TextMuted,
-                fontSize = 9.sp,
-                maxLines = 1,
-            )
-
-            Spacer(modifier = Modifier.height(5.dp))
-
-            Text(
-                text = if (pending > 0) {
-                    "$pending pending"
-                } else {
-                    "Synced"
-                },
-                color = if (pending > 0) {
-                    Color(0xFFFFA726)
-                } else {
-                    DevLedgerColors.SuccessGreen
-                },
-                fontSize = 9.sp,
-                fontWeight = FontWeight.Medium,
-            )
-        }
-    }
-}
-
-@Composable
-private fun SyncQueueCard(
-    state: SyncUiState,
-    onRetry: () -> Unit,
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        border = BorderStroke(
-            width = 1.dp,
-            color = DevLedgerColors.Border,
-        ),
-        colors = CardDefaults.cardColors(
-            containerColor = DevLedgerColors.SurfaceCard,
-        ),
-    ) {
-        Column {
-            if (state.totalPending == 0) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.CheckCircle,
-                        contentDescription = null,
-                        tint = DevLedgerColors.SuccessGreen,
-                    )
-
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    Column {
-                        Text(
-                            text = "Queue is empty",
-                            color = DevLedgerColors.TextPrimary,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-
-                        Text(
-                            text = "There are no local changes waiting to upload.",
-                            color = DevLedgerColors.TextMuted,
-                            style = MaterialTheme.typography.bodySmall,
-                        )
+            when (selectedTab) {
+                QueueTab.ALL, QueueTab.UPLOADING -> {
+                    if (state.uploadQueue.isEmpty()) {
+                        item { EmptyQueueMessage("Nothing pending — everything is synced.") }
+                    } else {
+                        items(state.uploadQueue, key = { it.id }) { QueueRow(it, state.isSyncing) }
                     }
                 }
-            } else {
-                SyncQueueRow(
-                    icon = Icons.Outlined.Code,
-                    title = "Snippet changes",
-                    count = state.pendingSnippets,
-                    color = DevLedgerColors.AccentBlue,
-                )
-
-                HorizontalDivider(color = DevLedgerColors.Border)
-
-                SyncQueueRow(
-                    icon = Icons.Filled.AttachMoney,
-                    title = "Financial transactions",
-                    count = state.pendingTransactions,
-                    color = DevLedgerColors.SuccessGreen,
-                )
-            }
-
-            if (
-                state.runState == SyncRunState.FAILED &&
-                state.totalPending > 0
-            ) {
-                HorizontalDivider(color = DevLedgerColors.Border)
-
-                TextButton(
-                    onClick = onRetry,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(
-                        text = "Retry failed items",
-                        color = DevLedgerColors.ErrorRed,
-                        fontWeight = FontWeight.SemiBold,
-                    )
+                QueueTab.COMPLETED -> {
+                    val completed = state.recentLog.filter { it.status == "COMPLETED" }
+                    if (completed.isEmpty()) item { EmptyQueueMessage("No completed syncs yet.") }
+                    else items(completed, key = { it.logId }) { LogRow(it) }
+                }
+                QueueTab.ERRORS -> {
+                    val errors = state.recentLog.filter { it.status == "FAILED" }
+                    if (errors.isEmpty()) item { EmptyQueueMessage("No sync errors — nice.") }
+                    else items(errors, key = { it.logId }) { LogRow(it, onRetry = viewModel::retryFailed) }
                 }
             }
+
+            item {
+                DevLedgerCard {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.Shield, contentDescription = null, tint = DevLedgerColors.SuccessGreen, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("Your data is safe", color = DevLedgerColors.TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                            Text("All data is encrypted and synchronised securely between your device and the cloud.", color = DevLedgerColors.TextMuted, fontSize = 11.sp)
+                        }
+                    }
+                }
+            }
+
+            item { Text("Sync Settings", color = DevLedgerColors.TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold) }
+            item {
+                DevLedgerCard {
+                    SyncSettingRow(Icons.Filled.Sync, "Sync Frequency", "Automatically sync every") {
+                        FrequencyDropdown(state.syncFrequencyMinutes, viewModel::onFrequencyChange)
+                    }
+                    HorizontalDivider(color = DevLedgerColors.Border, modifier = Modifier.padding(vertical = 10.dp))
+                    SyncSettingRow(Icons.Filled.Wifi, "Sync On Wi-Fi Only", "Use Wi-Fi to save mobile data") {
+                        Switch(checked = state.wifiOnlySync, onCheckedChange = viewModel::onWifiOnlyToggle,
+                            colors = SwitchDefaults.colors(checkedThumbColor = DevLedgerColors.AccentBlue))
+                    }
+                    HorizontalDivider(color = DevLedgerColors.Border, modifier = Modifier.padding(vertical = 10.dp))
+                    SyncSettingRow(Icons.Filled.BatteryChargingFull, "Sync Only When Charging", "Sync only when device is charging") {
+                        Switch(checked = state.chargingOnlySync, onCheckedChange = viewModel::onChargingOnlyToggle,
+                            colors = SwitchDefaults.colors(checkedThumbColor = DevLedgerColors.AccentBlue))
+                    }
+                }
+            }
+            item { Spacer(Modifier.height(72.dp)) }
         }
     }
 }
 
 @Composable
-private fun SyncQueueRow(
-    icon: ImageVector,
-    title: String,
-    count: Int,
-    color: Color,
-) {
-    Row(
-        modifier = Modifier.padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(38.dp)
-                .background(
-                    color = color.copy(alpha = 0.16f),
-                    shape = CircleShape,
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = color,
-                modifier = Modifier.size(20.dp),
-            )
-        }
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        Column(
-            modifier = Modifier.weight(1f),
-        ) {
-            Text(
-                text = title,
-                color = DevLedgerColors.TextPrimary,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
-            )
-
-            Text(
-                text = if (count == 1) {
-                    "1 item waiting to synchronise"
-                } else {
-                    "$count items waiting to synchronise"
-                },
-                color = DevLedgerColors.TextMuted,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
-
-        Text(
-            text = count.toString(),
-            color = if (count > 0) {
-                Color(0xFFFFA726)
-            } else {
-                DevLedgerColors.SuccessGreen
-            },
-            fontWeight = FontWeight.Bold,
-        )
-    }
-}
-
-@Composable
-private fun DataSafetyCard() {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        border = BorderStroke(
-            width = 1.dp,
-            color = DevLedgerColors.AccentBlue.copy(alpha = 0.45f),
-        ),
-        colors = CardDefaults.cardColors(
-            containerColor =
-                DevLedgerColors.AccentBlue.copy(alpha = 0.08f),
-        ),
-    ) {
-        Row(
-            modifier = Modifier.padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                imageVector = Icons.Filled.CheckCircle,
-                contentDescription = null,
-                tint = DevLedgerColors.AccentBlue,
-                modifier = Modifier.size(28.dp),
-            )
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column {
+private fun HeroStatusCard(state: SyncUiState, onSyncNow: () -> Unit) {
+    val dateFormat = remember { SimpleDateFormat("d MMM yyyy, h:mm a", Locale.getDefault()) }
+    DevLedgerCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(modifier = Modifier.size(48.dp).clip(CircleShape).background(DevLedgerColors.AccentBlue.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
+                if (state.isSyncing) CircularProgressIndicator(modifier = Modifier.size(24.dp), color = DevLedgerColors.AccentBlue, strokeWidth = 2.dp)
+                else Icon(if (state.isUpToDate) Icons.Filled.CheckCircle else Icons.Filled.Warning, contentDescription = null,
+                    tint = if (state.isUpToDate) DevLedgerColors.SuccessGreen else DevLedgerColors.WarningAmber, modifier = Modifier.size(26.dp))
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
                 Text(
-                    text = "Your local data is safe",
-                    color = DevLedgerColors.AccentBlue,
-                    fontWeight = FontWeight.SemiBold,
+                    when { state.isSyncing -> "Syncing..."; state.isUpToDate -> "All Up To Date!"; else -> "${state.uploadQueue.size} items pending" },
+                    color = DevLedgerColors.TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
                 )
-
                 Text(
-                    text = "Unsynchronised records remain available in Room until the API confirms them.",
-                    color = DevLedgerColors.TextMuted,
-                    style = MaterialTheme.typography.bodySmall,
+                    if (state.isSyncing) "${state.processedItems}/${state.totalItems} • ${state.currentEntity ?: ""}"
+                    else "Your data is synchronised and secure.",
+                    color = DevLedgerColors.TextMuted, fontSize = 11.sp,
                 )
             }
         }
+        if (state.isSyncing) {
+            Spacer(Modifier.height(10.dp))
+            LinearProgressIndicator(progress = { state.progress }, modifier = Modifier.fillMaxWidth(), color = DevLedgerColors.AccentBlue)
+        }
+        Spacer(Modifier.height(12.dp))
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            state.lastCompletedAt?.let {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clip(RoundedCornerShape(50)).background(DevLedgerColors.SuccessGreen.copy(alpha = 0.15f)).padding(horizontal = 10.dp, vertical = 5.dp)) {
+                    Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = DevLedgerColors.SuccessGreen, modifier = Modifier.size(12.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Last synced ${dateFormat.format(Date(it))}", color = DevLedgerColors.SuccessGreen, fontSize = 10.sp)
+                }
+            } ?: Spacer(Modifier.width(1.dp))
+            Button(onClick = onSyncNow, enabled = !state.isSyncing, colors = ButtonDefaults.buttonColors(containerColor = DevLedgerColors.AccentBlue)) {
+                Icon(Icons.Filled.Sync, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp)); Text("Sync Now")
+            }
+        }
+        state.error?.let { Text(it, color = DevLedgerColors.ErrorRed, fontSize = 11.sp, modifier = Modifier.padding(top = 8.dp)) }
     }
 }
 
 @Composable
-private fun SyncSettingsCard(
-    wifiOnly: Boolean,
-    onOpenSettings: () -> Unit,
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onOpenSettings),
-        shape = RoundedCornerShape(14.dp),
-        border = BorderStroke(
-            width = 1.dp,
-            color = DevLedgerColors.Border,
-        ),
-        colors = CardDefaults.cardColors(
-            containerColor = DevLedgerColors.SurfaceCard,
-        ),
+private fun StatChip(icon: androidx.compose.ui.graphics.vector.ImageVector, value: String, label: String, color: Color, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier.clip(RoundedCornerShape(12.dp)).background(DevLedgerColors.SurfaceCard).border(1.dp, DevLedgerColors.Border, RoundedCornerShape(12.dp)).padding(10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Column {
-            SettingsRow(
-                icon = Icons.Filled.Sync,
-                title = "Automatic Sync",
-                value = "Every 15 minutes",
-                color = DevLedgerColors.AccentBlue,
-            )
+        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(18.dp))
+        Text(value, color = DevLedgerColors.TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        Text(label, color = DevLedgerColors.TextMuted, fontSize = 10.sp)
+        Text("✓ Synced", color = DevLedgerColors.SuccessGreen, fontSize = 9.sp)
+    }
+}
 
-            HorizontalDivider(color = DevLedgerColors.Border)
-
-            SettingsRow(
-                icon = Icons.Filled.Wifi,
-                title = "Sync on Wi-Fi only",
-                value = if (wifiOnly) "Enabled" else "Disabled",
-                color = if (wifiOnly) {
-                    DevLedgerColors.SuccessGreen
-                } else {
-                    DevLedgerColors.TextMuted
-                },
-            )
-
-            HorizontalDivider(color = DevLedgerColors.Border)
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Settings,
-                    contentDescription = null,
-                    tint = DevLedgerColors.AccentPurple,
-                )
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Text(
-                    text = "Manage Sync Settings",
-                    color = DevLedgerColors.TextPrimary,
-                    modifier = Modifier.weight(1f),
-                    fontWeight = FontWeight.Medium,
-                )
-
-                Text(
-                    text = "Open",
-                    color = DevLedgerColors.AccentBlue,
-                    style = MaterialTheme.typography.labelMedium,
-                )
+@Composable
+private fun QueueRow(item: QueueItem, isSyncing: Boolean) {
+    DevLedgerCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(if (item.direction == "UPLOAD") Icons.Filled.UploadFile else Icons.Filled.Download, contentDescription = null,
+                tint = DevLedgerColors.AccentBlue, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text(item.label, color = DevLedgerColors.TextPrimary, fontSize = 13.sp)
+                Text(item.entityType, color = DevLedgerColors.TextMuted, fontSize = 11.sp)
             }
+            Text(if (isSyncing) "Uploading" else "Pending", color = DevLedgerColors.AccentBlue, fontSize = 11.sp)
         }
     }
 }
 
 @Composable
-private fun SettingsRow(
-    icon: ImageVector,
-    title: String,
-    value: String,
-    color: Color,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = color,
-            modifier = Modifier.size(22.dp),
-        )
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        Text(
-            text = title,
-            color = DevLedgerColors.TextPrimary,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.weight(1f),
-        )
-
-        Text(
-            text = value,
-            color = color,
-            style = MaterialTheme.typography.bodySmall,
-            fontWeight = FontWeight.Medium,
-        )
+private fun LogRow(entry: SyncLogEntity, onRetry: (() -> Unit)? = null) {
+    val dateFormat = remember { SimpleDateFormat("d MMM yyyy, h:mm a", Locale.getDefault()) }
+    val isFailed = entry.status == "FAILED"
+    DevLedgerCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(if (isFailed) Icons.Filled.Error else Icons.Filled.CheckCircle, contentDescription = null,
+                tint = if (isFailed) DevLedgerColors.ErrorRed else DevLedgerColors.SuccessGreen, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text(if (isFailed) entry.errorMessage ?: "Sync failed" else "${entry.itemsSynced} items synced", color = DevLedgerColors.TextPrimary, fontSize = 13.sp)
+                Text(dateFormat.format(Date(entry.timestamp)), color = DevLedgerColors.TextMuted, fontSize = 10.sp)
+            }
+            if (isFailed && onRetry != null) TextButton(onClick = onRetry) { Text("Retry", color = DevLedgerColors.AccentBlue, fontSize = 12.sp) }
+        }
     }
 }
 
 @Composable
-private fun SectionLabel(
-    text: String,
-) {
-    Text(
-        text = text,
-        color = DevLedgerColors.TextSecondary,
-        style = MaterialTheme.typography.labelLarge,
-        fontWeight = FontWeight.SemiBold,
-    )
-}
-
-private data class SyncVisual(
-    val title: String,
-    val description: String,
-    val icon: ImageVector,
-    val color: Color,
-)
-
-private fun syncVisual(
-    state: SyncUiState,
-): SyncVisual {
-    return when (state.runState) {
-        SyncRunState.QUEUED -> SyncVisual(
-            title = "Sync queued",
-            description = "Waiting for the required network connection.",
-            icon = Icons.Filled.Sync,
-            color = Color(0xFFFFA726),
-        )
-
-        SyncRunState.RUNNING -> SyncVisual(
-            title = "Synchronising",
-            description = "Uploading pending local changes securely.",
-            icon = Icons.Filled.Sync,
-            color = DevLedgerColors.AccentBlue,
-        )
-
-        SyncRunState.FAILED -> SyncVisual(
-            title = "Sync requires attention",
-            description = "Some local changes could not be uploaded.",
-            icon = Icons.Filled.Warning,
-            color = DevLedgerColors.ErrorRed,
-        )
-
-        SyncRunState.CANCELLED -> SyncVisual(
-            title = "Sync cancelled",
-            description = "Your local data remains available and unchanged.",
-            icon = Icons.Filled.Warning,
-            color = Color(0xFFFFA726),
-        )
-
-        SyncRunState.SUCCEEDED -> SyncVisual(
-            title = if (state.totalPending == 0) {
-                "All up to date"
-            } else {
-                "Sync completed"
-            },
-            description = if (state.totalPending == 0) {
-                "Your local changes have been synchronised."
-            } else {
-                "New changes are waiting for the next sync."
-            },
-            icon = Icons.Filled.CheckCircle,
-            color = DevLedgerColors.SuccessGreen,
-        )
-
-        SyncRunState.IDLE -> SyncVisual(
-            title = if (state.totalPending == 0) {
-                "All up to date"
-            } else {
-                "${state.totalPending} changes pending"
-            },
-            description = if (state.totalPending == 0) {
-                "There are no local changes waiting to upload."
-            } else {
-                "Synchronise when you are ready."
-            },
-            icon = if (state.totalPending == 0) {
-                Icons.Filled.CheckCircle
-            } else {
-                Icons.Filled.Sync
-            },
-            color = if (state.totalPending == 0) {
-                DevLedgerColors.SuccessGreen
-            } else {
-                Color(0xFFFFA726)
-            },
-        )
+private fun EmptyQueueMessage(text: String) {
+    Box(Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) {
+        Text(text, color = DevLedgerColors.TextMuted, fontSize = 12.sp)
     }
 }
 
-private fun progressDescription(
-    state: SyncUiState,
-): String {
-    val entity = state.currentEntity ?: "Data"
-
-    return if (state.totalItems > 0) {
-        "$entity: ${state.processedItems} of ${state.totalItems} items"
-    } else {
-        "$entity synchronisation is starting"
-    }
-}
-
-private fun formatDateTime(
-    timestamp: Long,
-): String {
-    return DateFormat.getDateTimeInstance(
-        DateFormat.MEDIUM,
-        DateFormat.SHORT,
-    ).format(Date(timestamp))
-}
-
-@Preview(
-    showBackground = true,
-    widthDp = 390,
-    heightDp = 844,
-)
 @Composable
-private fun SyncScreenPreview() {
-    DevLedgerTheme {
-        SyncScreenContent(
-            state = SyncUiState(
-                totalSnippets = 128,
-                totalFolders = 24,
-                totalTags = 18,
-                totalTransactions = 248,
-                pendingSnippets = 2,
-                pendingTransactions = 1,
-                wifiOnlySync = true,
-                runState = SyncRunState.RUNNING,
-                progress = 0.66f,
-                processedItems = 2,
-                totalItems = 3,
-                currentEntity = "Transactions",
-            ),
-            onBack = {},
-            onOpenSettings = {},
-            onSyncNow = {},
-            onRetry = {},
-        )
+private fun SyncSettingRow(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, subtitle: String, trailing: @Composable () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        Icon(icon, contentDescription = null, tint = DevLedgerColors.AccentBlue, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f)) {
+            Text(title, color = DevLedgerColors.TextPrimary, fontSize = 13.sp)
+            Text(subtitle, color = DevLedgerColors.TextMuted, fontSize = 11.sp)
+        }
+        trailing()
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FrequencyDropdown(minutes: Int, onSelected: (Int) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        TextButton(onClick = { expanded = true }) {
+            Text(FrequencyOptions.first { it.first == minutes }.second, color = DevLedgerColors.AccentBlue, fontSize = 12.sp)
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            FrequencyOptions.forEach { (value, label) -> DropdownMenuItem(text = { Text(label) }, onClick = { onSelected(value); expanded = false }) }
+        }
     }
 }

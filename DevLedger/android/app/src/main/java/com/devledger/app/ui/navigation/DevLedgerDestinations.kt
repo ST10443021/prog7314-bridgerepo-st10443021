@@ -23,6 +23,7 @@ object DevLedgerDestinations {
     const val PIN_VERIFICATION = "pin_verification"
     const val SECURITY_SETUP = "security_setup"
     const val TRANSACTION_LIST = "transaction_list/{type}"
+    const val SYNC_STATUS = "sync_status"
     fun transactionListRoute(type: String) = "transaction_list/$type"
     const val TRANSACTION_DETAIL = "transaction_detail/{transactionId}"
     fun transactionDetailRoute(id: String) = "transaction_detail/$id"

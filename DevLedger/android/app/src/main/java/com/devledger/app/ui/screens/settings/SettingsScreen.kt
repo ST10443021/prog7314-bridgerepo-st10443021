@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.Language
@@ -69,6 +70,7 @@ import com.devledger.app.util.CurrencyConverter
 @Composable
 fun SettingsScreen(
     onSignedOut: () -> Unit,
+    onOpenSync: () -> Unit,
     onBack: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
@@ -90,6 +92,7 @@ fun SettingsScreen(
     SettingsScreenContent(
         state = state,
         onBack = onBack,
+        onOpenSync = onOpenSync,
         onLanguageChange = viewModel::setLanguage,
         onBiometricEnabledChange = viewModel::setBiometricEnabled,
         onWifiOnlySyncChange = viewModel::setWifiOnlySync,
@@ -113,6 +116,7 @@ fun SettingsScreen(
 fun SettingsScreenContent(
     state: SettingsUiState,
     onBack: () -> Unit,
+    onOpenSync: () -> Unit,
     onLanguageChange: (String) -> Unit,
     onBiometricEnabledChange: (Boolean) -> Unit,
     onWifiOnlySyncChange: (Boolean) -> Unit,
@@ -246,6 +250,14 @@ fun SettingsScreenContent(
                     description = "Upload pending changes and download updates.",
                     actionText = "Sync",
                     onClick = onSyncNow,
+                )
+
+                HorizontalDivider(color = DevLedgerColors.Border)
+
+                NavigationSettingRow(
+                    title = "Sync History & Status",
+                    description = "View detailed logs and current synchronization status.",
+                    onClick = onOpenSync,
                 )
             }
         }
@@ -550,6 +562,50 @@ private fun SettingActionRow(
 }
 
 @Composable
+private fun NavigationSettingRow(
+    title: String,
+    description: String,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(
+                horizontal = 14.dp,
+                vertical = 12.dp,
+            ),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+        ) {
+            Text(
+                text = title,
+                color = DevLedgerColors.TextPrimary,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+            )
+
+            Text(
+                text = description,
+                color = DevLedgerColors.TextMuted,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+
+        Spacer(modifier = Modifier.size(8.dp))
+
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
+            contentDescription = null,
+            tint = DevLedgerColors.TextMuted,
+            modifier = Modifier.size(16.dp),
+        )
+    }
+}
+
+@Composable
 private fun CurrencyOptions(
     selectedCurrency: String,
     onCurrencySelected: (String) -> Unit,
@@ -674,6 +730,7 @@ private fun SettingsScreenPreview() {
                 hasChanges = true,
             ),
             onBack = {},
+            onOpenSync = {},
             onLanguageChange = {},
             onBiometricEnabledChange = {},
             onWifiOnlySyncChange = {},

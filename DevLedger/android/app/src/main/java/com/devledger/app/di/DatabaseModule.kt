@@ -19,7 +19,7 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): DevLedgerDatabase =
         Room.databaseBuilder(context, DevLedgerDatabase::class.java, DevLedgerDatabase.DATABASE_NAME)
-            .fallbackToDestructiveMigration() // acceptable for a Part 2 prototype; replace with real migrations before production
+            .fallbackToDestructiveMigration()
             .build()
 
     @Provides fun provideSnippetDao(db: DevLedgerDatabase): SnippetDao = db.snippetDao()
@@ -27,4 +27,6 @@ object DatabaseModule {
     @Provides fun provideNotificationDao(db: DevLedgerDatabase): NotificationDao = db.notificationDao()
     @Provides fun provideFolderDao(db: DevLedgerDatabase): FolderDao = db.folderDao()
     @Provides fun provideUserDao(db: DevLedgerDatabase): UserDao = db.userDao()
+    @Provides
+    fun provideSyncLogDao(db: DevLedgerDatabase) = db.syncLogDao()
 }

@@ -6,46 +6,29 @@ import java.util.concurrent.TimeUnit
 
 object SyncScheduler {
 
-    private fun constraints(wifiOnly: Boolean): Constraints =
+    private fun constraints(wifiOnly: Boolean, chargingOnly: Boolean): Constraints =
         Constraints.Builder()
-            .setRequiredNetworkType(
-                if (wifiOnly) NetworkType.UNMETERED else NetworkType.CONNECTED,
-            )
+            .setRequiredNetworkType(if (wifiOnly) NetworkType.UNMETERED else NetworkType.CONNECTED)
+            .setRequiresCharging(chargingOnly)
             .build()
 
-    fun schedulePeriodicSync(context: Context, wifiOnly: Boolean) {
-        val request = PeriodicWorkRequestBuilder<SyncWorker>(
-            15, TimeUnit.MINUTES,
-        )
-            .setConstraints(constraints(wifiOnly))
-            .setBackoffCriteria(
-                BackoffPolicy.EXPONENTIAL,
-                WorkRequest.MIN_BACKOFF_MILLIS,
-                TimeUnit.MILLISECONDS,
-            )
+    fun schedulePeriodicSync(context: Context, wifiOnly: Boolean, frequencyMinutes: Int = 15, chargingOnly: Boolean = false) {
+        val request = PeriodicWorkRequestBuilder<SyncWorker>(frequencyMinutes.toLong().coerceAtLeast(15), TimeUnit.MINUTES)
+            .setConstraints(constraints(wifiOnly, chargingOnly))
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, WorkRequest.MIN_BACKOFF_MILLIS, TimeUnit.MILLISECONDS)
             .build()
-
-        WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-            SyncWorker.WORK_NAME,
-            ExistingPeriodicWorkPolicy.UPDATE,
-            request,
-        )
+        WorkManager.getInstance(context).enqueueUniquePeriodicWork(SyncWorker.WORK_NAME, ExistingPeriodicWorkPolicy.UPDATE, request)
     }
 
-    fun syncNow(context: Context, wifiOnly: Boolean = false) {
-        val request = OneTimeWorkRequestBuilder<SyncWorker>()
-            .setConstraints(constraints(wifiOnly))
-            .setBackoffCriteria(
-                BackoffPolicy.EXPONENTIAL,
-                WorkRequest.MIN_BACKOFF_MILLIS,
-                TimeUnit.MILLISECONDS,
-            )
-            .build()
+    fun cancelPeriodicSync(context: Context) {
+        WorkManager.getInstance(context).cancelUniqueWork(SyncWorker.WORK_NAME)
+    }
 
-        WorkManager.getInstance(context).enqueueUniqueWork(
-            "${SyncWorker.WORK_NAME}_immediate",
-            ExistingWorkPolicy.APPEND_OR_REPLACE,
-            request,
-        )
+    fun syncNow(context: Context, wifiOnly: Boolean = false, chargingOnly: Boolean = false) {
+        val request = OneTimeWorkRequestBuilder<SyncWorker>()
+            .setConstraints(constraints(wifiOnly, chargingOnly))
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, WorkRequest.MIN_BACKOFF_MILLIS, TimeUnit.MILLISECONDS)
+            .build()
+        WorkManager.getInstance(context).enqueueUniqueWork("${SyncWorker.WORK_NAME}_immediate", ExistingWorkPolicy.APPEND_OR_REPLACE, request)
     }
 }
