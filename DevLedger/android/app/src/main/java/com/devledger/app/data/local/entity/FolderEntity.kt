@@ -8,6 +8,10 @@ import kotlinx.serialization.Serializable
  *  SnippetsLab competitive analysis in the Part 1 Research Report. */
 @Serializable
 @Entity(tableName = "folders")
+/**
+ * Reference scope: Room entity mapping.
+ * (Google Developers, n.d.b). See REFERENCES-CODE.md for full entries.
+ */
 data class FolderEntity(
     @PrimaryKey val folderId: String,
     val userId: String,

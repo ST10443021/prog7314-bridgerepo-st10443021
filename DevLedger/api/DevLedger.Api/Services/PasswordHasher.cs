@@ -5,6 +5,10 @@ namespace DevLedger.Api.Services;
 /// <summary>PBKDF2-based password hashing so email/password accounts never store
 /// plaintext credentials, matching the "Security: Encrypt sensitive data" non-functional
 /// requirement from the Part 1 design doc.</summary>
+/// <remarks>
+/// Reference scope: ASP.NET Core authentication context only; this custom PBKDF2 implementation is not attributed to this source.
+/// (Microsoft Learn, n.d.). See REFERENCES-CODE.md for full entries.
+/// </remarks>
 public static class PasswordHasher
 {
     private const int SaltSize = 16;

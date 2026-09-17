@@ -4,6 +4,10 @@ import android.content.Context
 import androidx.work.*
 import java.util.concurrent.TimeUnit
 
+/**
+ * Reference scope: WorkManager background execution.
+ * (Google Developers, n.d.c). See REFERENCES-CODE.md for full entries.
+ */
 object SyncScheduler {
 
     private fun constraints(wifiOnly: Boolean, chargingOnly: Boolean): Constraints =

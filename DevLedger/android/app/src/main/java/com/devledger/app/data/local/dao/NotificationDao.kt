@@ -5,6 +5,10 @@ import com.devledger.app.data.local.entity.NotificationEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
+/**
+ * Reference scope: Room persistence.
+ * (Google Developers, n.d.b). See REFERENCES-CODE.md for full entries.
+ */
 interface NotificationDao {
     @Query("SELECT * FROM notifications ORDER BY createdAt DESC")
     fun observeAll(): Flow<List<NotificationEntity>>

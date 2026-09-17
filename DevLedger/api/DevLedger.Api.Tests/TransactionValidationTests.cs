@@ -22,8 +22,23 @@ public class TransactionValidationTests
     [Fact]
     public void CreateTransactionRequest_CanRoundTripThroughItsProperties()
     {
-        var request = new CreateTransactionRequest("EXPENSE", 450.00m, "ZAR", "Hosting", "Azure App Service", 1_700_000_000_000);
-
+    var request = new CreateTransactionRequest(
+        Type: "EXPENSE",
+        Amount: 450.00m,
+        Currency: "ZAR",
+        Category: "Hosting",
+        Description: "Azure App Service",
+        ClientOrFrom: "Microsoft Azure",
+        RelatedProject: null,
+        PaymentMethod: null,
+        ReferenceNumber: null,
+        IsRecurring: false,
+        RecurringFrequency: null,
+        NextOccurrenceDate: null,
+        AttachmentFileName: null,
+        AttachmentBase64: null,
+        TransactionDate: 1_700_000_000_000
+    );
         request.Type.Should().Be("EXPENSE");
         request.Amount.Should().BeGreaterThan(0);
         request.Currency.Should().Be("ZAR");

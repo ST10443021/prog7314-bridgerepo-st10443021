@@ -16,6 +16,10 @@ namespace DevLedger.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/auth")]
+/// <remarks>
+/// Reference scope: ASP.NET Core controller, routing and HTTP response patterns.
+/// (Microsoft Learn, n.d.). See REFERENCES-CODE.md for full entries.
+/// </remarks>
 public class AuthController : ControllerBase
 {
     private readonly DevLedgerDbContext _db;

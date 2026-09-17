@@ -46,6 +46,10 @@ import javax.inject.Inject
  * Matches Image 4 pixel-accurate split design.
  */
 @Composable
+/**
+ * Reference scope: UI and state-holder separation.
+ * (Google Developers, n.d.a; Google Developers, n.d.f). See REFERENCES-CODE.md for full entries.
+ */
 fun FoldersTagsScreen(onBack: () -> Unit, viewModel: FoldersTagsViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsState()
     var showCreateFolderDialog by remember { mutableStateOf(false) }

@@ -33,6 +33,10 @@ import java.util.Date
 import java.util.Locale
 
 @Composable
+/**
+ * Reference scope: UI and state-holder separation.
+ * (Google Developers, n.d.a; Google Developers, n.d.f). See REFERENCES-CODE.md for full entries.
+ */
 fun RecycleScreen(onBack: () -> Unit, viewModel: RecycleViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsState()
     RecycleScreenContent(
@@ -51,6 +55,10 @@ fun RecycleScreen(onBack: () -> Unit, viewModel: RecycleViewModel = hiltViewMode
 
 /** Real archived data with confirmed, offline-queued permanent deletion. */
 @Composable
+/**
+ * Reference scope: UI and state-holder separation.
+ * (Google Developers, n.d.a; Google Developers, n.d.f). See REFERENCES-CODE.md for full entries.
+ */
 fun RecycleScreenContent(
     state: RecycleUiState,
     onBack: () -> Unit,

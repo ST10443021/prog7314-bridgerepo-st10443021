@@ -25,6 +25,10 @@ import kotlinx.coroutines.flow.first
 /** Offline-first income/expense repository. Writes land in Room immediately, marked
  *  PENDING, and are queued for WorkManager synchronisation with the DevLedger API. */
 @Singleton
+/**
+ * Reference scope: repository separation and Room persistence.
+ * (Google Developers, n.d.a; Google Developers, n.d.b). See REFERENCES-CODE.md for full entries.
+ */
 class TransactionRepository @Inject constructor(
     private val dao: TransactionDao,
     private val deletedDao: DeletedDao,

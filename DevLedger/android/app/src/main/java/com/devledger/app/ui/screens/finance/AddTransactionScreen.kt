@@ -42,6 +42,10 @@ import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Reference scope: UI and state-holder separation.
+ * (Google Developers, n.d.a; Google Developers, n.d.f). See REFERENCES-CODE.md for full entries.
+ */
 fun AddTransactionScreen(
     onSaved: () -> Unit,
     onBack: () -> Unit,
