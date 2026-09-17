@@ -39,6 +39,10 @@ data class TransactionListUiState(val query: String = "", val transactions: List
  *  n.d.b). */
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
+/**
+ * Reference scope: UI and state-holder separation.
+ * (Google Developers, n.d.a; Google Developers, n.d.f). See REFERENCES-CODE.md for full entries.
+ */
 class TransactionListViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     authRepository: AuthRepository,
@@ -72,6 +76,10 @@ class TransactionListViewModel @Inject constructor(
 }
 
 @Composable
+/**
+ * Reference scope: UI and state-holder separation.
+ * (Google Developers, n.d.a; Google Developers, n.d.f). See REFERENCES-CODE.md for full entries.
+ */
 fun TransactionListScreen(onBack: () -> Unit, onOpenTransaction: (String) -> Unit, viewModel: TransactionListViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsState()
     val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale.forLanguageTag("en-ZA")) }

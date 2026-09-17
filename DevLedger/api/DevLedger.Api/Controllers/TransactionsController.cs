@@ -11,10 +11,14 @@ namespace DevLedger.Api.Controllers;
 
 /// <summary>Income/expense CRUD plus summary and chart endpoints — backs the Financial
 /// Tracker screen. Every action is scoped to the authenticated caller's UserId (JWT
-/// "sub" claim, never a client-supplied value — Microsoft Learn, n.d.a).</summary>
+/// "sub" claim, never a client-supplied value — Microsoft Learn, n.d.).</summary>
 [ApiController]
 [Route("api/transactions")]
 [Authorize]
+/// <remarks>
+/// Reference scope: ASP.NET Core controller, routing and HTTP response patterns.
+/// (Microsoft Learn, n.d.). See REFERENCES-CODE.md for full entries.
+/// </remarks>
 public class TransactionsController : ControllerBase
 {
     private const long MaxAttachmentBytes = 2 * 1024 * 1024; // 2MB — see class note on storage.

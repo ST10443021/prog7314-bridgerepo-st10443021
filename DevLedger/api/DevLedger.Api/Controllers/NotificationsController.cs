@@ -13,6 +13,10 @@ namespace DevLedger.Api.Controllers;
 [ApiController]
 [Route("api/notifications")]
 [Authorize]
+/// <remarks>
+/// Reference scope: ASP.NET Core controller, routing and HTTP response patterns.
+/// (Microsoft Learn, n.d.; Firebase, n.d.). See REFERENCES-CODE.md for full entries.
+/// </remarks>
 public class NotificationsController : ControllerBase
 {
     private readonly DevLedgerDbContext _db;

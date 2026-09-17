@@ -28,6 +28,10 @@ import javax.inject.Singleton
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @Singleton
+/**
+ * Reference scope: repository separation and Room persistence.
+ * (Google Developers, n.d.a; Google Developers, n.d.b). See REFERENCES-CODE.md for full entries.
+ */
 class UserTagRepository @Inject constructor(
     private val dao: UserTagDao,
     private val deletedDao: DeletedDao,

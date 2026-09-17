@@ -35,6 +35,10 @@ val SnippetLanguages = listOf("Kotlin", "Java", "Swift", "JavaScript", "TypeScri
 /** Loads and saves snippets belonging to the signed-in user. Saves to Room first;
  *  pending records require cloud synchronisation. */
 @HiltViewModel
+/**
+ * Reference scope: UI and state-holder separation.
+ * (Google Developers, n.d.a; Google Developers, n.d.f). See REFERENCES-CODE.md for full entries.
+ */
 class SnippetEditorViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val authRepository: AuthRepository,

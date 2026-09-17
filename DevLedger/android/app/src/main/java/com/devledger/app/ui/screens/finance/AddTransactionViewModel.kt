@@ -54,6 +54,10 @@ data class AddTransactionUiState(
  *  amount, category/date, description, client/from, related project, payment method,
  *  reference number, recurring setup, and an optional attachment. */
 @HiltViewModel
+/**
+ * Reference scope: UI and state-holder separation.
+ * (Google Developers, n.d.a; Google Developers, n.d.f). See REFERENCES-CODE.md for full entries.
+ */
 class AddTransactionViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val transactionRepository: TransactionRepository,

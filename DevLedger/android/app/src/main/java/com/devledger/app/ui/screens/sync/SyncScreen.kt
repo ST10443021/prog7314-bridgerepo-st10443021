@@ -45,6 +45,10 @@ private val FrequencyOptions = listOf(15 to "15 minutes", 30 to "30 minutes", 60
  * and background synchronisation preferences.
  */
 @Composable
+/**
+ * Reference scope: UI and state-holder separation.
+ * (Google Developers, n.d.a; Google Developers, n.d.f). See REFERENCES-CODE.md for full entries.
+ */
 fun SyncScreen(onBack: () -> Unit, viewModel: SyncViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsState()
     var selectedTab by remember { mutableStateOf(QueueTab.ALL) }

@@ -19,6 +19,10 @@ import javax.inject.Singleton
 /** Mirrors Firebase Cloud Messaging pushes locally so the Notifications screen works
  *  offline and stays consistent with the system tray (Firebase, n.d.). */
 @Singleton
+/**
+ * Reference scope: repository separation and Room persistence.
+ * (Google Developers, n.d.a; Google Developers, n.d.b). See REFERENCES-CODE.md for full entries.
+ */
 class NotificationRepository @Inject constructor(
     private val dao: NotificationDao,
     @ApplicationContext private val context: Context,

@@ -12,7 +12,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Registers this device's current FCM token with the API (Google, n.d.b) so the
+ * Registers this device's current FCM token with the API (Firebase, n.d.) so the
  * backend can target push notifications at it. This is the missing link behind
  * "Implementation of Real-time Notification" — the messaging service and endpoint
  * already existed, but nothing was actually calling this before now. Called once
@@ -21,6 +21,10 @@ import javax.inject.Singleton
  * ([DevLedgerMessagingService.onNewToken] via [RegisterDeviceWorker]).
  */
 @Singleton
+/**
+ * Reference scope: FCM device tokens and message handling.
+ * (Firebase, n.d.). See REFERENCES-CODE.md for full entries.
+ */
 class DeviceRegistrar @Inject constructor(
     @ApplicationContext private val context: Context,
     private val api: DevLedgerApiService,

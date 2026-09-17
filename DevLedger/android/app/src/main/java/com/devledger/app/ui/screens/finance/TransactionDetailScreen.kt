@@ -44,6 +44,10 @@ import java.util.*
 import javax.inject.Inject
 
 @HiltViewModel
+/**
+ * Reference scope: UI and state-holder separation.
+ * (Google Developers, n.d.a; Google Developers, n.d.f). See REFERENCES-CODE.md for full entries.
+ */
 class TransactionDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val transactionRepository: TransactionRepository,
@@ -61,6 +65,10 @@ class TransactionDetailViewModel @Inject constructor(
  *  Transaction" form collects, shown back for review, matching the requirement that a
  *  user can view all details of a specific income/expense entry. */
 @Composable
+/**
+ * Reference scope: UI and state-holder separation.
+ * (Google Developers, n.d.a; Google Developers, n.d.f). See REFERENCES-CODE.md for full entries.
+ */
 fun TransactionDetailScreen(onBack: () -> Unit, viewModel: TransactionDetailViewModel = hiltViewModel()) {
     val tx by viewModel.transaction.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()

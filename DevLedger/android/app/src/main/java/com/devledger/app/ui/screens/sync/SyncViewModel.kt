@@ -54,9 +54,13 @@ data class SyncUiState(
 
 /** Backs the Sync Status screen: live upload queue from RoomDB PENDING rows, WorkManager
  *  progress for the run in flight, a persisted completed/error log (Google Developers,
- *  n.d.a), and the sync preferences that drive [SyncScheduler]. */
+ *  n.d.b; Google Developers, n.d.c), and the sync preferences that drive [SyncScheduler]. */
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
+/**
+ * Reference scope: UI and state-holder separation.
+ * (Google Developers, n.d.a; Google Developers, n.d.f). See REFERENCES-CODE.md for full entries.
+ */
 class SyncViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val authRepository: AuthRepository,

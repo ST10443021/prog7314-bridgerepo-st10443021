@@ -9,6 +9,10 @@ import com.devledger.app.data.local.entity.UserTagEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
+/**
+ * Reference scope: Room persistence.
+ * (Google Developers, n.d.b). See REFERENCES-CODE.md for full entries.
+ */
 interface UserTagDao {
     @Query("SELECT * FROM user_tags WHERE userId = :userId ORDER BY name ASC")
     fun observeForUser(userId: String): Flow<List<UserTagEntity>>

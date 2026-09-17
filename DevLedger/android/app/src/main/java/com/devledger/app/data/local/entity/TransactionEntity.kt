@@ -5,10 +5,13 @@ import androidx.room.PrimaryKey
 import kotlinx.serialization.Serializable
 
 /** Income/expense record — mirrors the extended Transaction schema. @Serializable is
- *  required so SyncWorker can encode this directly for the sync batch payload
- *  (JetBrains, n.d.). */
+ *  required so SyncWorker can encode this directly for the sync batch payload. */
 @Serializable
 @Entity(tableName = "transactions")
+/**
+ * Reference scope: Room entity mapping.
+ * (Google Developers, n.d.b). See REFERENCES-CODE.md for full entries.
+ */
 data class TransactionEntity(
     @PrimaryKey val transactionId: String,
     val userId: String,

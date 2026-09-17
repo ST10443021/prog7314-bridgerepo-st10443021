@@ -58,6 +58,10 @@ data class SnippetVaultUiState(
  *  client-side over the RoomDB-backed list so the vault works fully offline. */
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
+/**
+ * Reference scope: UI and state-holder separation.
+ * (Google Developers, n.d.a; Google Developers, n.d.f). See REFERENCES-CODE.md for full entries.
+ */
 class SnippetVaultViewModel @Inject constructor(
     private val repository: SnippetRepository,
     private val folderRepository: FolderRepository,

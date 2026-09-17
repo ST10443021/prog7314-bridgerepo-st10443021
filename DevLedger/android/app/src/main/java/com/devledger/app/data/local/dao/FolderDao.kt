@@ -9,6 +9,10 @@ import com.devledger.app.data.local.entity.SyncStatus
 import kotlinx.coroutines.flow.Flow
 
 @Dao
+/**
+ * Reference scope: Room persistence.
+ * (Google Developers, n.d.b). See REFERENCES-CODE.md for full entries.
+ */
 interface FolderDao {
     @Query("SELECT * FROM folders WHERE userId = :userId ORDER BY name ASC")
     fun observeForUser(userId: String): Flow<List<FolderEntity>>

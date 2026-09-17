@@ -12,6 +12,10 @@ namespace DevLedger.Api.Services;
 /// the Part 1 Planning and Design document ("Authentication uses JWT bearer tokens
 /// validated on every request except the SSO callback and refresh-token endpoints").
 /// </summary>
+/// <remarks>
+/// Reference scope: token-based authentication integration; token policy is application-specific.
+/// (Microsoft Learn, n.d.). See REFERENCES-CODE.md for full entries.
+/// </remarks>
 public class TokenService
 {
     private readonly string _signingKey;
