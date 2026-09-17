@@ -7,6 +7,7 @@ import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.devledger.app.data.local.dao.DeletedDao
 import com.devledger.app.data.local.dao.SyncLogDao
+import com.devledger.app.data.local.entity.SnippetEntity
 import com.devledger.app.data.local.entity.SyncLogEntity
 import com.devledger.app.data.remote.DevLedgerApiService
 import com.devledger.app.data.remote.auth.TokenManager
@@ -22,8 +23,8 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 /**
- * Orchestrates bidirectional synchronization between local RoomDB and the DevLedger API.
- * Handles upserts and deletions for Snippets, Transactions, Folders, and Tags.
+ * Orchestrates bidirectional synchronization.
+ * Handles Snippets (marker-based delete), and Transactions/Folders/Tags (table-based delete).
  */
 @HiltWorker
 class SyncWorker @AssistedInject constructor(
@@ -57,56 +58,50 @@ class SyncWorker @AssistedInject constructor(
             currentUserId = user.userId
 
             // 1. Gather all pending changes
+            val pendingDeletesMarkers = snippetRepository.getPendingDeletesForUser(user.userId)
             val pendingSnippets = snippetRepository.getPendingSyncForUser(user.userId)
             val pendingTransactions = transactionRepository.getPendingSyncForUser(user.userId)
             val pendingFolders = folderRepository.getPendingSyncForUser(user.userId)
             val pendingTags = userTagRepository.getPendingSyncForUser(user.userId)
-            val pendingDeletions = deletedDao.getForUser(user.userId)
+            val pendingGenericDeletions = deletedDao.getForUser(user.userId)
 
-            if (pendingSnippets.isEmpty() && pendingTransactions.isEmpty() && 
-                pendingFolders.isEmpty() && pendingTags.isEmpty() && pendingDeletions.isEmpty()) {
-                // If nothing to upload, still perform bidirectional sync (Download latest state)
+            if (pendingDeletesMarkers.isEmpty() && pendingSnippets.isEmpty() && 
+                pendingTransactions.isEmpty() && pendingFolders.isEmpty() && 
+                pendingTags.isEmpty() && pendingGenericDeletions.isEmpty()) {
+                
                 ensureSameSession(startingToken, currentUserId, processedItems)?.let { return it }
-                snippetRepository.refreshFromApi()
-                transactionRepository.refreshFromApi()
-                folderRepository.refreshFromApi()
-                userTagRepository.refreshFromApi()
+                downloadLatest()
                 return success(itemsSynced = 0, userId = user.userId)
             }
 
-            val totalItems = pendingSnippets.size + pendingTransactions.size + 
-                             pendingFolders.size + pendingTags.size + pendingDeletions.size
+            val totalItems = pendingDeletesMarkers.size + pendingSnippets.size + 
+                             pendingTransactions.size + pendingFolders.size + 
+                             pendingTags.size + pendingGenericDeletions.size
 
             publishProgress(processedItems, totalItems, "Preparing")
 
             // 2. Perform Batch Upload
             val operations = mutableListOf<SyncOperation>()
 
-            // Deletions first. The API remembers deleted IDs, so older uploads cannot revive them.
-            pendingDeletions.forEach { del ->
-                val payload = if (del.entityType == "snippet") {
-                    json.encodeToString(SnippetDeletePayload(del.entityId, user.userId))
-                } else {
-                    json.encodeToString(DeleteSyncPayload(del.entityId))
-                }
-                
-                operations.add(SyncOperation(
-                    entity = del.entityType,
-                    action = "delete",
-                    payload = payload,
-                    clientTimestamp = del.deletedAt
-                ))
+            // Snippet marker-based deletions first
+            pendingDeletesMarkers.forEach { s ->
+                operations.add(SyncOperation("snippet", "delete", json.encodeToString(
+                    SnippetDeletePayload(s.snippetId, s.userId)
+                ), s.updatedAt))
+            }
+
+            // Generic deletions (Folders, Tags, Transactions)
+            pendingGenericDeletions.forEach { del ->
+                operations.add(SyncOperation(del.entityType, "delete", json.encodeToString(
+                    DeleteSyncPayload(del.entityId)
+                ), del.deletedAt))
             }
 
             // Upserts
             pendingSnippets.forEach { s ->
                 operations.add(SyncOperation("snippet", "upsert", json.encodeToString(
-                    SnippetSyncPayload(
-                        snippetId = s.snippetId, userId = s.userId, folderId = s.folderId, title = s.title, 
-                        content = s.content, language = s.language, description = s.description, 
-                        tags = s.tagsCsv.split(",").filter { it.isNotBlank() }, // teammate's List<String> fix
-                        isFavourite = s.isFavourite, isArchived = s.isArchived, createdAt = s.createdAt, updatedAt = s.updatedAt
-                    )
+                    SnippetSyncPayload(s.snippetId, s.userId, s.folderId, s.title, s.content, s.language, s.description, 
+                                       s.tagsCsv.split(",").filter { it.isNotBlank() }, s.isFavourite, s.isArchived, s.createdAt, s.updatedAt)
                 ), s.updatedAt))
             }
 
@@ -131,17 +126,18 @@ class SyncWorker @AssistedInject constructor(
                 ), tg.createdAt))
             }
 
-            // Chunk upload if too many operations
+            // Chunk upload
             for (batchOps in operations.chunked(100)) {
                 ensureSameSession(startingToken, currentUserId, processedItems)?.let { return it }
 
                 val response = api.syncBatch(SyncBatchRequest(batchOps))
                 if (!response.isSuccessful) return responseFailure(response.code(), "batch", currentUserId, processedItems)
 
-                val acknowledgement = response.body() ?: return failure("No acknowledgement received.", currentUserId, processedItems)
+                val acknowledgement = response.body() ?: return failure("No acknowledgement.", currentUserId, processedItems)
                 
-                // Mark items as synced locally
                 acknowledgement.applied.forEach { id ->
+                    // Try all repositories/daos since we don't have entity type in applied IDs easily
+                    snippetRepository.acknowledgeDelete(SnippetEntity(id, user.userId, null, "", "", "", null, "", createdAt = 0, updatedAt = 0))
                     snippetRepository.markSynced(id)
                     transactionRepository.markSynced(id)
                     folderRepository.markSynced(id)
@@ -153,7 +149,7 @@ class SyncWorker @AssistedInject constructor(
                 publishProgress(processedItems, totalItems, "Uploading")
             }
 
-            // 3. Bidirectional Sync: Download latest remote state
+            // 3. Bidirectional Sync
             downloadLatest()
 
             success(itemsSynced = processedItems, userId = user.userId)
@@ -174,21 +170,19 @@ class SyncWorker @AssistedInject constructor(
             folderRepository.refreshFromApi()
             userTagRepository.refreshFromApi()
         } catch (e: Exception) {
-            // Log but don't fail the whole sync if download fails
+            // Ignore download errors to preserve upload success
         }
     }
 
     private suspend fun ensureSameSession(startingToken: String, userId: String?, itemsSynced: Int): Result? {
-        return if (tokenManager.getAccessToken() != startingToken) failure("The account changed during synchronisation.", userId, itemsSynced) else null
+        return if (tokenManager.getAccessToken() != startingToken) failure("Account session changed.", userId, itemsSynced) else null
     }
 
     private suspend fun responseFailure(statusCode: Int, entityName: String, userId: String?, itemsSynced: Int): Result {
         return when (statusCode) {
             408, 429 -> Result.retry()
             in 500..599 -> Result.retry()
-            401, 403 -> failure("The API rejected the session or $entityName ownership.", userId, itemsSynced)
-            409 -> failure("A $entityName conflicts with its server version.", userId, itemsSynced)
-            else -> failure("The API rejected the $entityName sync request ($statusCode).", userId, itemsSynced)
+            else -> failure("The API rejected the $entityName request ($statusCode).", userId, itemsSynced)
         }
     }
 

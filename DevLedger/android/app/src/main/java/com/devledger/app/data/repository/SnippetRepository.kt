@@ -59,13 +59,15 @@ class SnippetRepository @Inject constructor(
 
         val user = userDao.getCurrentUser() ?: return
 
+        check(tokenManager.getAccessToken() == startingToken) { "Account session changed." }
+
         val response = api.getSnippetSnapshot()
 
         if (!response.isSuccessful) {
             throw HttpException(response)
         }
 
-        val snapshot = response.body() ?: return
+        val snapshot = response.body() ?: error("The API returned no snippet snapshot.")
 
         if (tokenManager.getAccessToken() != startingToken) return
 
@@ -110,7 +112,9 @@ class SnippetRepository @Inject constructor(
 
     suspend fun getById(id: String): SnippetEntity? {
         val user = userDao.getCurrentUser() ?: return null
-        return dao.getById(id)?.takeIf { it.userId == user.userId }
+        return dao.getById(id)?.takeIf { 
+            it.userId == user.userId && it.syncStatus !in listOf("DELETE_PENDING", "DELETED") 
+        }
     }
 
     suspend fun createOrUpdate(
@@ -123,69 +127,34 @@ class SnippetRepository @Inject constructor(
         tags: List<String>,
         folderId: String? = null,
     ): SnippetEntity {
-        require(userId.isNotBlank()) {
-            "Sign in before saving a snippet."
-        }
-        require(userDao.getCurrentUser()?.userId == userId) {
-            "The account changed. Reopen the editor and try again."
-        }
-        require(title.isNotBlank()) {
-            "Enter a snippet title."
-        }
-        require(content.isNotBlank()) {
-            "Enter some code or configuration content."
-        }
-        require(language.isNotBlank()) {
-            "Select a language."
-        }
+        require(userId.isNotBlank()) { "Sign in before saving a snippet." }
+        require(title.isNotBlank()) { "Enter a snippet title." }
+        require(content.isNotBlank()) { "Enter some code or configuration content." }
 
         val existing = id?.let { dao.getById(it) }
-
-        require(existing == null || existing.userId == userId) {
-            "You cannot edit another user's snippet."
-        }
+        require(existing == null || existing.userId == userId) { "Ownership mismatch." }
 
         val now = System.currentTimeMillis()
-        val updatedAt = if (existing != null) {
-            maxOf(now, existing.updatedAt + 1)
-        } else {
-            now
-        }
-
-        val tagsCsv = tags
-            .map { it.trim() }
-            .filter { it.isNotEmpty() }
-            .distinct()
-            .joinToString(",")
+        val updatedAt = if (existing != null) maxOf(now, existing.updatedAt + 1) else now
+        val tagsCsv = tags.map { it.trim() }.filter { it.isNotEmpty() }.distinct().joinToString(",")
 
         val snippet = if (existing != null) {
             existing.copy(
-                folderId = folderId,
-                title = title.trim(),
-                content = content,
-                language = language.trim(),
-                description = description?.trim()?.takeIf { it.isNotEmpty() },
-                tagsCsv = tagsCsv,
-                updatedAt = updatedAt,
-                syncStatus = SyncStatus.PENDING,
+                folderId = folderId, title = title.trim(), content = content,
+                language = language.trim(), description = description?.trim()?.takeIf { it.isNotEmpty() },
+                tagsCsv = tagsCsv, updatedAt = updatedAt, syncStatus = SyncStatus.PENDING,
             )
         } else {
             SnippetEntity(
-                snippetId = id ?: IdGenerator.newId(),
-                userId = userId,
-                folderId = folderId,
-                title = title.trim(),
-                content = content,
-                language = language.trim(),
+                snippetId = id ?: IdGenerator.newId(), userId = userId, folderId = folderId,
+                title = title.trim(), content = content, language = language.trim(),
                 description = description?.trim()?.takeIf { it.isNotEmpty() },
-                tagsCsv = tagsCsv,
-                createdAt = now,
-                updatedAt = updatedAt,
+                tagsCsv = tagsCsv, createdAt = now, updatedAt = updatedAt,
                 syncStatus = SyncStatus.PENDING,
             )
         }
 
-        dao.upsert(snippet)
+        dao.saveUnlessDeleted(snippet)
         queueSync()
         return snippet
     }
@@ -203,15 +172,21 @@ class SnippetRepository @Inject constructor(
     }
     
     suspend fun delete(snippet: SnippetEntity) {
-        val user = userDao.getCurrentUser() ?: return
-        deletedDao.insert(DeletedEntity(
-            entityId = snippet.snippetId,
-            userId = user.userId,
-            entityType = "snippet"
-        ))
-        dao.delete(snippet)
-        queueSync()
+        deleteArchived(listOf(snippet.snippetId))
     }
+
+    suspend fun deleteArchived(ids: List<String>): Int {
+        val user = userDao.getCurrentUser() ?: error("Sign in before deleting snippets.")
+        val count = dao.queueArchivedDeletes(user.userId, ids)
+        if (count > 0) queueSync()
+        return count
+    }
+
+    suspend fun getPendingDeletesForUser(userId: String): List<SnippetEntity> =
+        dao.getPendingDeletesForUser(userId)
+
+    suspend fun acknowledgeDelete(snippet: SnippetEntity) =
+        dao.markDeleted(snippet.userId, snippet.snippetId)
 
     suspend fun getPendingSync() = dao.getPendingSync()
     suspend fun markSynced(id: String) = dao.updateSyncStatus(id, SyncStatus.SYNCED)
