@@ -1,9 +1,12 @@
 package com.devledger.app
 
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
+import android.Manifest
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
@@ -33,6 +36,14 @@ import androidx.appcompat.app.AppCompatActivity
  */
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
+
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        // We record local notifications in Room regardless of system tray permissions,
+        // so no special handling is needed if denied — they'll still see the badge.
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -41,6 +52,14 @@ class MainActivity : AppCompatActivity() {
         }
         // Cold start: the app was not already running when GitHub redirected back.
         handleGitHubRedirect(intent)
+        
+        requestNotificationPermission()
+    }
+
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
