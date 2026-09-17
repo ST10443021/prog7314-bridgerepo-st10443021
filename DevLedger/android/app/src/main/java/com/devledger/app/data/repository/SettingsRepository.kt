@@ -38,12 +38,18 @@ class SettingsRepository @Inject constructor(
         val BIOMETRIC_ENABLED = booleanPreferencesKey("biometric_enabled")
         val WIFI_ONLY_SYNC = booleanPreferencesKey("wifi_only_sync")
         val BASE_CURRENCY = stringPreferencesKey("base_currency")
+        val AUTO_SYNC_ENABLED = booleanPreferencesKey("auto_sync_enabled")
+        val SYNC_FREQUENCY_MINUTES = androidx.datastore.preferences.core.intPreferencesKey("sync_frequency_minutes")
+        val CHARGING_ONLY_SYNC = booleanPreferencesKey("charging_only_sync")
     }
 
     val language: Flow<String> = store.data.map { it[Keys.LANGUAGE] ?: "en" }
     val biometricEnabled: Flow<Boolean> = store.data.map { it[Keys.BIOMETRIC_ENABLED] ?: true }
     val wifiOnlySync: Flow<Boolean> = store.data.map { it[Keys.WIFI_ONLY_SYNC] ?: false }
     val baseCurrency: Flow<String> = store.data.map { it[Keys.BASE_CURRENCY] ?: "ZAR" }
+    val autoSyncEnabled: Flow<Boolean> = store.data.map { it[Keys.AUTO_SYNC_ENABLED] ?: true }
+    val syncFrequencyMinutes: Flow<Int> = store.data.map { it[Keys.SYNC_FREQUENCY_MINUTES] ?: 15 }
+    val chargingOnlySync: Flow<Boolean> = store.data.map { it[Keys.CHARGING_ONLY_SYNC] ?: false }
 
     suspend fun setLanguage(languageTag: String) {
         store.edit { it[Keys.LANGUAGE] = languageTag }
@@ -59,6 +65,18 @@ class SettingsRepository @Inject constructor(
 
     suspend fun setBaseCurrency(currency: String) {
         store.edit { it[Keys.BASE_CURRENCY] = currency }
+    }
+
+    suspend fun setAutoSyncEnabled(enabled: Boolean) {
+        store.edit { it[Keys.AUTO_SYNC_ENABLED] = enabled }
+    }
+
+    suspend fun setSyncFrequencyMinutes(minutes: Int) {
+        store.edit { it[Keys.SYNC_FREQUENCY_MINUTES] = minutes }
+    }
+
+    suspend fun setChargingOnlySync(enabled: Boolean) {
+        store.edit { it[Keys.CHARGING_ONLY_SYNC] = enabled }
     }
 
     /**

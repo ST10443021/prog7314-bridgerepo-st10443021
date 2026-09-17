@@ -5,13 +5,18 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import com.devledger.app.data.local.dao.SyncLogDao
+import com.devledger.app.data.local.entity.SyncLogEntity
 import com.devledger.app.data.remote.DevLedgerApiService
 import com.devledger.app.data.remote.auth.TokenManager
+import com.devledger.app.data.remote.dto.SnippetSyncPayload
 import com.devledger.app.data.remote.dto.SyncBatchRequest
 import com.devledger.app.data.remote.dto.SyncOperation
+import com.devledger.app.data.remote.dto.TransactionSyncPayload
 import com.devledger.app.data.repository.AuthRepository
 import com.devledger.app.data.repository.SnippetRepository
 import com.devledger.app.data.repository.TransactionRepository
+import com.devledger.app.util.IdGenerator
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import java.io.IOException
@@ -19,8 +24,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import com.devledger.app.data.remote.dto.SnippetSyncPayload
-import com.devledger.app.data.remote.dto.TransactionSyncPayload
 
 /**
  * Uploads pending offline changes belonging to the current account.
@@ -37,6 +40,7 @@ class SyncWorker @AssistedInject constructor(
     private val transactionRepository: TransactionRepository,
     private val authRepository: AuthRepository,
     private val tokenManager: TokenManager,
+    private val syncLogDao: SyncLogDao,
 ) : CoroutineWorker(context, params) {
 
     private val json = Json {
@@ -44,13 +48,18 @@ class SyncWorker @AssistedInject constructor(
     }
 
     override suspend fun doWork(): Result {
+        var currentUserId: String? = null
+        var processedItems = 0
+
         return try {
             val startingToken = tokenManager.getAccessToken()
                 ?.takeIf { it.isNotBlank() }
-                ?: return failure("Sign in before synchronising.")
+                ?: return failure("Sign in before synchronising.", userId = null)
 
             val user = authRepository.currentUser.first()
-                ?: return failure("The current account could not be loaded.")
+                ?: return failure("The current account could not be loaded.", userId = null)
+
+            currentUserId = user.userId
 
             val pendingSnippets =
                 snippetRepository.getPendingSyncForUser(user.userId)
@@ -59,13 +68,11 @@ class SyncWorker @AssistedInject constructor(
                 transactionRepository.getPendingSyncForUser(user.userId)
 
             if (pendingSnippets.isEmpty() && pendingTransactions.isEmpty()) {
-                return success()
+                return success(itemsSynced = 0, userId = user.userId)
             }
 
             val totalItems =
                 pendingSnippets.size + pendingTransactions.size
-
-            var processedItems = 0
 
             publishProgress(
                 processed = processedItems,
@@ -77,7 +84,7 @@ class SyncWorker @AssistedInject constructor(
 
             // ---- Snippets -------------------------------------------------
             for (batch in pendingSnippets.chunked(100)) {
-                ensureSameSession(startingToken)?.let {
+                ensureSameSession(startingToken, currentUserId, processedItems)?.let {
                     return it
                 }
 
@@ -113,12 +120,16 @@ class SyncWorker @AssistedInject constructor(
                     return responseFailure(
                         response.code(),
                         "snippet",
+                        currentUserId,
+                        processedItems,
                     )
                 }
 
                 val acknowledgement = response.body()
                     ?: return failure(
-                        "The API returned no snippet sync acknowledgement."
+                        "The API returned no snippet sync acknowledgement.",
+                        currentUserId,
+                        processedItems,
                     )
 
                 val expectedIds =
@@ -133,11 +144,13 @@ class SyncWorker @AssistedInject constructor(
                     acknowledgement.applied.size != expectedIds.size
                 ) {
                     return failure(
-                        "The API did not confirm every submitted snippet."
+                        "The API did not confirm every submitted snippet.",
+                        currentUserId,
+                        processedItems,
                     )
                 }
 
-                ensureSameSession(startingToken)?.let {
+                ensureSameSession(startingToken, currentUserId, processedItems)?.let {
                     return it
                 }
 
@@ -158,7 +171,7 @@ class SyncWorker @AssistedInject constructor(
 
             // ---- Financial transactions ----------------------------------
             for (batch in pendingTransactions.chunked(100)) {
-                ensureSameSession(startingToken)?.let {
+                ensureSameSession(startingToken, currentUserId, processedItems)?.let {
                     return it
                 }
 
@@ -175,6 +188,15 @@ class SyncWorker @AssistedInject constructor(
                                 currency = transaction.currency,
                                 category = transaction.category,
                                 description = transaction.description,
+                                clientOrFrom = transaction.clientOrFrom,
+                                relatedProject = transaction.relatedProject,
+                                paymentMethod = transaction.paymentMethod,
+                                referenceNumber = transaction.referenceNumber,
+                                isRecurring = transaction.isRecurring,
+                                recurringFrequency = transaction.recurringFrequency,
+                                nextOccurrenceDate = transaction.nextOccurrenceDate,
+                                attachmentFileName = transaction.attachmentFileName,
+                                attachmentBase64 = transaction.attachmentBase64,
                                 transactionDate = transaction.transactionDate,
                                 createdAt = transaction.createdAt,
                             )
@@ -191,12 +213,16 @@ class SyncWorker @AssistedInject constructor(
                     return responseFailure(
                         response.code(),
                         "transaction",
+                        currentUserId,
+                        processedItems,
                     )
                 }
 
                 val acknowledgement = response.body()
                     ?: return failure(
-                        "The API returned no transaction sync acknowledgement."
+                        "The API returned no transaction sync acknowledgement.",
+                        currentUserId,
+                        processedItems,
                     )
 
                 val expectedIds =
@@ -211,11 +237,13 @@ class SyncWorker @AssistedInject constructor(
                     acknowledgement.applied.size != expectedIds.size
                 ) {
                     return failure(
-                        "The API did not confirm every submitted transaction."
+                        "The API did not confirm every submitted transaction.",
+                        currentUserId,
+                        processedItems,
                     )
                 }
 
-                ensureSameSession(startingToken)?.let {
+                ensureSameSession(startingToken, currentUserId, processedItems)?.let {
                     return it
                 }
 
@@ -239,7 +267,7 @@ class SyncWorker @AssistedInject constructor(
             if (changedDuringUpload) {
                 Result.retry()
             } else {
-                success()
+                success(itemsSynced = processedItems, userId = user.userId)
             }
         } catch (cancelled: CancellationException) {
             throw cancelled
@@ -247,26 +275,34 @@ class SyncWorker @AssistedInject constructor(
             Result.retry()
         } catch (error: Exception) {
             failure(
-                "Synchronisation failed. Local records remain available."
+                "Synchronisation failed. Local records remain available.",
+                currentUserId,
+                processedItems,
             )
         }
     }
 
-    private fun ensureSameSession(
+    private suspend fun ensureSameSession(
         startingToken: String,
+        userId: String?,
+        itemsSynced: Int,
     ): Result? {
         return if (tokenManager.getAccessToken() != startingToken) {
             failure(
-                "The account changed during synchronisation."
+                "The account changed during synchronisation.",
+                userId,
+                itemsSynced,
             )
         } else {
             null
         }
     }
 
-    private fun responseFailure(
+    private suspend fun responseFailure(
         statusCode: Int,
         entityName: String,
+        userId: String?,
+        itemsSynced: Int,
     ): Result {
         return when (statusCode) {
             408, 429 -> Result.retry()
@@ -274,15 +310,21 @@ class SyncWorker @AssistedInject constructor(
             in 500..599 -> Result.retry()
 
             401, 403 -> failure(
-                "The API rejected the session or $entityName ownership."
+                "The API rejected the session or $entityName ownership.",
+                userId,
+                itemsSynced,
             )
 
             409 -> failure(
-                "A $entityName conflicts with its server version."
+                "A $entityName conflicts with its server version.",
+                userId,
+                itemsSynced,
             )
 
             else -> failure(
-                "The API rejected the $entityName sync request ($statusCode)."
+                "The API rejected the $entityName sync request ($statusCode).",
+                userId,
+                itemsSynced,
             )
         }
     }
@@ -301,17 +343,36 @@ class SyncWorker @AssistedInject constructor(
         )
     }
 
-    private fun success(): Result {
-        return Result.success(
-            workDataOf(
-                KEY_COMPLETED_AT to System.currentTimeMillis(),
+    private suspend fun success(itemsSynced: Int, userId: String): Result {
+        syncLogDao.insert(
+            SyncLogEntity(
+                logId = IdGenerator.newId(),
+                userId = userId,
+                status = "COMPLETED",
+                itemsSynced = itemsSynced,
+                errorMessage = null,
+                timestamp = System.currentTimeMillis(),
             )
         )
+        return Result.success(workDataOf(KEY_COMPLETED_AT to System.currentTimeMillis()))
     }
 
-    private fun failure(message: String): Result =
-        Result.failure(
-            workDataOf(KEY_SYNC_ERROR to message)        )
+    private suspend fun failure(message: String, userId: String?, itemsSynced: Int = 0): Result {
+        if (userId != null) {
+            syncLogDao.insert(
+                SyncLogEntity(
+                    logId = IdGenerator.newId(),
+                    userId = userId,
+                    status = "FAILED",
+                    itemsSynced = itemsSynced,
+                    errorMessage = message,
+                    timestamp = System.currentTimeMillis(),
+                )
+            )
+        }
+        return Result.failure(workDataOf(KEY_SYNC_ERROR to message))
+    }
+
 
     companion object {
         const val WORK_NAME = "devledger_sync_work"

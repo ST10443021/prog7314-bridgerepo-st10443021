@@ -223,6 +223,8 @@ All sources are cited in the IIE Harvard referencing style.
 - Google Developers, n.d.n. *Access documents and other files from shared storage*. [Online] Available at: https://developer.android.com/training/data-storage/shared/documents-files [Accessed 14 September 2026].
 - Google Developers, n.d.o. *Canvas and drawing basics in Compose*. [Online] Available at: https://developer.android.com/develop/ui/compose/graphics/draw/overview [Accessed 14 September 2026].
 - Google Developers, n.d.p. *Date pickers — Material Design 3*. [Online] Available at: https://m3.material.io/components/date-pickers/overview [Accessed 14 September 2026].
+- Google Developers, n.d.q. *WorkManager: guaranteed, asynchronous work*. [Online] Available at: https://developer.android.com/develop/background-work/background-tasks/persistent [Accessed 14 September 2026].
+- Google Developers, n.d.r. *Room and data access objects (DAOs)*. [Online] Available at: https://developer.android.com/training/data-storage/room/accessing-data [Accessed 14 September 2026].
 - Kapeli, n.d. *Dash for macOS — API Documentation Browser, Snippet Manager.* [Online] Available at: https://kapeli.com/dash [Accessed 1 August 2026].
 - Microsoft Learn, n.d. *ASP.NET Core documentation.* [Online] Available at: https://learn.microsoft.com/en-us/aspnet/core/ [Accessed 1 August 2026].
 - Npgsql, n.d. *Npgsql Entity Framework Core Provider.* [Online] Available at: https://www.npgsql.org/efcore/ [Accessed 14 September 2026].

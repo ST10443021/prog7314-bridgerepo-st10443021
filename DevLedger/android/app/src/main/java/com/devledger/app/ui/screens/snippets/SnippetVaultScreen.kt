@@ -53,6 +53,7 @@ fun SnippetVaultScreen(
     onOpenFoldersAndTags: () -> Unit,
     onOpenNotifications: () -> Unit,
     onOpenDrawer: () -> Unit,
+    onOpenSync: () -> Unit,
     viewModel: SnippetVaultViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
