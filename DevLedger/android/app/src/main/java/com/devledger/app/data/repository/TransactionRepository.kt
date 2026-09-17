@@ -29,6 +29,7 @@ class TransactionRepository @Inject constructor(
     private val dao: TransactionDao,
     private val deletedDao: DeletedDao,
     private val userDao: UserDao,
+    private val notificationRepository: NotificationRepository,
     private val settingsRepository: SettingsRepository,
     private val api: DevLedgerApiService,
     private val tokenManager: TokenManager,
@@ -128,6 +129,13 @@ class TransactionRepository @Inject constructor(
             syncStatus = SyncStatus.PENDING,
         )
         dao.upsert(tx)
+        
+        notificationRepository.notify(
+            title = if (tx.type == "INCOME") "Income Added" else "Expense Added",
+            message = "${if (tx.type == "INCOME") "Received" else "Spent"} ${tx.currency} ${tx.amount} for ${tx.category}.",
+            type = "TRANSACTION"
+        )
+        
         queueSync()
         return tx
     }
@@ -156,6 +164,13 @@ class TransactionRepository @Inject constructor(
         )
         dao.upsert(newTransaction)
         dao.upsert(original.copy(nextOccurrenceDate = nextDate, syncStatus = SyncStatus.PENDING))
+        
+        notificationRepository.notify(
+            title = "Recurring ${if (newTransaction.type == "INCOME") "Income" else "Expense"}",
+            message = "New occurrence of \"${newTransaction.category}\" processed: ${newTransaction.currency} ${newTransaction.amount}.",
+            type = "TRANSACTION"
+        )
+        
         queueSync()
         return newTransaction
     }

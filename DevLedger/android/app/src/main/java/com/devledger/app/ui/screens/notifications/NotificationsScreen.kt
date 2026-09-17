@@ -616,6 +616,7 @@ private fun notificationVisual(
         "EXPENSE",
         "FINANCE",
         "INCOME",
+        "TRANSACTION",
             -> NotificationVisual(
             icon = Icons.Filled.AttachMoney,
             color = Color(0xFFFF5252),
