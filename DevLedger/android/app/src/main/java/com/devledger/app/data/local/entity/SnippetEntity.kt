@@ -35,4 +35,6 @@ object SyncStatus {
     const val PENDING = "PENDING"
     const val SYNCED = "SYNCED"
     const val FAILED = "FAILED"
+    const val DELETE_PENDING = "DELETE_PENDING"
+    const val DELETED = "DELETED"
 }

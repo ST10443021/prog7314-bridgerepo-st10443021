@@ -47,7 +47,7 @@ class SnippetRepository @Inject constructor(
         }
 
     /**
-     * Downloads active snippets for the current account.
+     * Downloads active and archived snippets for the current account.
      * Pending local changes are preserved by the DAO's transactional merge.
      */
     suspend fun refreshFromApi() {
@@ -62,13 +62,13 @@ class SnippetRepository @Inject constructor(
             "The account changed. Please retry."
         }
 
-        val response = api.getSnippets()
+        val response = api.getSnippetSnapshot()
 
         if (!response.isSuccessful) {
             throw HttpException(response)
         }
 
-        val remoteSnippets = response.body()
+        val snapshot = response.body()
             ?: error("The API returned no snippet list.")
 
         check(
@@ -78,7 +78,7 @@ class SnippetRepository @Inject constructor(
             "The account changed during refresh. Please retry."
         }
 
-        val entities = remoteSnippets.map { remote ->
+        val entities = snapshot.snippets.map { remote ->
             SnippetEntity(
                 snippetId = remote.snippetId,
                 userId = user.userId,
@@ -96,7 +96,7 @@ class SnippetRepository @Inject constructor(
             )
         }
 
-        dao.mergeRemoteSnippets(user.userId, entities)
+        dao.mergeRemoteSnippets(user.userId, entities, snapshot.deletedIds)
     }
 
     fun observeArchived(): Flow<List<SnippetEntity>> =
@@ -119,7 +119,7 @@ class SnippetRepository @Inject constructor(
 
     suspend fun getById(id: String): SnippetEntity? {
         val user = userDao.getCurrentUser() ?: return null
-        return dao.getById(id)?.takeIf { it.userId == user.userId }
+        return dao.getById(id)?.takeIf { it.userId == user.userId && it.syncStatus !in listOf(SyncStatus.DELETE_PENDING, SyncStatus.DELETED) }
     }
 
     suspend fun createOrUpdate(
@@ -194,7 +194,7 @@ class SnippetRepository @Inject constructor(
             )
         }
 
-        dao.upsert(snippet)
+        dao.saveUnlessDeleted(snippet)
         queueSync()
         return snippet
     }
@@ -210,7 +210,23 @@ class SnippetRepository @Inject constructor(
         dao.setArchived(snippet.snippetId, archived)
         queueSync()
     }
-    suspend fun delete(snippet: SnippetEntity) = dao.delete(snippet)
+    suspend fun delete(snippet: SnippetEntity) {
+        deleteArchived(listOf(snippet.snippetId))
+    }
+
+    suspend fun deleteArchived(ids: List<String>): Int {
+        val user = userDao.getCurrentUser() ?: error("Sign in before deleting snippets.")
+        val count = dao.queueArchivedDeletes(user.userId, ids)
+        if (count > 0) queueSync()
+        return count
+    }
+
+    suspend fun getPendingDeletesForUser(userId: String): List<SnippetEntity> =
+        dao.getPendingDeletesForUser(userId)
+
+    suspend fun acknowledgeDelete(snippet: SnippetEntity) =
+        dao.markDeleted(snippet.userId, snippet.snippetId)
+
     suspend fun getPendingSync() = dao.getPendingSync()
     suspend fun markSynced(id: String) = dao.updateSyncStatus(id, SyncStatus.SYNCED)
 

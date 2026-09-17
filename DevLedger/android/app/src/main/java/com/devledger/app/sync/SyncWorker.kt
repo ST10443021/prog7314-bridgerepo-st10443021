@@ -19,6 +19,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import com.devledger.app.data.remote.dto.SnippetDeletePayload
 import com.devledger.app.data.remote.dto.SnippetSyncPayload
 import com.devledger.app.data.remote.dto.TransactionSyncPayload
 
@@ -52,18 +53,21 @@ class SyncWorker @AssistedInject constructor(
             val user = authRepository.currentUser.first()
                 ?: return failure("The current account could not be loaded.")
 
+            val pendingDeletes = snippetRepository.getPendingDeletesForUser(user.userId)
+
             val pendingSnippets =
                 snippetRepository.getPendingSyncForUser(user.userId)
 
             val pendingTransactions =
                 transactionRepository.getPendingSyncForUser(user.userId)
 
-            if (pendingSnippets.isEmpty() && pendingTransactions.isEmpty()) {
+            if (pendingDeletes.isEmpty() && pendingSnippets.isEmpty() && pendingTransactions.isEmpty()) {
+                snippetRepository.refreshFromApi()
                 return success()
             }
 
             val totalItems =
-                pendingSnippets.size + pendingTransactions.size
+                pendingDeletes.size + pendingSnippets.size + pendingTransactions.size
 
             var processedItems = 0
 
@@ -74,6 +78,29 @@ class SyncWorker @AssistedInject constructor(
             )
 
             var changedDuringUpload = false
+
+            // Delete first. The API remembers deleted IDs, so older uploads cannot revive them.
+            for (batch in pendingDeletes.chunked(100)) {
+                ensureSameSession(startingToken)?.let { return it }
+                val operations = batch.map { snippet ->
+                    SyncOperation(
+                        entity = "snippet", action = "delete",
+                        payload = json.encodeToString(SnippetDeletePayload(snippet.snippetId, snippet.userId)),
+                        clientTimestamp = snippet.updatedAt,
+                    )
+                }
+                val response = api.syncBatch(SyncBatchRequest(operations))
+                if (!response.isSuccessful) return responseFailure(response.code(), "snippet deletion")
+                val ack = response.body() ?: return failure("Missing deletion acknowledgement.")
+                val expected = batch.map { it.snippetId }.toSet()
+                if (ack.conflicts.isNotEmpty() || ack.applied.toSet() != expected || ack.applied.size != expected.size) {
+                    return failure("The API did not confirm every deletion.")
+                }
+                ensureSameSession(startingToken)?.let { return it }
+                for (snippet in batch) snippetRepository.acknowledgeDelete(snippet)
+                processedItems += batch.size
+                publishProgress(processedItems, totalItems, "Deleted snippets")
+            }
 
             // ---- Snippets -------------------------------------------------
             for (batch in pendingSnippets.chunked(100)) {
@@ -94,7 +121,7 @@ class SyncWorker @AssistedInject constructor(
                                 content = snippet.content,
                                 language = snippet.language,
                                 description = snippet.description,
-                                tags = snippet.tagsCsv.split(",").map(String::trim).filter(String::isNotEmpty),
+                                tagsCsv = snippet.tagsCsv,
                                 isFavourite = snippet.isFavourite,
                                 isArchived = snippet.isArchived,
                                 createdAt = snippet.createdAt,
@@ -155,6 +182,9 @@ class SyncWorker @AssistedInject constructor(
                     currentEntity = "Snippets",
                 )
             }
+
+            ensureSameSession(startingToken)?.let { return it }
+            snippetRepository.refreshFromApi()
 
             // ---- Financial transactions ----------------------------------
             for (batch in pendingTransactions.chunked(100)) {

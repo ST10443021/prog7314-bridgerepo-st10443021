@@ -42,6 +42,9 @@ interface DevLedgerApiService {
     @GET("api/snippets")
     suspend fun getSnippets(): Response<List<SnippetDto>>
 
+    @GET("api/snippets/snapshot")
+    suspend fun getSnippetSnapshot(): Response<SnippetSnapshotDto>
+
     @POST("api/snippets")
     suspend fun createSnippet(@Body request: CreateSnippetRequest): Response<SnippetDto>
 
