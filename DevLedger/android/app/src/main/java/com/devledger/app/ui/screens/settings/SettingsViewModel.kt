@@ -54,6 +54,7 @@ class SettingsViewModel @Inject constructor(
                 isLoading = true,
                 error = null,
                 message = null,
+                isLoaded = true,
             )
         }
 
@@ -63,12 +64,26 @@ class SettingsViewModel @Inject constructor(
                     settingsRepository.loadFromApi()
                 }
 
-                acceptServerSettings(settings)
+                if (_uiState.value.hasChanges) {
+                    // The user changed something while the API request was running.
+                    // Preserve those edits instead of replacing them with the older server state.
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            isLoaded = true,
+                            appliedLanguage = settings.language,
+                            appliedWifiOnlySync = settings.syncOnWifiOnly,
+                        )
+                    }
+                } else {
+                    acceptServerSettings(settings)
+                }
             } catch (timeout: TimeoutCancellationException) {
                 _uiState.update {
                     it.copy(
                         isLoading = false,
                         error = "Settings took too long to load. Check your connection and retry.",
+                        isLoaded = true,
                     )
                 }
             } catch (cancelled: CancellationException) {
@@ -78,6 +93,7 @@ class SettingsViewModel @Inject constructor(
                     it.copy(
                         isLoading = false,
                         error = errorMessage(error),
+                        isLoaded = true,
                     )
                 }
             }
@@ -100,7 +116,8 @@ class SettingsViewModel @Inject constructor(
     ) {
         val current = _uiState.value
 
-        if (!current.isLoaded || current.isLoading || current.isSaving) return
+        // Only block changes while an actual save is in progress.
+        if (current.isSaving) return
 
         _uiState.value = change(current).copy(
             hasChanges = true,
@@ -123,6 +140,7 @@ class SettingsViewModel @Inject constructor(
                 isSaving = true,
                 error = null,
                 message = null,
+                isLoaded = true,
             )
         }
 
@@ -146,6 +164,7 @@ class SettingsViewModel @Inject constructor(
                     it.copy(
                         isSaving = false,
                         error = "Saving took too long. Check your connection and retry.",
+                        isLoaded = true,
                     )
                 }
             } catch (cancelled: CancellationException) {
@@ -155,6 +174,7 @@ class SettingsViewModel @Inject constructor(
                     it.copy(
                         isSaving = false,
                         error = errorMessage(error),
+                        isLoaded = true,
                     )
                 }
             }
