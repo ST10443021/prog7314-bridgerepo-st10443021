@@ -49,6 +49,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -112,6 +114,8 @@ fun SnippetDetailScreen(
     val state by viewModel.uiState.collectAsState()
     val clipboard = LocalClipboardManager.current
     val context = LocalContext.current
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showFullscreen by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -202,7 +206,9 @@ fun SnippetDetailScreen(
                             }
                             Text("Copy", color = DevLedgerColors.AccentBlue, fontSize = 12.sp)
                             Spacer(Modifier.width(16.dp))
-                            Icon(Icons.Default.Fullscreen, contentDescription = "Fullscreen", tint = DevLedgerColors.TextMuted, modifier = Modifier.size(18.dp))
+                            IconButton(onClick = { showFullscreen = true }, modifier = Modifier.size(32.dp)) {
+                                Icon(Icons.Default.Fullscreen, contentDescription = "Fullscreen", tint = DevLedgerColors.TextMuted, modifier = Modifier.size(18.dp))
+                            }
                         }
                     }
                     
@@ -225,10 +231,10 @@ fun SnippetDetailScreen(
                     Text("STATS", color = DevLedgerColors.TextMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(12.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        StatCard(Icons.Default.Visibility, "Views", "156", Modifier.weight(1f))
-                        StatCard(Icons.Default.Code, "Uses", "32", Modifier.weight(1f))
-                        StatCard(Icons.Default.StarBorder, "Favorites", "12", Modifier.weight(1f))
-                        StatCard(Icons.Default.History, "Last Used", "Just now", Modifier.weight(1f))
+                        StatCard(Icons.Default.FormatAlignLeft, "Lines", snippet.content.lineSequence().count().toString(), Modifier.weight(1f))
+                        StatCard(Icons.Default.TextFormat, "Characters", snippet.content.length.toString(), Modifier.weight(1f))
+                        StatCard(Icons.Default.Star, "Is Favorite", if (snippet.isFavourite) "Yes" else "No", Modifier.weight(1f))
+                        StatCard(Icons.Default.History, "Age", TimeAgo.format(snippet.createdAt), Modifier.weight(1f))
                     }
 
                     Spacer(Modifier.height(24.dp))
@@ -244,11 +250,60 @@ fun SnippetDetailScreen(
                             context.startActivity(Intent.createChooser(intent, "Share snippet"))
                         }
                         ActionBtn(Icons.Default.ContentCopy, "Duplicate", Modifier.weight(1f)) { viewModel.duplicate(onDuplicated) }
-                        ActionBtn(Icons.Default.FileDownload, "Export", Modifier.weight(1f)) { /* Export */ }
-                        ActionBtn(Icons.Default.Delete, "Delete", Modifier.weight(1f), isDestructive = true) { viewModel.archive(); onBack() }
+                        ActionBtn(Icons.Default.FileDownload, "Export", Modifier.weight(1f)) {
+                            val intent = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_TITLE, "${snippet.title}.${snippet.language.lowercase()}")
+                                putExtra(Intent.EXTRA_TEXT, snippet.content)
+                            }
+                            context.startActivity(Intent.createChooser(intent, "Export snippet"))
+                        }
+                        ActionBtn(Icons.Default.Delete, "Delete", Modifier.weight(1f), isDestructive = true) { showDeleteConfirm = true }
                     }
                     
                     Spacer(Modifier.height(48.dp))
+                }
+            }
+        }
+    }
+
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text("Delete Snippet?", color = Color.White) },
+            text = { Text("Are you sure you want to move this snippet to the recycle bin?", color = DevLedgerColors.TextSecondary) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.archive(); onBack() }) {
+                    Text("Delete", color = DevLedgerColors.ErrorRed)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) {
+                    Text("Cancel", color = Color.White)
+                }
+            },
+            containerColor = DevLedgerColors.SurfaceCard
+        )
+    }
+
+    if (showFullscreen) {
+        Dialog(
+            onDismissRequest = { showFullscreen = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Box(Modifier.fillMaxSize().background(DevLedgerColors.BgDeep)) {
+                Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(state.snippet?.title ?: "Code View", color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 8.dp))
+                        IconButton(onClick = { showFullscreen = false }) {
+                            Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
+                        }
+                    }
+                    CodeViewer(state.snippet?.content ?: "")
                 }
             }
         }
@@ -283,9 +338,6 @@ private fun DetailTopBar(onBack: () -> Unit, onEdit: () -> Unit, isFavourite: Bo
         }
         IconButton(onClick = onEdit) {
             Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Color.White)
-        }
-        IconButton(onClick = { /* Menu */ }) {
-            Icon(Icons.Default.MoreVert, contentDescription = "More", tint = Color.White)
         }
     }
 }

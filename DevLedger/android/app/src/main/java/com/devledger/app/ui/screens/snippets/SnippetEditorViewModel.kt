@@ -5,9 +5,11 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.devledger.app.data.local.entity.FolderEntity
+import com.devledger.app.data.local.entity.UserTagEntity
 import com.devledger.app.data.repository.AuthRepository
 import com.devledger.app.data.repository.FolderRepository
 import com.devledger.app.data.repository.SnippetRepository
+import com.devledger.app.data.repository.UserTagRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.*
@@ -38,6 +40,7 @@ class SnippetEditorViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val snippetRepository: SnippetRepository,
     private val folderRepository: FolderRepository,
+    private val userTagRepository: UserTagRepository,
 ) : ViewModel() {
 
     private val initialId = savedStateHandle.get<String>("snippetId")
@@ -45,6 +48,9 @@ class SnippetEditorViewModel @Inject constructor(
     val uiState: StateFlow<SnippetEditorUiState> = _uiState.asStateFlow()
 
     val folders: StateFlow<List<FolderEntity>> = folderRepository.observeFolders()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val availableTags: StateFlow<List<UserTagEntity>> = userTagRepository.observeTags()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private var loadFailed = false
@@ -93,7 +99,14 @@ class SnippetEditorViewModel @Inject constructor(
 
     fun addTag(tag: String) = edit {
         val trimmed = tag.trim()
-        if (trimmed.isEmpty() || it.tags.any { existing -> existing.equals(trimmed, ignoreCase = true) }) it else it.copy(tags = it.tags + trimmed)
+        if (trimmed.isEmpty() || it.tags.any { existing -> existing.equals(trimmed, ignoreCase = true) }) it 
+        else {
+            // Asynchronously ensure the tag is saved to the global repository
+            viewModelScope.launch {
+                userTagRepository.create(trimmed)
+            }
+            it.copy(tags = it.tags + trimmed)
+        }
     }
     fun removeTag(tag: String) = edit { it.copy(tags = it.tags - tag) }
 

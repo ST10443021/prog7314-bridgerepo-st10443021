@@ -219,6 +219,7 @@ fun DevLedgerNavHost(navController: NavHostController) {
             MainScaffold(navController, BottomNavTab.SNIPPETS) {
                 SnippetVaultScreen(
                     onOpenSnippet = { id -> navController.navigate(DevLedgerDestinations.snippetDetailRoute(id)) },
+                    onAddSnippet = { navController.navigate(DevLedgerDestinations.snippetEditorRoute()) },
                     onOpenFoldersAndTags = { navController.navigate(DevLedgerDestinations.FOLDERS_TAGS) },
                     onOpenNotifications = { navController.navigate(DevLedgerDestinations.NOTIFICATIONS) },
                     onOpenDrawer = { /* Drawer not implemented */ },

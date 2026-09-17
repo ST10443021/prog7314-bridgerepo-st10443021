@@ -70,7 +70,7 @@ fun DevLedgerBottomNav(
             NavItem(Icons.Filled.AttachMoney, stringRes(R.string.nav_finance), active == BottomNavTab.FINANCE) {
                 onNavigate(BottomNavTab.FINANCE)
             }
-            NavItem(Icons.Filled.Description, "Reports", active == BottomNavTab.NOTIFICATIONS) {
+            NavItem(Icons.Filled.Notifications, stringRes(R.string.nav_notifications), active == BottomNavTab.NOTIFICATIONS) {
                 onNavigate(BottomNavTab.NOTIFICATIONS)
             }
         }
