@@ -198,26 +198,12 @@ class SyncWorker @AssistedInject constructor(
     private suspend fun success(itemsSynced: Int, userId: String): Result {
         syncLogDao.insert(SyncLogEntity(IdGenerator.newId(), userId, "COMPLETED", itemsSynced, null, System.currentTimeMillis()))
         
-        if (itemsSynced > 0) {
-            notificationRepository.notify(
-                title = "Sync Completed",
-                message = "Successfully synchronised $itemsSynced item(s) with the cloud.",
-                type = "SYNC"
-            )
-        }
-        
         return Result.success(workDataOf(KEY_COMPLETED_AT to System.currentTimeMillis()))
     }
 
     private suspend fun failure(message: String, userId: String?, itemsSynced: Int = 0): Result {
         if (userId != null) {
             syncLogDao.insert(SyncLogEntity(IdGenerator.newId(), userId, "FAILED", itemsSynced, message, System.currentTimeMillis()))
-            
-            notificationRepository.notify(
-                title = "Sync Failed",
-                message = "Synchronisation encountered an error: $message",
-                type = "SYNC"
-            )
         }
         return Result.failure(workDataOf(KEY_SYNC_ERROR to message))
     }
