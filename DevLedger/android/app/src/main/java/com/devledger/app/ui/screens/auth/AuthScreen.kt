@@ -74,10 +74,11 @@ fun AuthScreen(
                 viewModel.signInWithGoogle(idToken)
             } else {
                 Log.w(TAG, "Google Sign-In returned no ID token")
+                viewModel.onGoogleSignInFailure("No ID token returned from Google.")
             }
         } catch (e: ApiException) {
             Log.e(TAG, "Google Sign-In failed with status code ${e.statusCode}", e)
-            viewModel.onGitHubOAuthFailure("Cancelled") // reuse for convenience
+            viewModel.onGoogleSignInFailure(if (e.statusCode == 12501) "Sign-in cancelled." else "Google Sign-In failed (${e.statusCode}).")
         }
     }
 
@@ -206,9 +207,14 @@ fun AuthScreen(
         Button(
             onClick = { 
                 viewModel.onGoogleSignInClicked()
-                // Force sign out first to ensure account selection and a fresh ID token
-                googleSignInClient.signOut().addOnCompleteListener {
-                    googleSignInLauncher.launch(googleSignInClient.signInIntent) 
+                // Only sign out if an account is already signed in to allow account switcher
+                val lastAccount = GoogleSignIn.getLastSignedInAccount(context)
+                if (lastAccount != null) {
+                    googleSignInClient.signOut().addOnCompleteListener {
+                        googleSignInLauncher.launch(googleSignInClient.signInIntent)
+                    }
+                } else {
+                    googleSignInLauncher.launch(googleSignInClient.signInIntent)
                 }
             },
             colors = ButtonDefaults.buttonColors(containerColor = Color.White),
