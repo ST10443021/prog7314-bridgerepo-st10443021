@@ -32,6 +32,7 @@ import com.devledger.app.R
 import com.devledger.app.data.local.entity.FolderEntity
 import com.devledger.app.data.repository.FolderRepository
 import com.devledger.app.data.repository.SnippetRepository
+import com.devledger.app.data.repository.UserTagRepository
 import com.devledger.app.ui.theme.DevLedgerColors
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
@@ -50,24 +51,34 @@ data class FoldersTagsUiState(
 @HiltViewModel
 class FoldersTagsViewModel @Inject constructor(
     private val folderRepository: FolderRepository,
+    private val userTagRepository: UserTagRepository,
     snippetRepository: SnippetRepository,
 ) : ViewModel() {
 
     val uiState: StateFlow<FoldersTagsUiState> = combine(
-        folderRepository.observeFolders(), snippetRepository.observeSnippets(""),
-    ) { folders, snippets ->
+        folderRepository.observeFolders(), 
+        snippetRepository.observeSnippets(""),
+        userTagRepository.observeTags()
+    ) { folders, snippets, globalTags ->
+        val counts = snippets.flatMap { it.tagsCsv.split(",").map(String::trim).filter(String::isNotEmpty) }
+            .groupingBy { it.lowercase() }.eachCount()
+        
+        // Merge global tags with snippet-derived tags to ensure all created tags show up
+        val allTagNames = (globalTags.map { it.name } + counts.keys).distinctBy { it.lowercase() }
+        
         FoldersTagsUiState(
             folders = folders,
             folderCounts = snippets.filter { it.folderId != null }.groupingBy { it.folderId!! }.eachCount(),
-            tagCounts = snippets.flatMap { it.tagsCsv.split(",").map(String::trim).filter(String::isNotEmpty) }
-                .groupingBy { it }.eachCount().toList().sortedByDescending { it.second },
+            tagCounts = allTagNames.map { name -> 
+                name to (counts[name.lowercase()] ?: 0)
+            }.sortedByDescending { it.second },
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), FoldersTagsUiState())
 
     fun createFolder(name: String) { viewModelScope.launch { folderRepository.create(name) } }
     fun renameFolder(id: String, name: String) { viewModelScope.launch { folderRepository.rename(id, name) } }
-    fun deleteFolder(id: String, reassignToFolderId: String?) { viewModelScope.launch { folderRepository.delete(id,
-        reassignToFolderId) } }
+    fun deleteFolder(id: String, reassignToFolderId: String?) { viewModelScope.launch { folderRepository.delete(id, reassignToFolderId) } }
+    fun createTag(name: String) { viewModelScope.launch { userTagRepository.create(name) } }
 }
 
 /** 
@@ -134,13 +145,25 @@ fun FoldersTagsScreen(onBack: () -> Unit, viewModel: FoldersTagsViewModel = hilt
 
                 // TAGS Column
                 Column(modifier = Modifier.weight(1f).fillMaxHeight().padding(start = 8.dp)) {
+                    var showCreateTagDialog by remember { mutableStateOf(false) }
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text("TAGS", color = DevLedgerColors.TextMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        Text("+ New Tag", color = DevLedgerColors.AccentBlue, fontSize = 11.sp)
+                        Text(
+                            "+ New Tag", 
+                            color = DevLedgerColors.AccentBlue, 
+                            fontSize = 11.sp,
+                            modifier = Modifier.clickable { showCreateTagDialog = true }
+                        )
+                    }
+
+                    if (showCreateTagDialog) {
+                        FolderDialog("New Tag", "", { showCreateTagDialog = false }) { name ->
+                            viewModel.createTag(name); showCreateTagDialog = false
+                        }
                     }
 
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.weight(1f)) {

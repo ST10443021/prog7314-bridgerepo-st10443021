@@ -50,6 +50,7 @@ private val FolderPalette = listOf(
 @Composable
 fun SnippetVaultScreen(
     onOpenSnippet: (String) -> Unit,
+    onAddSnippet: () -> Unit,
     onOpenFoldersAndTags: () -> Unit,
     onOpenNotifications: () -> Unit,
     onOpenDrawer: () -> Unit,
@@ -65,7 +66,7 @@ fun SnippetVaultScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { /* NavHost handles the central '+' button usually */ },
+                onClick = onAddSnippet,
                 containerColor = DevLedgerColors.AccentBlue,
                 contentColor = Color.White,
                 shape = RoundedCornerShape(12.dp),
@@ -229,8 +230,6 @@ fun SnippetVaultScreen(
                                     }
                                 }
                             }
-                            Spacer(Modifier.width(12.dp))
-                            Icon(Icons.Filled.List, contentDescription = null, tint = DevLedgerColors.AccentBlue, modifier = Modifier.size(20.dp))
                         }
                     }
                     Spacer(Modifier.height(16.dp))

@@ -30,6 +30,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.devledger.app.R
 import com.devledger.app.data.local.entity.FolderEntity
@@ -51,6 +53,9 @@ fun SnippetEditorScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val folders by viewModel.folders.collectAsState()
+    val availableTags by viewModel.availableTags.collectAsState()
+    var showPreview by remember { mutableStateOf(false) }
+    var showCreateTagDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(state.saved) { if (state.saved) onSaved() }
 
@@ -112,7 +117,14 @@ fun SnippetEditorScreen(
             }
 
             Text("Tags", color = DevLedgerColors.TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
-            TagInputArea(state.tags, viewModel::addTag, viewModel::removeTag, Modifier.padding(bottom = 20.dp))
+            TagInputArea(
+                tags = state.tags, 
+                suggestions = availableTags.map { it.name }, 
+                onAddTag = viewModel::addTag, 
+                onRemoveTag = viewModel::removeTag,
+                onCreateNew = { showCreateTagDialog = true },
+                modifier = Modifier.padding(bottom = 20.dp)
+            )
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -163,7 +175,7 @@ fun SnippetEditorScreen(
                 }
                 Spacer(Modifier.weight(1f))
                 OutlinedButton(
-                    onClick = { /* Preview */ },
+                    onClick = { showPreview = true },
                     shape = RoundedCornerShape(8.dp),
                     border = BorderStroke(1.dp, DevLedgerColors.Border),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = DevLedgerColors.AccentBlue)
@@ -175,6 +187,41 @@ fun SnippetEditorScreen(
             }
             
             Spacer(Modifier.height(32.dp))
+        }
+    }
+
+    if (showCreateTagDialog) {
+        TagCreationDialog(
+            onDismiss = { showCreateTagDialog = false },
+            onConfirm = { name ->
+                viewModel.addTag(name)
+                showCreateTagDialog = false
+            }
+        )
+    }
+
+    if (showPreview) {
+        Dialog(
+            onDismissRequest = { showPreview = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Box(Modifier.fillMaxSize().background(DevLedgerColors.BgDeep)) {
+                Column(Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Snippet Preview", color = Color.White, fontWeight = FontWeight.Bold)
+                        IconButton(onClick = { showPreview = false }) {
+                            Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
+                        }
+                    }
+                    Text(state.title, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(8.dp))
+                    CodeEditor(state.content, {}, Modifier.padding(bottom = 20.dp))
+                }
+            }
         }
     }
 }
@@ -197,15 +244,6 @@ private fun EditorTopBar(onBack: () -> Unit, onSave: () -> Unit, isSaving: Boole
         Text("DevLedger", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         
         Spacer(Modifier.weight(1f))
-        
-        IconButton(onClick = { /* Price/Tag icon placeholder */ }) {
-            Icon(Icons.Default.LocalOffer, contentDescription = null, tint = Color.White)
-        }
-        IconButton(onClick = { /* Menu */ }) {
-            Icon(Icons.Default.MoreVert, contentDescription = null, tint = Color.White)
-        }
-        
-        Spacer(Modifier.width(8.dp))
         
         Button(
             onClick = onSave,
@@ -294,40 +332,122 @@ private fun LanguageSelector(selectedLanguage: String, onSelected: (String) -> U
 }
 
 @Composable
-private fun TagInputArea(tags: List<String>, onAddTag: (String) -> Unit, onRemoveTag: (String) -> Unit, modifier: Modifier = Modifier) {
-    var draft by remember { mutableStateOf("") }
+private fun TagCreationDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
+    var name by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = DevLedgerColors.SurfaceCard,
+        title = { Text("Create New Tag", color = Color.White) },
+        text = { 
+            OutlinedTextField(
+                value = name, 
+                onValueChange = { name = it }, 
+                singleLine = true, 
+                label = { Text("Tag name") },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White
+                )
+            ) 
+        },
+        confirmButton = { 
+            TextButton(onClick = { if (name.isNotBlank()) onConfirm(name.trim()) }) { 
+                Text("Add", color = DevLedgerColors.AccentBlue) 
+            } 
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = Color.White) } },
+    )
+}
 
-    Row(modifier = modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-        tags.forEach { tag ->
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(DevLedgerColors.SurfaceCard)
-                    .border(1.dp, DevLedgerColors.Border, RoundedCornerShape(8.dp))
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(tag, color = Color.White, fontSize = 12.sp)
-                    Spacer(Modifier.width(8.dp))
-                    Icon(Icons.Filled.Close, contentDescription = "Remove", tint = DevLedgerColors.TextMuted,
-                        modifier = Modifier.size(14.dp).clickable { onRemoveTag(tag) })
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TagInputArea(
+    tags: List<String>, 
+    suggestions: List<String>, 
+    onAddTag: (String) -> Unit, 
+    onRemoveTag: (String) -> Unit, 
+    onCreateNew: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Column(modifier = modifier) {
+        Row(
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), 
+            horizontalArrangement = Arrangement.spacedBy(8.dp), 
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            tags.forEach { tag ->
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(DevLedgerColors.SurfaceCard)
+                        .border(1.dp, DevLedgerColors.Border, RoundedCornerShape(8.dp))
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(tag, color = Color.White, fontSize = 12.sp)
+                        Spacer(Modifier.width(8.dp))
+                        Icon(
+                            imageVector = Icons.Filled.Close, 
+                            contentDescription = "Remove", 
+                            tint = DevLedgerColors.TextMuted,
+                            modifier = Modifier.size(14.dp).clickable { onRemoveTag(tag) }
+                        )
+                    }
+                }
+            }
+            
+            Box {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(DevLedgerColors.SurfaceCardAlt)
+                        .clickable { expanded = true }
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("+ Add Tag", color = DevLedgerColors.AccentBlue, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Icon(Icons.Default.ArrowDropDown, null, tint = DevLedgerColors.AccentBlue, modifier = Modifier.size(16.dp))
+                    }
+                }
+
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                    modifier = Modifier.background(DevLedgerColors.SurfaceCard).widthIn(min = 160.dp)
+                ) {
+                    DropdownMenuItem(
+                        text = { 
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Add, null, tint = DevLedgerColors.AccentBlue, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("Create New Tag...", color = DevLedgerColors.AccentBlue, fontWeight = FontWeight.Bold)
+                            }
+                        },
+                        onClick = { 
+                            onCreateNew()
+                            expanded = false
+                        }
+                    )
+                    
+                    val selectableSuggestions = suggestions.filter { it !in tags }
+                    if (selectableSuggestions.isNotEmpty()) {
+                        HorizontalDivider(color = DevLedgerColors.Border, modifier = Modifier.padding(vertical = 4.dp))
+                        selectableSuggestions.forEach { suggestion ->
+                            DropdownMenuItem(
+                                text = { Text(suggestion, color = Color.White) },
+                                onClick = { 
+                                    onAddTag(suggestion)
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
                 }
             }
         }
-        
-        BasicTextField(
-            value = draft, 
-            onValueChange = { draft = it },
-            singleLine = true,
-            textStyle = TextStyle(color = Color.White, fontSize = 12.sp),
-            cursorBrush = SolidColor(DevLedgerColors.AccentBlue),
-            modifier = Modifier.width(100.dp),
-            decorationBox = { innerTextField ->
-                if (draft.isEmpty()) Text("+ Add Tag", color = DevLedgerColors.AccentBlue, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                innerTextField()
-            },
-            keyboardActions = KeyboardActions(onDone = { if (draft.isNotBlank()) { onAddTag(draft); draft = "" } })
-        )
     }
 }
 
