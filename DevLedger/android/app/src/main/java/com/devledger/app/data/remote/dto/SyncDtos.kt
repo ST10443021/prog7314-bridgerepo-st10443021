@@ -19,7 +19,7 @@ data class SnippetSyncPayload(
     val content: String,
     val language: String,
     val description: String? = null,
-    val tags: List<String> = emptyList(),
+    val tagsCsv: String = "",
     val isFavourite: Boolean = false,
     val isArchived: Boolean = false,
     val createdAt: Long,
@@ -72,4 +72,13 @@ data class UserSettingsDto(
     val biometricEnabled: Boolean,
     val syncOnWifiOnly: Boolean,
     val monthlyBudget: Double? = null,
+)
+
+@Serializable
+data class SnippetDeletePayload(val snippetId: String, val userId: String)
+
+@Serializable
+data class SnippetSnapshotDto(
+    val snippets: List<SnippetDto>,
+    val deletedIds: List<String>,
 )

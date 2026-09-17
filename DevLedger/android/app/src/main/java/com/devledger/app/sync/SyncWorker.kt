@@ -24,6 +24,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import com.devledger.app.data.remote.dto.SnippetDeletePayload
 
 /**
  * Uploads pending offline changes belonging to the current account.
@@ -61,18 +62,22 @@ class SyncWorker @AssistedInject constructor(
 
             currentUserId = user.userId
 
+            val pendingDeletes = snippetRepository.getPendingDeletesForUser(user.userId)
+
             val pendingSnippets =
                 snippetRepository.getPendingSyncForUser(user.userId)
 
             val pendingTransactions =
                 transactionRepository.getPendingSyncForUser(user.userId)
 
-            if (pendingSnippets.isEmpty() && pendingTransactions.isEmpty()) {
+            if (pendingDeletes.isEmpty() && pendingSnippets.isEmpty() && pendingTransactions.isEmpty()) {
+                ensureSameSession(startingToken, currentUserId, processedItems)?.let { return it }
+                snippetRepository.refreshFromApi()
                 return success(itemsSynced = 0, userId = user.userId)
             }
 
             val totalItems =
-                pendingSnippets.size + pendingTransactions.size
+                pendingDeletes.size + pendingSnippets.size + pendingTransactions.size
 
             publishProgress(
                 processed = processedItems,
@@ -81,6 +86,29 @@ class SyncWorker @AssistedInject constructor(
             )
 
             var changedDuringUpload = false
+
+            // Delete first. The API remembers deleted IDs, so older uploads cannot revive them.
+            for (batch in pendingDeletes.chunked(100)) {
+                ensureSameSession(startingToken, currentUserId, processedItems)?.let { return it }
+                val operations = batch.map { snippet ->
+                    SyncOperation(
+                        entity = "snippet", action = "delete",
+                        payload = json.encodeToString(SnippetDeletePayload(snippet.snippetId, snippet.userId)),
+                        clientTimestamp = snippet.updatedAt,
+                    )
+                }
+                val response = api.syncBatch(SyncBatchRequest(operations))
+                if (!response.isSuccessful) return responseFailure(response.code(), "snippet deletion", currentUserId, processedItems)
+                val ack = response.body() ?: return failure("Missing deletion acknowledgement.", currentUserId, processedItems)
+                val expected = batch.map { it.snippetId }.toSet()
+                if (ack.conflicts.isNotEmpty() || ack.applied.toSet() != expected || ack.applied.size != expected.size) {
+                    return failure("The API did not confirm every deletion.", currentUserId, processedItems)
+                }
+                ensureSameSession(startingToken, currentUserId, processedItems)?.let { return it }
+                for (snippet in batch) snippetRepository.acknowledgeDelete(snippet)
+                processedItems += batch.size
+                publishProgress(processedItems, totalItems, "Deleted snippets")
+            }
 
             // ---- Snippets -------------------------------------------------
             for (batch in pendingSnippets.chunked(100)) {
@@ -101,7 +129,7 @@ class SyncWorker @AssistedInject constructor(
                                 content = snippet.content,
                                 language = snippet.language,
                                 description = snippet.description,
-                                tags = snippet.tagsCsv.split(",").map(String::trim).filter(String::isNotEmpty),
+                                tagsCsv = snippet.tagsCsv,
                                 isFavourite = snippet.isFavourite,
                                 isArchived = snippet.isArchived,
                                 createdAt = snippet.createdAt,
@@ -168,6 +196,9 @@ class SyncWorker @AssistedInject constructor(
                     currentEntity = "Snippets",
                 )
             }
+
+            ensureSameSession(startingToken, currentUserId, processedItems)?.let { return it }
+            snippetRepository.refreshFromApi()
 
             // ---- Financial transactions ----------------------------------
             for (batch in pendingTransactions.chunked(100)) {

@@ -34,6 +34,25 @@ public class SnippetsController : ControllerBase
         return Ok(snippets.Select(ToDto));
     }
 
+    // One consistent response includes active items, archived items and deletion IDs.
+    [HttpGet("snapshot")]
+    public async Task<IActionResult> Snapshot(CancellationToken cancellationToken)
+    {
+        var userId = CurrentUserId;
+        await using var scope = await SnippetMutationLock.BeginAsync(_db, userId, cancellationToken);
+        var snippets = await _db.Snippets.AsNoTracking()
+            .Where(item => item.UserId == userId)
+            .OrderByDescending(item => item.UpdatedAt).ToListAsync(cancellationToken);
+        var deletedIds = await _db.Set<DeletedSnippet>().AsNoTracking()
+            .Where(item => item.UserId == userId)
+            .Select(item => item.SnippetId).ToListAsync(cancellationToken);
+        await scope.CommitAsync(cancellationToken);
+        return Ok(new {
+            snippets = snippets.Select(ToDto).ToList(),
+            deletedIds = deletedIds.Select(id => id.ToString()).ToList(),
+        });
+    }
+
     [HttpGet("{id}")]
     public async Task<ActionResult<SnippetDto>> GetById(Guid id)
     {
@@ -47,6 +66,7 @@ public class SnippetsController : ControllerBase
         if (string.IsNullOrWhiteSpace(request.Title) || string.IsNullOrWhiteSpace(request.Content))
             return BadRequest("Title and content are required.");
 
+        await using var scope = await SnippetMutationLock.BeginAsync(_db, CurrentUserId);
         var snippet = new Snippet
         {
             UserId = CurrentUserId,
@@ -59,12 +79,14 @@ public class SnippetsController : ControllerBase
         };
         _db.Snippets.Add(snippet);
         await _db.SaveChangesAsync();
+        await scope.CommitAsync();
         return CreatedAtAction(nameof(GetById), new { id = snippet.SnippetId }, ToDto(snippet));
     }
 
     [HttpPut("{id}")]
     public async Task<ActionResult<SnippetDto>> Update(Guid id, [FromBody] CreateSnippetRequest request)
     {
+        await using var scope = await SnippetMutationLock.BeginAsync(_db, CurrentUserId);
         var snippet = await _db.Snippets.FirstOrDefaultAsync(s => s.SnippetId == id && s.UserId == CurrentUserId);
         if (snippet is null) return NotFound();
 
@@ -76,16 +98,26 @@ public class SnippetsController : ControllerBase
         snippet.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
+        await scope.CommitAsync();
         return Ok(ToDto(snippet));
     }
 
     [HttpDelete("{id}")]
-    public async Task<IActionResult> Delete(Guid id)
+    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
-        var snippet = await _db.Snippets.FirstOrDefaultAsync(s => s.SnippetId == id && s.UserId == CurrentUserId);
+        var userId = CurrentUserId;
+        await using var scope = await SnippetMutationLock.BeginAsync(_db, userId, cancellationToken);
+        var deleted = await _db.Set<DeletedSnippet>().SingleOrDefaultAsync(
+            item => item.SnippetId == id, cancellationToken);
+        if (deleted is not null)
+            return deleted.UserId == userId ? NoContent() : NotFound();
+        var snippet = await _db.Snippets.SingleOrDefaultAsync(
+            item => item.SnippetId == id && item.UserId == userId, cancellationToken);
         if (snippet is null) return NotFound();
         _db.Snippets.Remove(snippet);
-        await _db.SaveChangesAsync();
+        _db.Set<DeletedSnippet>().Add(new DeletedSnippet { SnippetId = id, UserId = userId });
+        await _db.SaveChangesAsync(cancellationToken);
+        await scope.CommitAsync(cancellationToken);
         return NoContent();
     }
 
