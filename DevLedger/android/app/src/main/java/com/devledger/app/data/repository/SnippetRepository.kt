@@ -34,6 +34,7 @@ class SnippetRepository @Inject constructor(
     private val dao: SnippetDao,
     private val deletedDao: DeletedDao,
     private val userDao: UserDao,
+    private val notificationRepository: NotificationRepository,
     private val settingsRepository: SettingsRepository,
     private val api: DevLedgerApiService,
     private val tokenManager: TokenManager,
@@ -153,6 +154,15 @@ class SnippetRepository @Inject constructor(
         }
 
         dao.saveUnlessDeleted(snippet)
+
+        if (existing == null) {
+            notificationRepository.notify(
+                title = "Snippet Created",
+                message = "New snippet \"${snippet.title}\" has been saved.",
+                type = "SNIPPET"
+            )
+        }
+
         queueSync()
         return snippet
     }
@@ -176,7 +186,14 @@ class SnippetRepository @Inject constructor(
     suspend fun deleteArchived(ids: List<String>): Int {
         val user = userDao.getCurrentUser() ?: error("Sign in before deleting snippets.")
         val count = dao.queueArchivedDeletes(user.userId, ids)
-        if (count > 0) queueSync()
+        if (count > 0) {
+            notificationRepository.notify(
+                title = "Snippet Deleted",
+                message = "$count snippet(s) moved to the deletion queue.",
+                type = "SNIPPET"
+            )
+            queueSync()
+        }
         return count
     }
 
