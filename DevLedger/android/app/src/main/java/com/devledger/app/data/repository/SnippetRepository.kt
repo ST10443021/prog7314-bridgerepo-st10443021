@@ -67,7 +67,7 @@ class SnippetRepository @Inject constructor(
             throw HttpException(response)
         }
 
-        val snapshot = response.body() ?: error("The API returned no snippet snapshot.")
+        val snapshot = response.body() ?: error("The API returned no snippet list.")
 
         if (tokenManager.getAccessToken() != startingToken) return
 
@@ -112,9 +112,7 @@ class SnippetRepository @Inject constructor(
 
     suspend fun getById(id: String): SnippetEntity? {
         val user = userDao.getCurrentUser() ?: return null
-        return dao.getById(id)?.takeIf { 
-            it.userId == user.userId && it.syncStatus !in listOf("DELETE_PENDING", "DELETED") 
-        }
+        return dao.getById(id)?.takeIf { it.userId == user.userId && it.syncStatus !in listOf(SyncStatus.DELETE_PENDING, SyncStatus.DELETED) }
     }
 
     suspend fun createOrUpdate(
@@ -170,7 +168,7 @@ class SnippetRepository @Inject constructor(
         dao.setArchived(snippet.snippetId, archived)
         queueSync()
     }
-    
+
     suspend fun delete(snippet: SnippetEntity) {
         deleteArchived(listOf(snippet.snippetId))
     }

@@ -58,8 +58,6 @@ interface SnippetDao {
         changedAt: Long = System.currentTimeMillis(),
     )
 
-    @Delete
-    suspend fun delete(snippet: SnippetEntity)
 
     @Query("SELECT COUNT(*) FROM snippets WHERE isArchived = 0 AND syncStatus NOT IN ('DELETE_PENDING', 'DELETED')")
     fun observeActiveCount(): Flow<Int>
@@ -129,7 +127,7 @@ interface SnippetDao {
 
         for (remote in remoteSnippets) {
             if (remote.snippetId in deletedIds) continue
-            require(remote.userId == userId) { "Account mismatch in sync." }
+            require(remote.userId == userId) { "The downloaded snippet belongs to a different account." }
 
             val local = getById(remote.snippetId)
             if (local == null) {
@@ -159,10 +157,11 @@ interface SnippetDao {
         return count
     }
 
+    /** Keep only an erased marker so a stale download cannot recreate deleted content. */
     @Transaction
     suspend fun markDeleted(userId: String, id: String) {
         val local = getById(id)
-        if (local != null && local.userId != userId) return
+        require(local == null || local.userId == userId) { "Snippet account mismatch." }
         upsert(SnippetEntity(
             snippetId = id, userId = userId, folderId = null, title = "", content = "",
             language = "", description = null, tagsCsv = "", isArchived = true,
@@ -175,7 +174,7 @@ interface SnippetDao {
     suspend fun saveUnlessDeleted(snippet: SnippetEntity) {
         val current = getById(snippet.snippetId)
         check(current == null || current.syncStatus !in listOf("DELETE_PENDING", "DELETED")) {
-            "This snippet was permanently deleted."
+            "This snippet was permanently deleted. Create a new snippet instead."
         }
         upsert(snippet)
     }

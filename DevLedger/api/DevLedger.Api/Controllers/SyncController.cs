@@ -11,7 +11,7 @@ namespace DevLedger.Api.Controllers;
 
 /// <summary>
 /// Persists queued offline changes for the authenticated user.
-/// Currently supports snippet and financial-transaction upserts.
+/// Supports snippet upserts/deletes and financial-transaction upserts.
 /// Unsupported operations are rejected rather than falsely acknowledged.
 /// </summary>
 [ApiController]
@@ -53,6 +53,8 @@ public class SyncController : ControllerBase
         if (request.Operations.Count > 100)
             return BadRequest("Send at most 100 operations per batch.");
 
+        await using var transactionScope = await SnippetMutationLock.BeginAsync(_db, userId, cancellationToken);
+
         var applied = new List<string>();
 
         var seenOperations = new HashSet<string>(
@@ -63,10 +65,10 @@ public class SyncController : ControllerBase
             if (operation is null)
                 return BadRequest("A sync operation cannot be null.");
 
-            if (operation.Action != "upsert")
+            if (operation.Action != "upsert" && !(operation.Entity == "snippet" && operation.Action == "delete"))
             {
                 return BadRequest(
-                    "This endpoint currently supports upsert operations only.");
+                    "Only upsert and snippet delete operations are supported.");
             }
 
             if (string.IsNullOrWhiteSpace(operation.Payload))
@@ -102,6 +104,32 @@ public class SyncController : ControllerBase
                     {
                         return BadRequest(
                             "A batch cannot contain duplicate snippet IDs.");
+                    }
+
+                    var deleted = await _db.Set<DeletedSnippet>().SingleOrDefaultAsync(
+                        item => item.SnippetId == payload.SnippetId, cancellationToken);
+                    if (deleted is not null && deleted.UserId != userId) return Forbid();
+
+                    // A permanent deletion wins over an old offline edit or restore.
+                    // Acknowledge retries; the client's snapshot pull removes stale copies.
+                    if (deleted is not null)
+                    {
+                        applied.Add(payload.SnippetId.ToString());
+                        break;
+                    }
+
+                    if (operation.Action == "delete")
+                    {
+                        var toDelete = await _db.Snippets.SingleOrDefaultAsync(
+                            item => item.SnippetId == payload.SnippetId, cancellationToken);
+                        if (toDelete is not null && toDelete.UserId != userId) return Forbid();
+                        if (toDelete is not null) _db.Snippets.Remove(toDelete);
+                        // Also records deletes of snippets created and deleted offline.
+                        _db.Set<DeletedSnippet>().Add(new DeletedSnippet {
+                            SnippetId = payload.SnippetId, UserId = userId,
+                        });
+                        applied.Add(payload.SnippetId.ToString());
+                        break;
                     }
 
                     if (string.IsNullOrWhiteSpace(payload.Title) ||
@@ -182,7 +210,7 @@ public class SyncController : ControllerBase
                     snippet.Content = payload.Content!;
                     snippet.Language = payload.Language!;
                     snippet.Description = payload.Description;
-                    snippet.TagsCsv = payload.TagsCsv ?? string.Empty;
+                    snippet.TagsCsv = PayloadTags(payload);
                     snippet.IsFavourite = payload.IsFavourite;
                     snippet.IsArchived = payload.IsArchived;
                     snippet.UpdatedAt = DateTimeOffset
@@ -332,12 +360,16 @@ public class SyncController : ControllerBase
 
         // EF Core commits the complete batch atomically.
         await _db.SaveChangesAsync(cancellationToken);
+        await transactionScope.CommitAsync(cancellationToken);
 
         return Ok(
             new SyncBatchResponse(
                 Applied: applied,
                 Conflicts: new List<string>()));
     }
+
+    private static string PayloadTags(SnippetSyncPayload payload) =>
+        payload.TagsCsv ?? string.Join(",", payload.Tags ?? new List<string>());
 
     private static bool HasSameSnippetContent(
         Snippet snippet,
@@ -347,7 +379,7 @@ public class SyncController : ControllerBase
         snippet.Content == payload.Content &&
         snippet.Language == payload.Language &&
         snippet.Description == payload.Description &&
-        snippet.TagsCsv == (payload.TagsCsv ?? string.Empty) &&
+        snippet.TagsCsv == (PayloadTags(payload)) &&
         snippet.IsFavourite == payload.IsFavourite &&
         snippet.IsArchived == payload.IsArchived;
 
@@ -363,7 +395,8 @@ public class SyncController : ControllerBase
         bool IsFavourite,
         bool IsArchived,
         long CreatedAt,
-        long UpdatedAt);
+        long UpdatedAt,
+        List<string>? Tags = null);
 
     public sealed record TransactionSyncPayload(
         Guid TransactionId,

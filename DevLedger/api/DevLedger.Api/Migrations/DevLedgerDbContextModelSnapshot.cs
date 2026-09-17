@@ -22,6 +22,22 @@ namespace DevLedger.Api.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("DevLedger.Api.Models.DeletedSnippet", b =>
+                {
+                    b.Property<Guid>("SnippetId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("SnippetId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("DeletedSnippets");
+                });
+
             modelBuilder.Entity("DevLedger.Api.Models.Folder", b =>
                 {
                     b.Property<Guid>("FolderId")

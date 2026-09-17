@@ -21,6 +21,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import com.devledger.app.data.remote.dto.SnippetDeletePayload
 
 /**
  * Orchestrates bidirectional synchronization.
@@ -133,7 +134,7 @@ class SyncWorker @AssistedInject constructor(
                 val response = api.syncBatch(SyncBatchRequest(batchOps))
                 if (!response.isSuccessful) return responseFailure(response.code(), "batch", currentUserId, processedItems)
 
-                val acknowledgement = response.body() ?: return failure("No acknowledgement.", currentUserId, processedItems)
+                val acknowledgement = response.body() ?: return failure("No acknowledgement received.", currentUserId, processedItems)
                 
                 acknowledgement.applied.forEach { id ->
                     // Try all repositories/daos since we don't have entity type in applied IDs easily
@@ -175,7 +176,7 @@ class SyncWorker @AssistedInject constructor(
     }
 
     private suspend fun ensureSameSession(startingToken: String, userId: String?, itemsSynced: Int): Result? {
-        return if (tokenManager.getAccessToken() != startingToken) failure("Account session changed.", userId, itemsSynced) else null
+        return if (tokenManager.getAccessToken() != startingToken) failure("The account changed during synchronisation.", userId, itemsSynced) else null
     }
 
     private suspend fun responseFailure(statusCode: Int, entityName: String, userId: String?, itemsSynced: Int): Result {
