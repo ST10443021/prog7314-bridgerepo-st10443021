@@ -170,6 +170,10 @@ interface SnippetDao {
         ))
     }
 
+    /** Transition from DELETE_PENDING to DELETED after server acknowledgement. Safe for newly created items. */
+    @Query("UPDATE snippets SET syncStatus = 'DELETED' WHERE snippetId = :id AND userId = :userId AND syncStatus = 'DELETE_PENDING'")
+    suspend fun acknowledgeDeletion(userId: String, id: String)
+
     @Transaction
     suspend fun saveUnlessDeleted(snippet: SnippetEntity) {
         val current = getById(snippet.snippetId)

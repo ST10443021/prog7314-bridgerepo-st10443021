@@ -21,7 +21,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import com.devledger.app.data.remote.dto.SnippetDeletePayload
 
 /**
  * Orchestrates bidirectional synchronization.
@@ -137,12 +136,16 @@ class SyncWorker @AssistedInject constructor(
                 val acknowledgement = response.body() ?: return failure("No acknowledgement received.", currentUserId, processedItems)
                 
                 acknowledgement.applied.forEach { id ->
-                    // Try all repositories/daos since we don't have entity type in applied IDs easily
-                    snippetRepository.acknowledgeDelete(SnippetEntity(id, user.userId, null, "", "", "", null, "", createdAt = 0, updatedAt = 0))
+                    // Safely acknowledge deletions (only works if status is DELETE_PENDING)
+                    snippetRepository.acknowledgeDelete(user.userId, id)
+                    
+                    // Safely mark upserts as synced (only works if status is PENDING)
                     snippetRepository.markSynced(id)
                     transactionRepository.markSynced(id)
                     folderRepository.markSynced(id)
                     userTagRepository.markSynced(id)
+                    
+                    // Cleanup generic deletion tracking
                     deletedDao.delete(id)
                 }
                 
@@ -176,7 +179,7 @@ class SyncWorker @AssistedInject constructor(
     }
 
     private suspend fun ensureSameSession(startingToken: String, userId: String?, itemsSynced: Int): Result? {
-        return if (tokenManager.getAccessToken() != startingToken) failure("The account changed during synchronisation.", userId, itemsSynced) else null
+        return if (tokenManager.getAccessToken() != startingToken) failure("Account session changed.", userId, itemsSynced) else null
     }
 
     private suspend fun responseFailure(statusCode: Int, entityName: String, userId: String?, itemsSynced: Int): Result {

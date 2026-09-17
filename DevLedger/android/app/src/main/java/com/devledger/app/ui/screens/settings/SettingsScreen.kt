@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.RestoreFromTrash
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -71,6 +72,7 @@ import com.devledger.app.util.CurrencyConverter
 fun SettingsScreen(
     onSignedOut: () -> Unit,
     onOpenSync: () -> Unit,
+    onOpenRecycle: () -> Unit,
     onBack: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
@@ -93,6 +95,7 @@ fun SettingsScreen(
         state = state,
         onBack = onBack,
         onOpenSync = onOpenSync,
+        onOpenRecycle = onOpenRecycle,
         onLanguageChange = viewModel::setLanguage,
         onBiometricEnabledChange = viewModel::setBiometricEnabled,
         onWifiOnlySyncChange = viewModel::setWifiOnlySync,
@@ -117,6 +120,7 @@ fun SettingsScreenContent(
     state: SettingsUiState,
     onBack: () -> Unit,
     onOpenSync: () -> Unit,
+    onOpenRecycle: () -> Unit,
     onLanguageChange: (String) -> Unit,
     onBiometricEnabledChange: (Boolean) -> Unit,
     onWifiOnlySyncChange: (Boolean) -> Unit,
@@ -258,6 +262,29 @@ fun SettingsScreenContent(
                     title = "Sync History & Status",
                     description = "View detailed logs and current synchronization status.",
                     onClick = onOpenSync,
+                )
+            }
+        }
+
+        item {
+            SettingsSectionCard(
+                icon = Icons.Filled.RestoreFromTrash,
+                title = "Maintenance & Data",
+                subtitle = "Manage your deleted and archived snippets.",
+                accentColor = DevLedgerColors.AccentPurple,
+            ) {
+                NavigationSettingRow(
+                    title = "Recycle Bin",
+                    description = "Restore or permanently delete removed snippets.",
+                    onClick = onOpenRecycle,
+                )
+
+                HorizontalDivider(color = DevLedgerColors.Border)
+
+                NavigationSettingRow(
+                    title = "Archive",
+                    description = "View and manage your archived snippets.",
+                    onClick = onOpenRecycle,
                 )
             }
         }
@@ -731,6 +758,7 @@ private fun SettingsScreenPreview() {
             ),
             onBack = {},
             onOpenSync = {},
+            onOpenRecycle = {},
             onLanguageChange = {},
             onBiometricEnabledChange = {},
             onWifiOnlySyncChange = {},
