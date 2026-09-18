@@ -13,6 +13,10 @@ import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
+/**
+ * Reference scope: Room persistence.
+ * (Google Developers, n.d.b). See REFERENCES-CODE.md for full entries.
+ */
 object DatabaseModule {
 
     @Provides

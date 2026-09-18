@@ -24,6 +24,10 @@ import com.devledger.app.data.local.entity.*
     version = 5,
     exportSchema = true,
 )
+/**
+ * Reference scope: Room persistence.
+ * (Google Developers, n.d.b). See REFERENCES-CODE.md for full entries.
+ */
 abstract class DevLedgerDatabase : RoomDatabase() {
     abstract fun snippetDao(): SnippetDao
     abstract fun transactionDao(): TransactionDao

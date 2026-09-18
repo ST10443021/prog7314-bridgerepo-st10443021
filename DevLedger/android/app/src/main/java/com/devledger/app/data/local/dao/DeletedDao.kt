@@ -7,6 +7,10 @@ import androidx.room.Query
 import com.devledger.app.data.local.entity.DeletedEntity
 
 @Dao
+/**
+ * Reference scope: Room persistence.
+ * (Google Developers, n.d.b). See REFERENCES-CODE.md for full entries.
+ */
 interface DeletedDao {
     @Query("SELECT * FROM deleted_entities WHERE userId = :userId ORDER BY deletedAt ASC")
     suspend fun getForUser(userId: String): List<DeletedEntity>

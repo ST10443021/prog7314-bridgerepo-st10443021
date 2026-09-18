@@ -1,18 +1,15 @@
 name: API CI
 
-# Builds and runs the xUnit test suite for the DevLedger REST API on every push,
-# mirroring the Android workflow's "build + test on every push" requirement for the
-# backend half of the project.
 on:
   push:
     branches: [ "main", "develop" ]
     paths:
-      - "api/**"
+      - "DevLedger/api/**"
       - ".github/workflows/api-ci.yml"
   pull_request:
     branches: [ "main", "develop" ]
     paths:
-      - "api/**"
+      - "DevLedger/api/**"
 
 jobs:
   build-and-test:
@@ -30,19 +27,19 @@ jobs:
 
       - name: Restore dependencies
         run: dotnet restore
-        working-directory: api
+        working-directory: DevLedger/api
 
       - name: Build
         run: dotnet build --no-restore --configuration Release
-        working-directory: api
+        working-directory: DevLedger/api
 
       - name: Run unit tests
         run: dotnet test --no-build --configuration Release --logger "trx;LogFileName=test-results.trx"
-        working-directory: api
+        working-directory: DevLedger/api
 
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: api-test-results
-          path: api/DevLedger.Api.Tests/TestResults/
+          path: DevLedger/api/DevLedger.Api.Tests/TestResults/

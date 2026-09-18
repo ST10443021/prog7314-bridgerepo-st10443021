@@ -58,6 +58,10 @@ import java.util.Locale
 data class SnippetDetailUiState(val snippet: SnippetEntity? = null, val folderName: String? = null, val isLoading: Boolean = true)
 
 @HiltViewModel
+/**
+ * Reference scope: UI and state-holder separation.
+ * (Google Developers, n.d.a; Google Developers, n.d.f). See REFERENCES-CODE.md for full entries.
+ */
 class SnippetDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val snippetRepository: SnippetRepository,
@@ -153,6 +157,10 @@ class SnippetDetailViewModel @Inject constructor(
  *  Key elements: Title, language, tags, syntax-highlighted code, description and management actions.
  *  Matches Image 2 pixel-accurate design. */
 @Composable
+/**
+ * Reference scope: UI and state-holder separation.
+ * (Google Developers, n.d.a; Google Developers, n.d.f). See REFERENCES-CODE.md for full entries.
+ */
 fun SnippetDetailScreen(
     onBack: () -> Unit,
     onEdit: (String) -> Unit,

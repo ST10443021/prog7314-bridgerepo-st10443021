@@ -28,6 +28,10 @@ data class FoldersTagsUiState(
 )
 
 @HiltViewModel
+/**
+ * Reference scope: UI and state-holder separation.
+ * (Google Developers, n.d.a; Google Developers, n.d.f). See REFERENCES-CODE.md for full entries.
+ */
 class FoldersTagsViewModel @Inject constructor(
     private val folderRepository: FolderRepository,
     snippetRepository: SnippetRepository,

@@ -4,12 +4,16 @@ using FirebaseAdmin.Messaging;
 namespace DevLedger.Api.Services;
 
 /// <summary>
-/// Thin wrapper around the Firebase Admin SDK for .NET (Google, n.d.a), used to send
+/// Thin wrapper around the Firebase Admin SDK for .NET (Firebase, n.d.), used to send
 /// real push notifications — the server-side half of the "Implementation of
 /// Real-time Notification" core requirement. Silently no-ops (with a log line) if
 /// Firebase wasn't initialised, so a missing credentials file degrades push
 /// notifications gracefully instead of crashing unrelated endpoints.
 /// </summary>
+/// <remarks>
+/// Reference scope: Firebase Cloud Messaging server-side delivery.
+/// (Firebase, n.d.). See REFERENCES-CODE.md for full entries.
+/// </remarks>
 public class NotificationService
 {
     private readonly ILogger<NotificationService> _logger;

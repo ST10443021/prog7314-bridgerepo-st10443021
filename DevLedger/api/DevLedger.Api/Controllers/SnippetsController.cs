@@ -14,6 +14,10 @@ namespace DevLedger.Api.Controllers;
 [ApiController]
 [Route("api/snippets")]
 [Authorize]
+/// <remarks>
+/// Reference scope: ASP.NET Core controller, routing and HTTP response patterns.
+/// (Microsoft Learn, n.d.). See REFERENCES-CODE.md for full entries.
+/// </remarks>
 public class SnippetsController : ControllerBase
 {
     private readonly DevLedgerDbContext _db;

@@ -46,6 +46,10 @@ import com.devledger.app.util.SyntaxHighlightTransformation
  * Matches Image 3 pixel-accurate design.
  */
 @Composable
+/**
+ * Reference scope: UI and state-holder separation.
+ * (Google Developers, n.d.a; Google Developers, n.d.f). See REFERENCES-CODE.md for full entries.
+ */
 fun SnippetEditorScreen(
     onSaved: () -> Unit,
     onBack: () -> Unit,

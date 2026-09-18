@@ -6,7 +6,11 @@ namespace DevLedger.Api.Services;
 /// <summary>Shared budget-threshold check used by both the direct transaction-create
 /// endpoint and the offline-sync batch endpoint, so an over-budget alert fires
 /// regardless of which path a transaction arrived through — backing the "Push
-/// Notifications" core requirement (Google Developers, n.d.a).</summary>
+/// Notifications" core requirement (Firebase, n.d.).</summary>
+/// <remarks>
+/// Reference scope: service dependency injection; the budget rule is application-specific.
+/// (Microsoft Learn, n.d.). See REFERENCES-CODE.md for full entries.
+/// </remarks>
 public class BudgetAlertService
 {
     private readonly DevLedgerDbContext _db;

@@ -47,6 +47,10 @@ data class FinanceUiState(
  *  than a dedicated report endpoint, so the dashboard stays accurate offline. */
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
+/**
+ * Reference scope: UI and state-holder separation.
+ * (Google Developers, n.d.a; Google Developers, n.d.f). See REFERENCES-CODE.md for full entries.
+ */
 class FinanceViewModel @Inject constructor(
     private val transactionRepository: TransactionRepository,
     private val settingsRepository: SettingsRepository,
