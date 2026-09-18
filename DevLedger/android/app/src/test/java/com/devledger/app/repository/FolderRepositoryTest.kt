@@ -43,7 +43,9 @@ class FolderRepositoryTest {
         val api = mockk<DevLedgerApiService>(relaxed = true)
         val context = mockk<Context>(relaxed = true)
         every { settings.wifiOnlySync } returns flowOf(false)
-        coEvery { userDao.getCurrentUser() } returns UserEntity("u1", "u@test.com", "Test", "GOOGLE")
+        val user = UserEntity("u1", "u@test.com", "Test", "GOOGLE")
+        coEvery { userDao.getCurrentUser() } returns user
+        every { userDao.observeCurrentUser() } returns flowOf(user)
         mockkObject(SyncScheduler)
         every { SyncScheduler.schedulePeriodicSync(any(), any()) } returns Unit
         every { SyncScheduler.syncNow(any(), any()) } returns Unit
