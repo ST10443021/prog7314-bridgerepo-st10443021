@@ -31,6 +31,15 @@ jobs:
           java-version: "17"
           cache: "gradle"
 
+      - name: Create google-services.json from template
+        run: cp android/app/google-services.json.template android/app/google-services.json
+
+      - name: Generate Gradle Wrapper
+        # Since the binary .jar is gitignored per the README, we regenerate it
+        # using the system-installed Gradle on the runner before calling ./gradlew
+        run: gradle wrapper
+        working-directory: android
+
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
         working-directory: android
