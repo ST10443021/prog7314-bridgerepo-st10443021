@@ -60,16 +60,17 @@ class AuthViewModel @Inject constructor(
     }
     
     fun onGoogleSignInClicked() {
-        _uiState.value = _uiState.value.copy(isGoogleLoading = true, errorMessage = null)
+        _uiState.value = _uiState.value.copy(isGoogleLoading = true, isLoading = true, errorMessage = null)
     }
 
     fun onGitHubSignInClicked() {
-        _uiState.value = _uiState.value.copy(isGitHubLoading = true, errorMessage = null)
+        _uiState.value = _uiState.value.copy(isGitHubLoading = true, isLoading = true, errorMessage = null)
     }
 
     fun onGoogleSignInFailure(reason: String) {
         _uiState.value = _uiState.value.copy(
             isGoogleLoading = false,
+            isLoading = false,
             errorMessage = reason
         )
     }
@@ -80,17 +81,25 @@ class AuthViewModel @Inject constructor(
     fun onGitHubOAuthFailure(reason: String) {
         _uiState.value = _uiState.value.copy(
             isGitHubLoading = false, 
+            isLoading = false,
             errorMessage = "GitHub sign-in failed: $reason"
         )
     }
 
     private fun performSso(provider: String, idToken: String? = null, code: String? = null) {
+        _uiState.value = _uiState.value.copy(
+            isGoogleLoading = provider == "GOOGLE",
+            isGitHubLoading = provider == "GITHUB",
+            isLoading = true,
+            errorMessage = null
+        )
         viewModelScope.launch {
             when (val result = authRepository.signInWithSso(provider, idToken = idToken, code = code)) {
                 is DevLedgerResult.Success -> {
                     _uiState.value = _uiState.value.copy(
                         isGoogleLoading = false,
                         isGitHubLoading = false,
+                        isLoading = false,
                         isAuthenticated = true
                     )
                 }
@@ -98,6 +107,7 @@ class AuthViewModel @Inject constructor(
                     _uiState.value = _uiState.value.copy(
                         isGoogleLoading = false,
                         isGitHubLoading = false,
+                        isLoading = false,
                         errorMessage = result.message
                     )
                 }

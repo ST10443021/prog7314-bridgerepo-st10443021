@@ -24,13 +24,18 @@ data class FinanceUiState(
     val selectedMonth: Int = Calendar.getInstance().get(Calendar.MONTH), // 0-based, matches java.util.Calendar
     val incomeStat: MonthlyStat = MonthlyStat(0.0, null, emptyList()),
     val expenseStat: MonthlyStat = MonthlyStat(0.0, null, emptyList()),
-    val netBalance: Double = 0.0,
     val netBalancePercentChange: Double? = null,
     val baseCurrency: String = "ZAR",
     val dailyPoints: List<DailyPoint> = emptyList(),
     val recentTransactions: List<TransactionEntity> = emptyList(),
     val summaryRange: SummaryRange = SummaryRange.MONTH,
+    val monthlyBudget: Double = 0.0,
 ) {
+    val netBalance: Double get() = incomeStat.total - expenseStat.total
+
+    val budgetUsedFraction: Double
+        get() = if (monthlyBudget > 0.0) (expenseStat.total / monthlyBudget).coerceAtMost(1.0) else 0.0
+
     val monthLabel: String
         get() = java.text.SimpleDateFormat("MMMM yyyy", java.util.Locale.getDefault())
             .format(Calendar.getInstance().apply { set(selectedYear, selectedMonth, 1) }.time)
@@ -143,9 +148,9 @@ class FinanceViewModel @Inject constructor(
 
         return FinanceUiState(
             selectedYear = year, selectedMonth = month, incomeStat = incomeStat, expenseStat = expenseStat,
-            netBalance = netBalance, netBalancePercentChange = netChange, baseCurrency = currency,
+            netBalancePercentChange = netChange, baseCurrency = currency,
             dailyPoints = dailyPoints, recentTransactions = transactions.sortedByDescending { it.transactionDate }.take(5),
-            summaryRange = range
+            summaryRange = range, monthlyBudget = 0.0 // Default for now as it's not implemented in VM yet
         )
     }
 
