@@ -14,6 +14,10 @@ import javax.inject.Inject
 /** Backs the Notifications screen — real-time alerts received via Firebase Cloud
  *  Messaging and mirrored to Room by [com.devledger.app.notifications.DevLedgerMessagingService]. */
 @HiltViewModel
+/**
+ * Reference scope: UI and state-holder separation.
+ * (Google Developers, n.d.a; Google Developers, n.d.f). See REFERENCES-CODE.md for full entries.
+ */
 class NotificationsViewModel @Inject constructor(
     private val repository: NotificationRepository,
 ) : ViewModel() {

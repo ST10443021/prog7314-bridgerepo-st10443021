@@ -6,6 +6,10 @@ import androidx.room.PrimaryKey
 /** Local mirror of push notifications received via Firebase Cloud Messaging, so the
  *  in-app Notifications screen stays consistent with the system tray even offline. */
 @Entity(tableName = "notifications")
+/**
+ * Reference scope: Room entity mapping.
+ * (Google Developers, n.d.b). See REFERENCES-CODE.md for full entries.
+ */
 data class NotificationEntity(
     @PrimaryKey val notificationId: String,
     val title: String,

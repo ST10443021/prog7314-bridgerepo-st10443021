@@ -14,6 +14,10 @@ namespace DevLedger.Api.Controllers;
 [Route("api/settings")]
 [Route("api/users/me/settings")]
 [Authorize]
+/// <remarks>
+/// Reference scope: ASP.NET Core controller, routing and HTTP response patterns.
+/// (Microsoft Learn, n.d.). See REFERENCES-CODE.md for full entries.
+/// </remarks>
 public class UsersController : ControllerBase
 {
     private readonly DevLedgerDbContext _db;

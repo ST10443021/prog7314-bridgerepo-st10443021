@@ -6,6 +6,10 @@ import androidx.room.PrimaryKey
 /** Tracks entities deleted while offline so they can be removed from the server
  *  during the next synchronisation cycle. */
 @Entity(tableName = "deleted_entities")
+/**
+ * Reference scope: Room entity mapping.
+ * (Google Developers, n.d.b). See REFERENCES-CODE.md for full entries.
+ */
 data class DeletedEntity(
     @PrimaryKey val entityId: String,
     val userId: String,

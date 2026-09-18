@@ -1,19 +1,15 @@
 name: Android CI
 
-# Triggers a build and the full unit-test suite on every push and PR, per the Part 2
-# requirement: "Your workflow must trigger automated builds and execute your unit
-# tests on every push to verify your codebase functions outside of your local
-# environment."
 on:
   push:
     branches: [ "main", "develop" ]
     paths:
-      - "android/**"
+      - "DevLedger/android/**"
       - ".github/workflows/android-ci.yml"
   pull_request:
     branches: [ "main", "develop" ]
     paths:
-      - "android/**"
+      - "DevLedger/android/**"
 
 jobs:
   build-and-test:
@@ -42,30 +38,30 @@ jobs:
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
-        working-directory: android
+        working-directory: DevLedger/android
 
       - name: Lint (Kotlin/Android)
         run: ./gradlew lintDebug --stacktrace
-        working-directory: android
+        working-directory: DevLedger/android
 
       - name: Run unit tests
         run: ./gradlew testDebugUnitTest --stacktrace
-        working-directory: android
+        working-directory: DevLedger/android
 
       - name: Assemble debug APK
         run: ./gradlew assembleDebug --stacktrace
-        working-directory: android
+        working-directory: DevLedger/android
 
       - name: Upload unit test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: android-unit-test-results
-          path: android/app/build/reports/tests/testDebugUnitTest/
+          path: DevLedger/android/app/build/reports/tests/testDebugUnitTest/
 
       - name: Upload debug APK
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: devledger-debug-apk
-          path: android/app/build/outputs/apk/debug/*.apk
+          path: DevLedger/android/app/build/outputs/apk/debug/*.apk

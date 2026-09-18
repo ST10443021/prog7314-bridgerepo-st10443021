@@ -20,6 +20,10 @@ import java.util.concurrent.TimeUnit
  *  Each due transaction is rolled forward exactly once per run to avoid double-firing
  *  if the device was offline across more than one due date. */
 @HiltWorker
+/**
+ * Reference scope: WorkManager background execution.
+ * (Google Developers, n.d.c). See REFERENCES-CODE.md for full entries.
+ */
 class RecurringTransactionWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,

@@ -50,10 +50,13 @@ import java.util.Locale
  * - Monthly summary chart
  * - Recent transactions
  *
- * Canvas is used for the financial chart as supported by the Android Jetpack
- * Compose graphics APIs (Google Developers, n.d.).
+ * Canvas is used to draw the custom financial chart.
  */
 @Composable
+/**
+ * Reference scope: UI and state-holder separation.
+ * (Google Developers, n.d.a; Google Developers, n.d.f). See REFERENCES-CODE.md for full entries.
+ */
 fun FinancialTrackerScreen(
     onAddTransaction: () -> Unit,
     onViewIncome: () -> Unit,

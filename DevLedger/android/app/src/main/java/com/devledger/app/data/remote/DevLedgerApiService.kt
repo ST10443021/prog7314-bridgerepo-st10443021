@@ -9,6 +9,10 @@ import retrofit2.http.*
  * "5.2 Endpoint Specification" table of the Part 1 Planning and Design document
  * exactly, so the mobile client and the ASP.NET Core backend in /api stay in sync.
  */
+/**
+ * Reference scope: Retrofit HTTP interface annotations.
+ * (Square, n.d.). See REFERENCES-CODE.md for full entries.
+ */
 interface DevLedgerApiService {
 
     @POST("api/auth/sso")

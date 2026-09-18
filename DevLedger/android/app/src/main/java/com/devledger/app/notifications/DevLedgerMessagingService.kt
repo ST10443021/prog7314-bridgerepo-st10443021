@@ -26,6 +26,10 @@ import javax.inject.Inject
  * Notifications screen when the device is offline (Firebase, n.d.).
  */
 @AndroidEntryPoint
+/**
+ * Reference scope: FCM device tokens and message handling.
+ * (Firebase, n.d.). See REFERENCES-CODE.md for full entries.
+ */
 class DevLedgerMessagingService : FirebaseMessagingService() {
 
     @Inject lateinit var notificationRepository: NotificationRepository
@@ -53,7 +57,7 @@ class DevLedgerMessagingService : FirebaseMessagingService() {
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        // Enqueued via WorkManager (Google, n.d.c) rather than called directly: this
+        // Enqueued via WorkManager (Google Developers, n.d.c) rather than called directly: this
         // callback runs on a system-managed path outside normal Activity/ViewModel
         // scope, so a plain network call here would be unsafe if the process is about
         // to be torn down. RegisterDeviceWorker re-reads the token itself, so the

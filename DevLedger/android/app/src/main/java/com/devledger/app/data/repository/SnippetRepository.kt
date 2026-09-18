@@ -30,6 +30,10 @@ import retrofit2.HttpException
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @Singleton
+/**
+ * Reference scope: repository separation and Room persistence.
+ * (Google Developers, n.d.a; Google Developers, n.d.b). See REFERENCES-CODE.md for full entries.
+ */
 class SnippetRepository @Inject constructor(
     private val dao: SnippetDao,
     private val deletedDao: DeletedDao,

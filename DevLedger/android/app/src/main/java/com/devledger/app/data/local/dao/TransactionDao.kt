@@ -9,6 +9,10 @@ import com.devledger.app.data.local.entity.TransactionEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
+/**
+ * Reference scope: Room persistence.
+ * (Google Developers, n.d.b). See REFERENCES-CODE.md for full entries.
+ */
 interface TransactionDao {
 
     @Query("SELECT * FROM transactions WHERE userId = :userId ORDER BY transactionDate DESC")

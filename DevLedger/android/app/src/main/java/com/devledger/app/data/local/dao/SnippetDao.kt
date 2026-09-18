@@ -5,6 +5,10 @@ import com.devledger.app.data.local.entity.SnippetEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
+/**
+ * Reference scope: Room persistence.
+ * (Google Developers, n.d.b). See REFERENCES-CODE.md for full entries.
+ */
 interface SnippetDao {
     @Query("SELECT * FROM snippets WHERE isArchived = 0 AND syncStatus NOT IN ('DELETE_PENDING', 'DELETED') ORDER BY updatedAt DESC")
     fun observeActiveSnippets(): Flow<List<SnippetEntity>>

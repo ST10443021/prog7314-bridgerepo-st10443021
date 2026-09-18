@@ -14,6 +14,10 @@ import javax.inject.Inject
  * the recommended HiltWorkerFactory pattern.
  */
 @HiltAndroidApp
+/**
+ * Reference scope: WorkManager background execution.
+ * (Google Developers, n.d.c). See REFERENCES-CODE.md for full entries.
+ */
 class DevLedgerApplication : Application(), Configuration.Provider {
 
     @Inject lateinit var workerFactory: HiltWorkerFactory

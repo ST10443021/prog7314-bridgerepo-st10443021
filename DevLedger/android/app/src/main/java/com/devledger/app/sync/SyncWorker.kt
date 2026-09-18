@@ -27,6 +27,10 @@ import kotlinx.serialization.json.Json
  * Handles Snippets (marker-based delete), and Transactions/Folders/Tags (table-based delete).
  */
 @HiltWorker
+/**
+ * Reference scope: WorkManager background execution.
+ * (Google Developers, n.d.c). See REFERENCES-CODE.md for full entries.
+ */
 class SyncWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,

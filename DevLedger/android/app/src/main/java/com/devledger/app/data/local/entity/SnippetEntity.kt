@@ -10,11 +10,15 @@ import kotlinx.serialization.Serializable
  * [syncStatus] drives the offline-sync queue: PENDING rows are pushed to the REST API
  * by [com.devledger.app.sync.SyncWorker] once connectivity returns. @Serializable is
  * required here because SyncWorker encodes this entity directly to JSON for the
- * `/api/sync/batch` payload (JetBrains, n.d.).
+ * `/api/sync/batch` payload.
  */
 
 @Serializable
 @Entity(tableName = "snippets")
+/**
+ * Reference scope: Room entity mapping.
+ * (Google Developers, n.d.b). See REFERENCES-CODE.md for full entries.
+ */
 data class SnippetEntity(
     @PrimaryKey val snippetId: String,
     val userId: String,

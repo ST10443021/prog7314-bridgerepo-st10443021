@@ -84,6 +84,10 @@ private data class RestoreState(
  * changes continue through the normal offline-first sync process.
  */
 @HiltViewModel
+/**
+ * Reference scope: UI and state-holder separation.
+ * (Google Developers, n.d.a; Google Developers, n.d.f). See REFERENCES-CODE.md for full entries.
+ */
 class RecycleViewModel @Inject constructor(
     private val snippets: SnippetRepository,
     private val folders: FolderRepository,
