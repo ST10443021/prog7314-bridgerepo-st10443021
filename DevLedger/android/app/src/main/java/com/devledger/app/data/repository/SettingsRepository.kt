@@ -15,6 +15,7 @@ import com.devledger.app.data.remote.dto.UserSettingsDto
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import retrofit2.HttpException
+import android.util.Log
 
 private val Context.dataStore by preferencesDataStore(name = "devledger_settings")
 
@@ -84,8 +85,10 @@ class SettingsRepository @Inject constructor(
      * the local DataStore cache only after a successful response.
      */
     suspend fun loadFromApi(): UserSettingsDto = remoteMutex.withLock {
+        Log.d("SettingsRepo", "loadFromApi: entering lock")
         val settings = fetchRemoteSettings()
         cacheSettings(settings)
+        Log.d("SettingsRepo", "loadFromApi: success")
         settings
     }
 
@@ -99,6 +102,7 @@ class SettingsRepository @Inject constructor(
         wifiOnlySync: Boolean,
         baseCurrency: String,
     ): UserSettingsDto = remoteMutex.withLock {
+        Log.d("SettingsRepo", "saveToApi: entering lock")
         val current = fetchRemoteSettings()
 
         val updated = current.copy(
@@ -108,8 +112,10 @@ class SettingsRepository @Inject constructor(
             baseCurrency = baseCurrency,
         )
 
+        Log.d("SettingsRepo", "saveToApi: updating remote")
         val response = api.updateSettings(updated)
         if (!response.isSuccessful) {
+            Log.e("SettingsRepo", "saveToApi: failed with ${response.code()}")
             throw HttpException(response)
         }
 
@@ -117,12 +123,15 @@ class SettingsRepository @Inject constructor(
             ?: throw IllegalStateException("The API returned no saved settings.")
 
         cacheSettings(saved)
+        Log.d("SettingsRepo", "saveToApi: success")
         saved
     }
 
     private suspend fun fetchRemoteSettings(): UserSettingsDto {
+        Log.d("SettingsRepo", "fetchRemoteSettings: calling api.getSettings()")
         val response = api.getSettings()
         if (!response.isSuccessful) {
+            Log.e("SettingsRepo", "fetchRemoteSettings: failed with ${response.code()}")
             throw HttpException(response)
         }
 

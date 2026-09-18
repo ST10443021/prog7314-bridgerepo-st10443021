@@ -7,6 +7,17 @@ import okhttp3.Response
 class AuthInterceptor(private val tokenManager: TokenManager) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val original = chain.request()
+        val path = original.url.encodedPath
+
+        // Skip adding the Authorization header for auth endpoints
+        if (path.contains("api/auth/login") ||
+            path.contains("api/auth/register") ||
+            path.contains("api/auth/refresh") ||
+            path.contains("api/auth/sso")
+        ) {
+            return chain.proceed(original)
+        }
+
         val token = tokenManager.getAccessToken()
         val request = if (token != null) {
             original.newBuilder().header("Authorization", "Bearer $token").build()

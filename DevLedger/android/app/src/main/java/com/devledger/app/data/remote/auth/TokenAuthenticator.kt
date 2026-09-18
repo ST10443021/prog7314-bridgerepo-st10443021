@@ -22,6 +22,11 @@ class TokenAuthenticator @Inject constructor(
 ) : Authenticator {
 
     override fun authenticate(route: Route?, response: Response): Request? {
+        // Avoid infinite loops if the refresh call itself returns 401
+        if (response.request.url.encodedPath.contains("api/auth/refresh")) {
+            return null
+        }
+
         val refreshToken = tokenManager.getRefreshToken() ?: return null
 
         synchronized(this) {
@@ -30,7 +35,7 @@ class TokenAuthenticator @Inject constructor(
 
             // If the token in the request is already different from what we have, 
             // another thread might have refreshed it. Try with the new one.
-            if (currentToken != requestToken) {
+            if (currentToken != null && currentToken != requestToken) {
                 return response.request.newBuilder()
                     .header("Authorization", "Bearer $currentToken")
                     .build()
