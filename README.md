@@ -9,6 +9,8 @@ This repository contains two projects:
 | `android/` | The native Kotlin/Jetpack Compose Android client |
 | `api/` | The custom ASP.NET Core Web API + PostgreSQL database hosted on Render the app talks to |
 
+**YouTube Video**: https://youtu.be/Qk9ElXJkmPA
+
 ## Team Members
 
 | Name | Student Number |
@@ -120,7 +122,7 @@ Two GitHub repositories track this project's history: the Android client and the
 
 ## 8. Demonstration Video
 
-📺 **[Watch the demonstration video (unlisted)](https://www.youtube.com/watch?v=your-unlisted-video-id)**
+📺 **[https://youtu.be/Qk9ElXJkmPA]**
 
 ---
 
