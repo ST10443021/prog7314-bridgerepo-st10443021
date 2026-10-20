@@ -2,6 +2,7 @@ package com.devledger.app.ui.screens.finance
 
 import android.graphics.BitmapFactory
 import android.util.Base64
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -11,11 +12,17 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.res.stringResource
+import com.devledger.app.R
+import kotlinx.coroutines.CancellationException
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
@@ -58,6 +65,32 @@ class TransactionDetailViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
+    private val _isDeleting = MutableStateFlow(false)
+    val isDeleting: StateFlow<Boolean> = _isDeleting.asStateFlow()
+    private val _isDeleted = MutableStateFlow(false)
+    val isDeleted: StateFlow<Boolean> = _isDeleted.asStateFlow()
+    private val _deleteFailed = MutableStateFlow(false)
+    val deleteFailed: StateFlow<Boolean> = _deleteFailed.asStateFlow()
+
+    fun deleteTransaction() {
+        val row = _transaction.value ?: return
+        if (_isDeleting.value || _isDeleted.value) return
+        _isDeleting.value = true
+        _deleteFailed.value = false
+        viewModelScope.launch {
+            try {
+                transactionRepository.delete(row)
+                _isDeleted.value = true
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                _deleteFailed.value = true
+            } finally {
+                _isDeleting.value = false
+            }
+        }
+    }
+
     init { viewModelScope.launch { _transaction.value = transactionRepository.getById(transactionId); _isLoading.value = false } }
 }
 
@@ -72,6 +105,27 @@ class TransactionDetailViewModel @Inject constructor(
 fun TransactionDetailScreen(onBack: () -> Unit, viewModel: TransactionDetailViewModel = hiltViewModel()) {
     val tx by viewModel.transaction.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val isDeleting by viewModel.isDeleting.collectAsState()
+    val isDeleted by viewModel.isDeleted.collectAsState()
+    val deleteFailed by viewModel.deleteFailed.collectAsState()
+    var confirmDelete by remember { mutableStateOf(false) }
+    LaunchedEffect(isDeleted) { if (isDeleted) onBack() }
+    if (confirmDelete) {
+        AlertDialog(
+            onDismissRequest = { if (!isDeleting) confirmDelete = false },
+            title = { Text(stringResource(R.string.sync_delete_transaction)) },
+            text = { Text(stringResource(R.string.sync_delete_transaction_explanation)) },
+            confirmButton = {
+                TextButton(enabled = !isDeleting, onClick = {
+                    confirmDelete = false
+                    viewModel.deleteTransaction()
+                }) { Text(stringResource(R.string.sync_delete_confirm)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.sync_delete_cancel)) }
+            },
+        )
+    }
     val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale.forLanguageTag("en-ZA")) }
     val dateFormat = remember { SimpleDateFormat("d MMMM yyyy", Locale.getDefault()) }
 
@@ -100,9 +154,21 @@ fun TransactionDetailScreen(onBack: () -> Unit, viewModel: TransactionDetailView
                 DetailRow("Reference / Invoice #", transaction.referenceNumber ?: "—")
                 DetailRow("Date", dateFormat.format(Date(transaction.transactionDate)))
                 DetailRow("Recurring", if (transaction.isRecurring) "Yes — ${transaction.recurringFrequency?.lowercase()?.replaceFirstChar { it.uppercase() }}" else "No")
-                
+
                 if (transaction.attachmentFileName != null) {
                     AttachmentPreview(transaction.attachmentFileName, transaction.attachmentBase64)
+                }
+                if (deleteFailed) {
+                    Text(stringResource(R.string.sync_delete_failed), color = DevLedgerColors.ErrorRed)
+                }
+                OutlinedButton(
+                    enabled = !isDeleting,
+                    onClick = { confirmDelete = true },
+                    border = BorderStroke(1.dp, DevLedgerColors.ErrorRed),
+                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                ) {
+                    Text(stringResource(if (isDeleting) R.string.sync_deleting else R.string.sync_delete_transaction),
+                        color = DevLedgerColors.ErrorRed)
                 }
             }
         }

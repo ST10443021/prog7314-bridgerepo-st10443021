@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sync_delete_transaction">Verwyder transaksie</string>
+    <string name="sync_delete_transaction_explanation">Verwyder hierdie transaksie van hierdie toestel? Die verwydering sal sinkroniseer wanneer jy aanlyn is. Dit kan nie ongedaan gemaak word nie.</string>
+    <string name="sync_delete_confirm">Verwyder</string>
+    <string name="sync_delete_cancel">Kanselleer</string>
+    <string name="sync_deleting">Besig om te verwyder…</string>
+    <string name="sync_delete_failed">Kon nie die transaksie verwyder nie. Probeer weer.</string>
+</resources>

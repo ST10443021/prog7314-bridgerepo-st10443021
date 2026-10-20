@@ -68,8 +68,8 @@ class UserTagRepositoryTest {
         coEvery { dao.getById("t1") } returns existing
         val result = repository.delete("t1")
         assertThat(result).isInstanceOf(DevLedgerResult.Success::class.java)
-        coVerify(exactly = 1) { deletedDao.insert(match { it.entityId == "t1" && it.entityType == "tag" && it.userId == "u1" }) }
-        coVerify(exactly = 1) { dao.delete("t1") }
+        coVerify(exactly = 1) { deletedDao.queueTagDeletion(match { it.entityId == "t1" && it.entityType == "tag" && it.userId == "u1" }) }
+        // Real Room tests verify the atomic row removal and retained tombstone.
     }
 
     @Test

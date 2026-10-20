@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sync_delete_transaction">Cima intengiselwano</string>
+    <string name="sync_delete_transaction_explanation">Susa le ntengiselwano kwesi sixhobo? Ukucinywa kuya kulungelelaniswa xa ukwi-intanethi. Oku akunakubuyiselwa.</string>
+    <string name="sync_delete_confirm">Cima</string>
+    <string name="sync_delete_cancel">Rhoxisa</string>
+    <string name="sync_deleting">Iyacinywa…</string>
+    <string name="sync_delete_failed">Akukwazekanga ukucima intengiselwano. Zama kwakhona.</string>
+</resources>

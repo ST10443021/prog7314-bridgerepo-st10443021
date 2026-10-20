@@ -23,6 +23,7 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): DevLedgerDatabase =
         Room.databaseBuilder(context, DevLedgerDatabase::class.java, DevLedgerDatabase.DATABASE_NAME)
+            .addMigrations(com.devledger.app.data.local.SyncMigrations.MIGRATION_5_6)
             .fallbackToDestructiveMigration()
             .build()
 

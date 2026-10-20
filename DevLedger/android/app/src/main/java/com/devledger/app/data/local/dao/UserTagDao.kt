@@ -36,14 +36,25 @@ interface UserTagDao {
     suspend fun mergeRemoteTags(userId: String, remoteTags: List<UserTagEntity>) {
         for (remote in remoteTags) {
             require(remote.userId == userId) { "The downloaded tag belongs to a different account." }
+            if (hasDeletionMarker(userId, remote.tagId)) continue
             val local = getById(remote.tagId)
             require(local == null || local.userId == userId) { "A tag ID conflicts with another cached account." }
-            
+
             if (local == null) {
                 upsert(remote)
             } else if (local.syncStatus == SyncStatus.SYNCED) {
                 upsert(remote)
             }
         }
+    }
+
+    @Query("SELECT EXISTS(SELECT 1 FROM deleted_entities WHERE userId = :userId AND entityType = 'tag' AND entityId = :id)")
+    suspend fun hasDeletionMarker(userId: String, id: String): Boolean
+
+    @Transaction
+    suspend fun markSyncedIfUnchanged(uploaded: UserTagEntity): Boolean {
+        if (getById(uploaded.tagId) != uploaded) return false
+        updateSyncStatus(uploaded.tagId, "SYNCED")
+        return true
     }
 }

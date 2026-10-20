@@ -39,14 +39,25 @@ interface FolderDao {
     suspend fun mergeRemoteFolders(userId: String, remoteFolders: List<FolderEntity>) {
         for (remote in remoteFolders) {
             require(remote.userId == userId) { "The downloaded folder belongs to a different account." }
+            if (hasDeletionMarker(userId, remote.folderId)) continue
             val local = getById(remote.folderId)
             require(local == null || local.userId == userId) { "A folder ID conflicts with another cached account." }
-            
+
             if (local == null) {
                 upsert(remote)
             } else if (local.syncStatus == SyncStatus.SYNCED) {
                 upsert(remote)
             }
         }
+    }
+
+    @Query("SELECT EXISTS(SELECT 1 FROM deleted_entities WHERE userId = :userId AND entityType = 'folder' AND entityId = :id)")
+    suspend fun hasDeletionMarker(userId: String, id: String): Boolean
+
+    @Transaction
+    suspend fun markSyncedIfUnchanged(uploaded: FolderEntity): Boolean {
+        if (getById(uploaded.folderId) != uploaded) return false
+        updateSyncStatus(uploaded.folderId, "SYNCED")
+        return true
     }
 }

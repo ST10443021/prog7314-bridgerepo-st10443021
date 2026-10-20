@@ -50,21 +50,17 @@ class UserTagRepository @Inject constructor(
         val response = api.getTags()
         if (!response.isSuccessful) throw HttpException(response)
         val remote = response.body() ?: error("The API returned no tag list.")
-        
-        remote.forEach { dto ->
-            dao.upsert(UserTagEntity(
-                tagId = dto.tagId,
-                userId = user.userId,
-                name = dto.name,
-                colorHex = dto.colorHex,
-                createdAt = dto.createdAt,
-                syncStatus = SyncStatus.SYNCED
-            ))
-        }
+
+        check(userDao.getCurrentUser()?.userId == user.userId) { "Account session changed." }
+        dao.mergeRemoteTags(user.userId, remote.map { dto ->
+            UserTagEntity(dto.tagId, user.userId, dto.name, dto.colorHex, dto.createdAt, SyncStatus.SYNCED)
+        })
     }
 
     suspend fun create(name: String, colorHex: String? = null): DevLedgerResult<UserTagEntity> = DevLedgerResult.safeCall {
         val user = userDao.getCurrentUser() ?: error("Sign in before creating a tag.")
+        require(name.trim().isNotEmpty()) { "Tag name is required." }
+        require(colorHex == null || Regex("^#[0-9a-fA-F]{6}$").matches(colorHex)) { "Use #RRGGBB for the tag colour." }
         val entity = UserTagEntity(
             tagId = IdGenerator.newId(),
             userId = user.userId,
@@ -81,17 +77,16 @@ class UserTagRepository @Inject constructor(
     suspend fun delete(tagId: String): DevLedgerResult<Unit> = DevLedgerResult.safeCall {
         val user = userDao.getCurrentUser() ?: error("Sign in before deleting.")
         val existing = dao.getById(tagId) ?: return@safeCall
-        
-        deletedDao.insert(DeletedEntity(
-            entityId = existing.tagId,
-            userId = user.userId,
-            entityType = "tag"
+
+        require(existing.userId == user.userId) { "Tag account mismatch." }
+        deletedDao.queueTagDeletion(DeletedEntity(
+            entityId = existing.tagId, userId = user.userId, entityType = "tag"
         ))
-        dao.delete(tagId)
         queueSync()
     }
 
     suspend fun getPendingSyncForUser(userId: String) = dao.getPendingSyncForUser(userId)
+    suspend fun markSyncedIfUnchanged(tag: UserTagEntity) = dao.markSyncedIfUnchanged(tag)
     suspend fun markSynced(id: String) = dao.updateSyncStatus(id, SyncStatus.SYNCED)
 
     private suspend fun queueSync() {

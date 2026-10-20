@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using DevLedger.Api.Data;
 using DevLedger.Api.DTOs;
 using DevLedger.Api.Models;
@@ -79,17 +80,19 @@ public class FoldersController : ControllerBase
         var folder = await _db.Folders.FirstOrDefaultAsync(f => f.FolderId == id && f.UserId == CurrentUserId);
         if (folder is null) return NotFound();
 
-        Guid? reassignTo = string.IsNullOrEmpty(request.ReassignToFolderId) ? null : Guid.Parse(request.ReassignToFolderId);
-        if (reassignTo is not null && !await _db.Folders.AnyAsync(f => f.FolderId == reassignTo && f.UserId == CurrentUserId))
-            return BadRequest("The reassignment target folder does not exist.");
-
-        var affectedSnippets = await _db.Snippets.Where(s => s.UserId == CurrentUserId && s.FolderId == id).ToListAsync();
-        foreach (var snippet in affectedSnippets)
-            snippet.FolderId = reassignTo;
-
-        _db.Folders.Remove(folder);
-        await _db.SaveChangesAsync();
-        return NoContent();
+        Guid? target = null;
+        if (!string.IsNullOrWhiteSpace(request.ReassignToFolderId))
+        {
+            if (!Guid.TryParse(request.ReassignToFolderId, out var parsed)) return BadRequest("Invalid reassignment folder ID.");
+            target = parsed;
+        }
+        var sync = new SyncController(_db) { ControllerContext = ControllerContext };
+        var result = await sync.Batch(new SyncBatchRequest(new List<SyncOperation> {
+            new("folder", "delete", JsonSerializer.Serialize(new {
+                entityId = id, userId = CurrentUserId, reassignToFolderId = target
+            }), DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
+        }), HttpContext.RequestAborted);
+        return result.Result is OkObjectResult ? NoContent() : result.Result ?? StatusCode(500);
     }
 
     private static FolderDto ToDto(Folder f, int count) => new(

@@ -71,7 +71,6 @@ class SnippetRepositoryTest {
         repository = SnippetRepository(
             dao = dao,
             deletedDao = mockk(relaxed = true),
-            notificationRepository = mockk(relaxed = true),
             userDao = userDao,
             notificationRepository = notificationRepository,
             settingsRepository = settingsRepository,

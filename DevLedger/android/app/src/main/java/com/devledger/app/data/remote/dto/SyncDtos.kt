@@ -69,7 +69,12 @@ data class UserTagSyncPayload(
 @Serializable
 data class DeleteSyncPayload(
     val entityId: String,
+    val userId: String? = null,
+    val reassignToFolderId: String? = null,
 )
+
+@Serializable
+data class SyncDeletionDto(val entityType: String, val entityId: String)
 
 @Serializable
 data class SnippetDeletePayload(val snippetId: String, val userId: String)

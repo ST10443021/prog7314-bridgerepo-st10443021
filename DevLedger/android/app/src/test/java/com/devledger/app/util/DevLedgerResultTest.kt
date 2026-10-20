@@ -38,4 +38,9 @@ class DevLedgerResultTest {
         DevLedgerResult.Error("failed").onSuccess { wronglyInvoked = true }
         assertThat(wronglyInvoked).isFalse()
     }
+
+    @Test(expected = kotlinx.coroutines.CancellationException::class)
+    fun `safeCall propagates coroutine cancellation`() {
+        DevLedgerResult.safeCall<Unit> { throw kotlinx.coroutines.CancellationException("Cancelled") }
+    }
 }
