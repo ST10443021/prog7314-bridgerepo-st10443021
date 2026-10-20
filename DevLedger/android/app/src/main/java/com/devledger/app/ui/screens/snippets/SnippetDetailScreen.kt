@@ -37,16 +37,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.devledger.app.R
 import com.devledger.app.data.local.entity.SnippetEntity
+import com.devledger.app.data.local.entity.UserTagEntity
 import com.devledger.app.data.repository.FolderRepository
 import com.devledger.app.data.repository.SnippetRepository
+import com.devledger.app.data.repository.UserTagRepository
 import com.devledger.app.ui.components.DevLedgerCard
 import com.devledger.app.ui.theme.DevLedgerColors
 import com.devledger.app.util.SyntaxHighlighter
 import com.devledger.app.util.TimeAgo
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import androidx.compose.ui.window.Dialog
@@ -66,11 +66,15 @@ class SnippetDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val snippetRepository: SnippetRepository,
     private val folderRepository: FolderRepository,
+    private val userTagRepository: UserTagRepository,
 ) : ViewModel() {
 
     private val snippetId: String = requireNotNull(savedStateHandle["snippetId"])
     private val _uiState = MutableStateFlow(SnippetDetailUiState())
     val uiState: StateFlow<SnippetDetailUiState> = _uiState.asStateFlow()
+
+    val availableTags: StateFlow<List<UserTagEntity>> = userTagRepository.observeTags()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init { load() }
 
@@ -79,6 +83,50 @@ class SnippetDetailViewModel @Inject constructor(
             val snippet = snippetRepository.getById(snippetId)
             val folderName = snippet?.folderId?.let { folderRepository.getById(it)?.name }
             _uiState.value = SnippetDetailUiState(snippet, folderName, isLoading = false)
+        }
+    }
+
+    fun addTag(tagName: String) {
+        val snippet = _uiState.value.snippet ?: return
+        val currentTags = snippet.tagsCsv.split(",").map(String::trim).filter(String::isNotEmpty)
+        if (currentTags.any { it.equals(tagName, ignoreCase = true) }) return
+
+        viewModelScope.launch {
+            // Ensure tag exists globally
+            userTagRepository.create(tagName)
+            
+            val newTags = currentTags + tagName
+            snippetRepository.createOrUpdate(
+                userId = snippet.userId,
+                id = snippet.snippetId,
+                title = snippet.title,
+                content = snippet.content,
+                language = snippet.language,
+                description = snippet.description,
+                tags = newTags,
+                folderId = snippet.folderId
+            )
+            load()
+        }
+    }
+
+    fun removeTag(tagName: String) {
+        val snippet = _uiState.value.snippet ?: return
+        val currentTags = snippet.tagsCsv.split(",").map(String::trim).filter(String::isNotEmpty)
+        val newTags = currentTags.filter { !it.equals(tagName, ignoreCase = true) }
+
+        viewModelScope.launch {
+            snippetRepository.createOrUpdate(
+                userId = snippet.userId,
+                id = snippet.snippetId,
+                title = snippet.title,
+                content = snippet.content,
+                language = snippet.language,
+                description = snippet.description,
+                tags = newTags,
+                folderId = snippet.folderId
+            )
+            load()
         }
     }
 
@@ -120,10 +168,13 @@ fun SnippetDetailScreen(
     viewModel: SnippetDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
+    val availableTags by viewModel.availableTags.collectAsState()
     val clipboard = LocalClipboardManager.current
     val context = LocalContext.current
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var showFullscreen by remember { mutableStateOf(false) }
+    var showTagDropdown by remember { mutableStateOf(false) }
+    var showCreateTagDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -192,12 +243,53 @@ fun SnippetDetailScreen(
 
                     Text("TAGS", color = DevLedgerColors.TextMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(8.dp))
-                    Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
-                        snippet.tagsCsv.split(",").map(String::trim).filter(String::isNotEmpty).forEach { tag ->
-                            TagBadge(tag)
+                    Row(
+                        modifier = Modifier.horizontalScroll(rememberScrollState()),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val currentTags = snippet.tagsCsv.split(",").map(String::trim).filter(String::isNotEmpty)
+                        currentTags.forEach { tag ->
+                            TagBadge(tag) { viewModel.removeTag(tag) }
                             Spacer(Modifier.width(8.dp))
                         }
-                        AddTagButton { /* Read-only here */ }
+                        
+                        Box {
+                            AddTagButton { showTagDropdown = true }
+                            
+                            DropdownMenu(
+                                expanded = showTagDropdown,
+                                onDismissRequest = { showTagDropdown = false },
+                                modifier = Modifier.background(DevLedgerColors.SurfaceCard).widthIn(min = 180.dp)
+                            ) {
+                                DropdownMenuItem(
+                                    text = { 
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.Add, null, tint = DevLedgerColors.AccentBlue, modifier = Modifier.size(20.dp))
+                                            Spacer(Modifier.width(12.dp))
+                                            Text("Create New Tag...", color = DevLedgerColors.AccentBlue, fontWeight = FontWeight.Bold)
+                                        }
+                                    },
+                                    onClick = { 
+                                        showCreateTagDialog = true
+                                        showTagDropdown = false
+                                    }
+                                )
+                                
+                                val selectableSuggestions = availableTags.map { it.name }.filter { it !in currentTags }
+                                if (selectableSuggestions.isNotEmpty()) {
+                                    HorizontalDivider(color = DevLedgerColors.Border, modifier = Modifier.padding(vertical = 4.dp))
+                                    selectableSuggestions.forEach { suggestion ->
+                                        DropdownMenuItem(
+                                            text = { Text(suggestion, color = Color.White) },
+                                            onClick = { 
+                                                viewModel.addTag(suggestion)
+                                                showTagDropdown = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     Spacer(Modifier.height(24.dp))
@@ -273,6 +365,16 @@ fun SnippetDetailScreen(
                 }
             }
         }
+    }
+
+    if (showCreateTagDialog) {
+        TagCreationDialog(
+            onDismiss = { showCreateTagDialog = false },
+            onConfirm = { name ->
+                viewModel.addTag(name)
+                showCreateTagDialog = false
+            }
+        )
     }
 
     if (showDeleteConfirm) {
@@ -363,7 +465,7 @@ private fun MetaItem(icon: ImageVector, label: String, value: String) {
 }
 
 @Composable
-private fun TagBadge(text: String) {
+private fun TagBadge(text: String, onRemove: () -> Unit) {
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
@@ -375,8 +477,43 @@ private fun TagBadge(text: String) {
             Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(DevLedgerColors.AccentPurple))
             Spacer(Modifier.width(8.dp))
             Text(text, color = Color.White, fontSize = 12.sp)
+            Spacer(Modifier.width(8.dp))
+            Icon(
+                imageVector = Icons.Filled.Close,
+                contentDescription = "Remove",
+                tint = DevLedgerColors.TextMuted,
+                modifier = Modifier.size(14.dp).clickable { onRemove() }
+            )
         }
     }
+}
+
+@Composable
+private fun TagCreationDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
+    var name by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = DevLedgerColors.SurfaceCard,
+        title = { Text("Create New Tag", color = Color.White) },
+        text = { 
+            OutlinedTextField(
+                value = name, 
+                onValueChange = { name = it }, 
+                singleLine = true, 
+                label = { Text("Tag name") },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White
+                )
+            ) 
+        },
+        confirmButton = { 
+            TextButton(onClick = { if (name.isNotBlank()) onConfirm(name.trim()) }) { 
+                Text("Add", color = DevLedgerColors.AccentBlue) 
+            } 
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = Color.White) } },
+    )
 }
 
 @Composable

@@ -375,10 +375,15 @@ private fun TagInputArea(
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    Column(modifier = modifier) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Row(
-            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), 
-            horizontalArrangement = Arrangement.spacedBy(8.dp), 
+            modifier = Modifier
+                .weight(1f)
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             tags.forEach { tag ->
@@ -401,53 +406,58 @@ private fun TagInputArea(
                     }
                 }
             }
-            
-            Box {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(DevLedgerColors.SurfaceCardAlt)
-                        .clickable { expanded = true }
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("+ Add Tag", color = DevLedgerColors.AccentBlue, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        Icon(Icons.Default.ArrowDropDown, null, tint = DevLedgerColors.AccentBlue, modifier = Modifier.size(16.dp))
-                    }
-                }
+        }
 
-                DropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false },
-                    modifier = Modifier.background(DevLedgerColors.SurfaceCard).widthIn(min = 160.dp)
+        Spacer(Modifier.width(8.dp))
+
+        Box {
+            Surface(
+                onClick = { expanded = true },
+                shape = RoundedCornerShape(8.dp),
+                color = DevLedgerColors.SurfaceCardAlt,
+                border = BorderStroke(1.dp, DevLedgerColors.AccentBlue.copy(alpha = 0.5f))
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    DropdownMenuItem(
-                        text = { 
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Add, null, tint = DevLedgerColors.AccentBlue, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(8.dp))
-                                Text("Create New Tag...", color = DevLedgerColors.AccentBlue, fontWeight = FontWeight.Bold)
+                    Text("+ Tag", color = DevLedgerColors.AccentBlue, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Icon(Icons.Default.ArrowDropDown, null, tint = DevLedgerColors.AccentBlue, modifier = Modifier.size(16.dp))
+                }
+            }
+
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                modifier = Modifier
+                    .background(DevLedgerColors.SurfaceCard)
+                    .widthIn(min = 180.dp)
+            ) {
+                DropdownMenuItem(
+                    text = { 
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Add, null, tint = DevLedgerColors.AccentBlue, modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(12.dp))
+                            Text("Create New Tag...", color = DevLedgerColors.AccentBlue, fontWeight = FontWeight.Bold)
+                        }
+                    },
+                    onClick = { 
+                        onCreateNew()
+                        expanded = false
+                    }
+                )
+                
+                val selectableSuggestions = suggestions.filter { it !in tags }
+                if (selectableSuggestions.isNotEmpty()) {
+                    HorizontalDivider(color = DevLedgerColors.Border, modifier = Modifier.padding(vertical = 4.dp))
+                    selectableSuggestions.forEach { suggestion ->
+                        DropdownMenuItem(
+                            text = { Text(suggestion, color = Color.White) },
+                            onClick = { 
+                                onAddTag(suggestion)
+                                expanded = false
                             }
-                        },
-                        onClick = { 
-                            onCreateNew()
-                            expanded = false
-                        }
-                    )
-                    
-                    val selectableSuggestions = suggestions.filter { it !in tags }
-                    if (selectableSuggestions.isNotEmpty()) {
-                        HorizontalDivider(color = DevLedgerColors.Border, modifier = Modifier.padding(vertical = 4.dp))
-                        selectableSuggestions.forEach { suggestion ->
-                            DropdownMenuItem(
-                                text = { Text(suggestion, color = Color.White) },
-                                onClick = { 
-                                    onAddTag(suggestion)
-                                    expanded = false
-                                }
-                            )
-                        }
+                        )
                     }
                 }
             }

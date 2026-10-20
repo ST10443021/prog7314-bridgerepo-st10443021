@@ -9,16 +9,12 @@ import com.devledger.app.data.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.IOException
 import javax.inject.Inject
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
-import kotlinx.coroutines.TimeoutCancellationException
-import kotlinx.coroutines.withTimeout
-
 
 data class SettingsUiState(
     val language: String = "en",
@@ -62,7 +58,6 @@ class SettingsViewModel @Inject constructor(
                 isLoading = true,
                 error = null,
                 message = null,
-                isLoaded = true,
             )
         }
 
@@ -75,8 +70,6 @@ class SettingsViewModel @Inject constructor(
                 }
 
                 if (_uiState.value.hasChanges) {
-                    // The user changed something while the API request was running.
-                    // Preserve those edits instead of replacing them with the older server state.
                     _uiState.update {
                         it.copy(
                             isLoading = false,
@@ -88,22 +81,13 @@ class SettingsViewModel @Inject constructor(
                 } else {
                     acceptServerSettings(settings)
                 }
-            } catch (timeout: TimeoutCancellationException) {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        error = "Settings took too long to load. Check your connection and retry.",
-                        isLoaded = true,
-                    )
-                }
-            } catch (cancelled: CancellationException) {
-                throw cancelled
             } catch (error: Exception) {
+                Log.e("SettingsVM", "Error loading settings", error)
                 _uiState.update {
                     it.copy(
                         isLoading = false,
                         error = errorMessage(error),
-                        isLoaded = true,
+                        isLoaded = false,
                     )
                 }
             }
@@ -186,7 +170,6 @@ class SettingsViewModel @Inject constructor(
                 isSaving = true,
                 error = null,
                 message = null,
-                isLoaded = true,
             )
         }
 
@@ -210,17 +193,8 @@ class SettingsViewModel @Inject constructor(
                     settings = saved,
                     message = "Settings saved.",
                 )
-            } catch (timeout: TimeoutCancellationException) {
-                _uiState.update {
-                    it.copy(
-                        isSaving = false,
-                        error = "Saving took too long. Check your connection and retry.",
-                        isLoaded = true,
-                    )
-                }
-            } catch (cancelled: CancellationException) {
-                throw cancelled
             } catch (error: Exception) {
+                Log.e("SettingsVM", "Error saving settings", error)
                 _uiState.update {
                     it.copy(
                         isSaving = false,
@@ -252,13 +226,13 @@ class SettingsViewModel @Inject constructor(
 
     private fun errorMessage(error: Exception): String = when (error) {
         is HttpException -> when (error.code()) {
-            401 -> "Your session has expired. Sign out and sign in again."
+            401 -> "Your session has expired. Please Sign Out and Sign In again to continue."
             403 -> "You do not have permission to access these settings."
-            404 -> "Settings were not found. Check the API deployment and account."
-            else -> "The API request failed (${error.code()}). Please retry."
+            404 -> "Settings were not found on the server."
+            else -> "The API request failed (${error.code()})."
         }
-        is IOException -> "Could not reach the API. Check your connection and retry."
-        else -> "Could not complete the settings request. Please retry."
+        is IOException -> "Could not reach the API. Please check your internet connection."
+        else -> error.message ?: "An unexpected error occurred. Please try again."
     }
 
     fun signOut(onComplete: () -> Unit = {}) = viewModelScope.launch {

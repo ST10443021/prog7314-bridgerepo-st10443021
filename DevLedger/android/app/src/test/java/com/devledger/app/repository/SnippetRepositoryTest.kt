@@ -8,6 +8,7 @@ import com.devledger.app.data.local.entity.SyncStatus
 import com.devledger.app.data.local.entity.UserEntity
 import com.devledger.app.data.remote.DevLedgerApiService
 import com.devledger.app.data.remote.auth.TokenManager
+import com.devledger.app.data.repository.NotificationRepository
 import com.devledger.app.data.repository.SettingsRepository
 import com.devledger.app.data.repository.SnippetRepository
 import com.devledger.app.sync.SyncScheduler
@@ -18,7 +19,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -26,15 +27,16 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * Verifies the offline-first snippet behaviour:
- * local writes are immediately persisted as PENDING and can later be
- * synchronised by WorkManager.
+ * Unit tests for the offline-first snippet repository.
+ *
+ * These tests deliberately mock Room/network boundaries so they exercise repository
+ * behaviour without changing or requiring a live API, database, or WorkManager run.
  */
-@OptIn(ExperimentalCoroutinesApi::class)
 class SnippetRepositoryTest {
 
     private lateinit var dao: SnippetDao
     private lateinit var userDao: UserDao
+    private lateinit var notificationRepository: NotificationRepository
     private lateinit var settingsRepository: SettingsRepository
     private lateinit var api: DevLedgerApiService
     private lateinit var tokenManager: TokenManager
@@ -46,31 +48,32 @@ class SnippetRepositoryTest {
     fun setUp() {
         dao = mockk(relaxed = true)
         userDao = mockk(relaxed = true)
+        notificationRepository = mockk(relaxed = true)
         settingsRepository = mockk(relaxed = true)
         api = mockk(relaxed = true)
         tokenManager = mockk(relaxed = true)
         context = mockk(relaxed = true)
-        currentUser = mockk(relaxed = true)
+        currentUser = UserEntity(
+            userId = "user-1",
+            email = "test@devledger.app",
+            fullName = "Test User",
+            ssoProvider = "GOOGLE",
+        )
 
-        every { currentUser.userId } returns "user-1"
         every { userDao.observeCurrentUser() } returns flowOf(currentUser)
         coEvery { userDao.getCurrentUser() } returns currentUser
-
         every { settingsRepository.wifiOnlySync } returns flowOf(false)
 
         mockkObject(SyncScheduler)
-        every {
-            SyncScheduler.schedulePeriodicSync(any(), any())
-        } returns Unit
-        every {
-            SyncScheduler.syncNow(any(), any())
-        } returns Unit
+        every { SyncScheduler.schedulePeriodicSync(any(), any()) } returns Unit
+        every { SyncScheduler.syncNow(any(), any()) } returns Unit
 
         repository = SnippetRepository(
             dao = dao,
             deletedDao = mockk(relaxed = true),
             notificationRepository = mockk(relaxed = true),
             userDao = userDao,
+            notificationRepository = notificationRepository,
             settingsRepository = settingsRepository,
             api = api,
             tokenManager = tokenManager,
@@ -84,14 +87,14 @@ class SnippetRepositoryTest {
     }
 
     @Test
-    fun `createOrUpdate persists a new snippet flagged PENDING for sync`() = runTest {
+    fun `createOrUpdate persists a new snippet as PENDING`() = runTest {
         val snippet = repository.createOrUpdate(
             userId = "user-1",
             title = "Deploy script",
             content = "#!/bin/bash\necho hello",
             language = "shell",
             description = null,
-            tags = listOf("shell", "ci"),
+            tags = listOf("shell", "ci", "shell"),
         )
 
         assertThat(snippet.title).isEqualTo("Deploy script")
@@ -104,19 +107,13 @@ class SnippetRepositoryTest {
     }
 
     @Test
-    fun `createOrUpdate reuses the same id when editing existing snippet`() = runTest {
-        val existing = snippet(
-            id = "existing-id-123",
-            title = "Old title",
-        )
-
-        coEvery {
-            dao.getById("existing-id-123")
-        } returns existing
+    fun `createOrUpdate reuses the same id and marks an existing snippet PENDING`() = runTest {
+        val existing = snippet(id = "existing-id", title = "Old title", updatedAt = 10L)
+        coEvery { dao.getById("existing-id") } returns existing
 
         val updated = repository.createOrUpdate(
             userId = "user-1",
-            id = "existing-id-123",
+            id = "existing-id",
             title = "Updated title",
             content = "new content",
             language = "kotlin",
@@ -124,68 +121,86 @@ class SnippetRepositoryTest {
             tags = emptyList(),
         )
 
-        assertThat(updated.snippetId).isEqualTo("existing-id-123")
+        assertThat(updated.snippetId).isEqualTo("existing-id")
         assertThat(updated.title).isEqualTo("Updated title")
         assertThat(updated.syncStatus).isEqualTo(SyncStatus.PENDING)
+        assertThat(updated.updatedAt).isGreaterThan(existing.updatedAt)
+        coVerify(exactly = 1) { dao.saveUnlessDeleted(updated) }
+        coVerify(exactly = 0) { notificationRepository.notify("Snippet Created", any(), "SNIPPET") }
     }
 
     @Test
-    fun `observeSnippets with blank query returns current users active snippets`() =
-        runTest {
-
-            val expected = listOf(
-                snippet(
-                    id = "1",
-                    title = "Example",
-                ),
+    fun `createOrUpdate rejects a blank title`() = runTest {
+        val error = runCatching {
+            repository.createOrUpdate(
+                userId = "user-1",
+                title = "   ",
+                content = "code",
+                language = "kotlin",
+                description = null,
+                tags = emptyList(),
             )
+        }.exceptionOrNull()
 
-            every {
-                dao.observeSnippetsForUser("user-1", "")
-            } returns flowOf(expected)
-
-            val result = repository.observeSnippets("")
-
-            result.collect { list ->
-                assertThat(list).isEqualTo(expected)
-            }
-        }
+        assertThat(error).isInstanceOf(IllegalArgumentException::class.java)
+        assertThat(error?.message).isEqualTo("Enter a snippet title.")
+        coVerify(exactly = 0) { dao.saveUnlessDeleted(any()) }
+    }
 
     @Test
-    fun `archive marks current users snippet archived`() = runTest {
-        val existing = snippet(id = "snippet-1")
+    fun `observeSnippets is scoped to the current user and trims the query`() = runTest {
+        val expected = listOf(snippet(id = "1", title = "Example"))
+        every { dao.observeSnippetsForUser("user-1", "kotlin") } returns flowOf(expected)
 
-        coEvery {
-            dao.getById("snippet-1")
-        } returns existing
+        val result = repository.observeSnippets("  kotlin  ").first()
+
+        assertThat(result).isEqualTo(expected)
+        coVerify(exactly = 0) { dao.observeSnippetsForUser(any(), "  kotlin  ") }
+    }
+
+    @Test
+    fun `archive delegates to the DAO for an existing snippet`() = runTest {
+        coEvery { dao.getById("snippet-1") } returns snippet(id = "snippet-1")
 
         repository.archive("snippet-1", true)
 
-        coVerify(exactly = 1) {
-            dao.setArchived("snippet-1", true, any())
-        }
+        coVerify(exactly = 1) { dao.setArchived("snippet-1", true, any()) }
     }
 
     @Test
-    fun `toggleFavourite delegates requested state for current users snippet`() =
-        runTest {
+    fun `toggleFavourite delegates requested state for an existing snippet`() = runTest {
+        coEvery { dao.getById("snippet-1") } returns snippet(id = "snippet-1")
 
-            val existing = snippet(id = "snippet-1")
+        repository.toggleFavourite("snippet-1", true)
 
-            coEvery {
-                dao.getById("snippet-1")
-            } returns existing
+        coVerify(exactly = 1) { dao.setFavourite("snippet-1", true, any()) }
+    }
 
-            repository.toggleFavourite("snippet-1", true)
+    @Test
+    fun `deleteArchived queues archived snippets and notifies`() = runTest {
+        coEvery { dao.queueArchivedDeletes("user-1", listOf("a", "b")) } returns 2
 
-            coVerify(exactly = 1) {
-                dao.setFavourite("snippet-1", true, any())
-            }
-        }
+        val deleted = repository.deleteArchived(listOf("a", "b"))
+
+        assertThat(deleted).isEqualTo(2)
+        coVerify(exactly = 1) { dao.queueArchivedDeletes("user-1", listOf("a", "b")) }
+        coVerify(exactly = 1) { notificationRepository.notify("Snippet Deleted", "2 snippet(s) moved to the deletion queue.", "SNIPPET") }
+    }
+
+    @Test
+    fun `deleteArchived does not notify when nothing can be deleted`() = runTest {
+        coEvery { dao.queueArchivedDeletes("user-1", listOf("missing")) } returns 0
+
+        val deleted = repository.deleteArchived(listOf("missing"))
+
+        assertThat(deleted).isEqualTo(0)
+        coVerify(exactly = 0) { notificationRepository.notify(any(), any(), any()) }
+    }
 
     private fun snippet(
         id: String,
         title: String = "Snippet",
+        updatedAt: Long = 1L,
     ) = SnippetEntity(
         snippetId = id,
         userId = "user-1",
@@ -196,7 +211,7 @@ class SnippetRepositoryTest {
         description = null,
         tagsCsv = "",
         createdAt = 1L,
-        updatedAt = 1L,
+        updatedAt = updatedAt,
         syncStatus = SyncStatus.PENDING,
     )
 }

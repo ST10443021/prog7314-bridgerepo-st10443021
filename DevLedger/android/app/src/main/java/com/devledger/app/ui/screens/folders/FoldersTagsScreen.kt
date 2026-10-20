@@ -55,6 +55,7 @@ fun FoldersTagsScreen(onBack: () -> Unit, viewModel: FoldersTagsViewModel = hilt
     var showCreateFolderDialog by remember { mutableStateOf(false) }
     var folderPendingDelete by remember { mutableStateOf<FolderEntity?>(null) }
     var folderPendingRename by remember { mutableStateOf<FolderEntity?>(null) }
+    var showCreateTagDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -115,7 +116,13 @@ fun FoldersTagsScreen(onBack: () -> Unit, viewModel: FoldersTagsViewModel = hilt
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text("TAGS", color = DevLedgerColors.TextMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        Text("+ New Tag", color = DevLedgerColors.AccentBlue, fontSize = 11.sp)
+                        TextButton(onClick = { showCreateTagDialog = true }) {
+                            Text(
+                                text = "+ New Tag",
+                                color = DevLedgerColors.AccentBlue,
+                                fontSize = 11.sp
+                            )
+                        }
                     }
 
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.weight(1f)) {
@@ -138,6 +145,64 @@ fun FoldersTagsScreen(onBack: () -> Unit, viewModel: FoldersTagsViewModel = hilt
                 TipCard(Icons.Default.Lightbulb, "Tag Tips", "Use tags to quickly filter and find related snippets.", DevLedgerColors.AccentPurple, Modifier.weight(1f))
             }
         }
+    }
+
+    if (showCreateTagDialog) {
+        var tagName by remember { mutableStateOf("") }
+        val trimmedName = tagName.trim()
+
+        val duplicateExists = state.tagCounts.any { (existingName, _) ->
+            existingName.equals(trimmedName, ignoreCase = true)
+        }
+
+        val validationError = when {
+            ',' in trimmedName -> "Use one tag name without commas."
+            duplicateExists -> "This tag already exists."
+            else -> null
+        }
+
+        AlertDialog(
+            onDismissRequest = { showCreateTagDialog = false },
+            containerColor = DevLedgerColors.SurfaceCard,
+            title = {
+                Text("New Tag", color = Color.White)
+            },
+            text = {
+                OutlinedTextField(
+                    value = tagName,
+                    onValueChange = { tagName = it },
+                    label = { Text("Tag name") },
+                    singleLine = true,
+                    isError = validationError != null,
+                    supportingText = {
+                        validationError?.let { Text(it) }
+                    },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = trimmedName.isNotBlank() &&
+                            validationError == null,
+                    onClick = {
+                        viewModel.createTag(trimmedName)
+                        showCreateTagDialog = false
+                    }
+                ) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showCreateTagDialog = false }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     // Dialogs
