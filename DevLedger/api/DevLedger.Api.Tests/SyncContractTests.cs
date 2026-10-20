@@ -250,4 +250,51 @@ public sealed class SyncContractTests
         var controller = new SyncController(db) { ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() } };
         Assert.IsType<UnauthorizedResult>((await controller.Batch(new SyncBatchRequest(new()), CancellationToken.None)).Result);
     }
+    private object SnippetPayload(Guid id, string content, long updatedAt, Guid? folderId = null) => new {
+        snippetId = id, userId = _owner, folderId, title = "Code", content, language = "kotlin",
+        createdAt = Stamp, updatedAt, tags = Array.Empty<string>(),
+    };
+
+    [Fact]
+    public async Task NewerServerSnippetRejectsWholeBatchWithoutSavingEarlierFolder()
+    {
+        var id = Guid.NewGuid(); var folder = Guid.NewGuid();
+        using (var db = Open())
+        {
+            db.Snippets.Add(new Snippet { SnippetId = id, UserId = _owner, Title = "Code", Content = "server",
+                Language = "kotlin", CreatedAt = DateTimeOffset.FromUnixTimeMilliseconds(Stamp).UtcDateTime,
+                UpdatedAt = DateTimeOffset.FromUnixTimeMilliseconds(Stamp + 1).UtcDateTime });
+            db.SaveChanges();
+        }
+        var result = await Post(Op("folder", FolderPayload(folder)), Op("snippet", SnippetPayload(id, "local", Stamp)));
+        var response = Assert.IsType<SyncBatchResponse>(Assert.IsType<ConflictObjectResult>(result.Result).Value);
+        Assert.Empty(response.Applied);
+        Assert.Equal(new[] { id.ToString() }, response.Conflicts);
+        using var check = Open();
+        Assert.Empty(await check.Folders.ToListAsync());
+        Assert.Equal("server", (await check.Snippets.FindAsync(id))!.Content);
+    }
+
+    [Fact]
+    public async Task EqualTimestampDifferentSnippetContentIsAnExplicitConflict()
+    {
+        var id = Guid.NewGuid();
+        Accepted(await Post(Op("snippet", SnippetPayload(id, "server", Stamp))));
+        var result = await Post(Op("snippet", SnippetPayload(id, "local", Stamp)));
+        Assert.IsType<ConflictObjectResult>(result.Result);
+        using var check = Open();
+        Assert.Equal("server", (await check.Snippets.FindAsync(id))!.Content);
+    }
+
+    [Fact]
+    public async Task IdenticalSnippetRetryIsAcknowledgedWithoutAnotherRow()
+    {
+        var id = Guid.NewGuid();
+        var operation = Op("snippet", SnippetPayload(id, "same", Stamp));
+        Accepted(await Post(operation));
+        Assert.Contains(id.ToString(), Accepted(await Post(operation)).Applied);
+        using var check = Open();
+        Assert.Single(await check.Snippets.ToListAsync());
+    }
+
 }

@@ -1,6 +1,7 @@
 package com.devledger.app.data.local.dao
 
 import androidx.room.*
+import kotlinx.coroutines.flow.Flow
 import com.devledger.app.data.local.entity.DeletedEntity
 import com.devledger.app.data.local.entity.SyncStatus
 
@@ -9,6 +10,9 @@ import com.devledger.app.data.local.entity.SyncStatus
 interface DeletedDao {
     @Query("SELECT * FROM deleted_entities WHERE userId = :userId AND syncStatus = 'PENDING' ORDER BY deletedAt ASC")
     suspend fun getForUser(userId: String): List<DeletedEntity>
+
+    @Query("SELECT * FROM deleted_entities WHERE userId = :userId AND syncStatus = 'PENDING' ORDER BY deletedAt ASC")
+    fun observePendingForUser(userId: String): Flow<List<DeletedEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(entity: DeletedEntity)
@@ -34,7 +38,7 @@ interface DeletedDao {
     @Query("DELETE FROM user_tags WHERE userId = :userId AND tagId = :id")
     suspend fun removeTag(userId: String, id: String)
 
-    @Query("UPDATE snippets SET folderId = :target, syncStatus = 'PENDING', updatedAt = MAX(updatedAt + 1, :now) WHERE userId = :userId AND folderId = :id AND syncStatus NOT IN ('DELETE_PENDING', 'DELETED')")
+    @Query("UPDATE snippets SET folderId = :target, syncStatus = CASE WHEN syncStatus = 'CONFLICT' THEN 'CONFLICT' ELSE 'PENDING' END, updatedAt = MAX(updatedAt + 1, :now) WHERE userId = :userId AND folderId = :id AND syncStatus NOT IN ('DELETE_PENDING', 'DELETED')")
     suspend fun reassignSnippets(userId: String, id: String, target: String?, now: Long)
 
     @Query("UPDATE folders SET parentFolderId = :target, syncStatus = 'PENDING' WHERE userId = :userId AND parentFolderId = :id")

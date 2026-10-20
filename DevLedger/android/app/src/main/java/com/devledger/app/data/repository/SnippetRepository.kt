@@ -145,7 +145,8 @@ class SnippetRepository @Inject constructor(
             existing.copy(
                 folderId = folderId, title = title.trim(), content = content,
                 language = language.trim(), description = description?.trim()?.takeIf { it.isNotEmpty() },
-                tagsCsv = tagsCsv, updatedAt = updatedAt, syncStatus = SyncStatus.PENDING,
+                tagsCsv = tagsCsv, updatedAt = updatedAt,
+                syncStatus = if (existing.syncStatus == SyncStatus.CONFLICT) SyncStatus.CONFLICT else SyncStatus.PENDING,
             )
         } else {
             SnippetEntity(

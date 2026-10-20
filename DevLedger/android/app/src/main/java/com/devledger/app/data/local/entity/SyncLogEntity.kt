@@ -14,7 +14,7 @@ import androidx.room.PrimaryKey
 data class SyncLogEntity(
     @PrimaryKey val logId: String,
     val userId: String,
-    val status: String, // "COMPLETED" | "FAILED"
+    val status: String, // COMPLETED | FAILED | RETRY | PARTIAL | CONFLICT | CANCELLED
     val itemsSynced: Int,
     val errorMessage: String?,
     val timestamp: Long,
