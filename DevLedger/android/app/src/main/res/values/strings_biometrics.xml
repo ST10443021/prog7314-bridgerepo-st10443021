@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="bio_verify_title">Verify your identity</string>
+    <string name="bio_verify_subtitle">Use your fingerprint or supported face recognition to unlock DevLedger</string>
+    <string name="bio_enable_title">Enable biometric access</string>
+    <string name="bio_enable_subtitle">Verify with Android, then tap Save changes in DevLedger</string>
+    <string name="bio_cancel">Cancel</string>
+    <string name="bio_scan_failed">Biometric not recognised. Try again or use your DevLedger PIN.</string>
+    <string name="bio_not_enrolled">No supported biometric is enrolled. Add one in Android Settings, then return and retry.</string>
+    <string name="bio_no_hardware">This device has no supported biometric hardware. Use your DevLedger PIN.</string>
+    <string name="bio_unavailable">Biometric verification is unavailable. Retry or use your DevLedger PIN.</string>
+    <string name="bio_update_required">Install the Android security update before using biometrics.</string>
+    <string name="bio_settings_title">Security</string>
+    <string name="bio_settings_subtitle">Choose how you unlock DevLedger on this device.</string>
+    <string name="bio_settings_toggle">Biometric unlock</string>
+    <string name="bio_settings_description">Verify to enable, then save. When disabled, your DevLedger PIN still protects access.</string>
+    <string name="bio_privacy">Android manages biometric data. DevLedger receives only the verification result.</string>
+</resources>

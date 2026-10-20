@@ -3,6 +3,7 @@ package com.devledger.app.data.local
 import android.content.Context
 import android.util.Base64
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.util.Locale
 import java.security.MessageDigest
 import java.security.SecureRandom
 import javax.crypto.SecretKeyFactory
@@ -14,6 +15,8 @@ import javax.inject.Singleton
  * Securely stores and verifies the user's fallback PIN and Biometric state.
  * Supports multi-user separation by using email prefixes to avoid cross-account bleeding.
  */
+data class PinCredentials(val hash: String, val salt: String)
+
 @Singleton
 class PinStorage @Inject constructor(
     @ApplicationContext context: Context,
@@ -25,24 +28,31 @@ class PinStorage @Inject constructor(
     )
 
     fun savePin(pin: String, email: String? = null) {
-        require(pin.length == 4 && pin.all { it.isDigit() }) {
+        savePinCredentials(createPinCredentials(pin), email)
+    }
+
+    /** Generate first, so Security Setup can save remotely before committing locally. */
+    fun createPinCredentials(pin: String): PinCredentials {
+        require(pin.length == 4 && pin.all { it in '0'..'9' }) {
             "PIN must contain exactly four digits."
         }
+        val salt = ByteArray(SALT_LENGTH).also { SecureRandom().nextBytes(it) }
+        return PinCredentials(
+            Base64.encodeToString(hashPin(pin, salt), Base64.NO_WRAP),
+            Base64.encodeToString(salt, Base64.NO_WRAP),
+        )
+    }
 
-        val salt = ByteArray(SALT_LENGTH)
-        SecureRandom().nextBytes(salt)
-
-        val hash = hashPin(pin, salt)
-        val suffix = if (email.isNullOrBlank()) "" else "_${email.lowercase()}"
-
+    fun savePinCredentials(credentials: PinCredentials, email: String?) {
+        val suffix = suffix(email)
         preferences.edit()
-            .putString(KEY_PIN_SALT + suffix, Base64.encodeToString(salt, Base64.NO_WRAP))
-            .putString(KEY_PIN_HASH + suffix, Base64.encodeToString(hash, Base64.NO_WRAP))
+            .putString(KEY_PIN_SALT + suffix, credentials.salt)
+            .putString(KEY_PIN_HASH + suffix, credentials.hash)
             .apply()
     }
 
     fun verifyPin(pin: String, email: String? = null): Boolean {
-        val suffix = if (email.isNullOrBlank()) "" else "_${email.lowercase()}"
+        val suffix = suffix(email)
         val storedSalt = preferences.getString(KEY_PIN_SALT + suffix, null)
             ?: return false
 
@@ -64,67 +74,60 @@ class PinStorage @Inject constructor(
     }
 
     fun hasPin(email: String? = null): Boolean {
-        val suffix = if (email.isNullOrBlank()) "" else "_${email.lowercase()}"
-        if (preferences.contains(KEY_PIN_SALT + suffix)) return true
-        
-        // Migration: If we have an unsuffixed PIN, migrate it to the new suffixed key
-        if (!email.isNullOrBlank() && preferences.contains(KEY_PIN_SALT)) {
-            val salt = preferences.getString(KEY_PIN_SALT, null)
-            val hash = preferences.getString(KEY_PIN_HASH, null)
-            val fingerprint = preferences.getBoolean("fingerprint_registered", false)
-            
-            if (salt != null && hash != null) {
-                preferences.edit()
-                    .putString(KEY_PIN_SALT + suffix, salt)
-                    .putString(KEY_PIN_HASH + suffix, hash)
-                    .putBoolean("fingerprint_registered" + suffix, fingerprint)
-                    .apply()
-                return true
-            }
-        }
+        val suffix = suffix(email)
+        if (preferences.contains(KEY_PIN_SALT + suffix) &&
+            preferences.contains(KEY_PIN_HASH + suffix)) return true
+
+        // A legacy unscoped PIN cannot safely be assigned to an arbitrary account.
+        // Existing account-scoped PINs are retained; otherwise use Security Setup.
         return false
     }
 
     fun isFingerprintRegistered(email: String? = null): Boolean {
-        val suffix = if (email.isNullOrBlank()) "" else "_${email.lowercase()}"
-        return preferences.getBoolean("fingerprint_registered" + suffix, false)
+        val suffix = suffix(email)
+        return preferences.getBoolean(KEY_DEVICE_VERIFIED + suffix, false)
     }
 
     fun setFingerprintRegistered(registered: Boolean, email: String? = null) {
-        val suffix = if (email.isNullOrBlank()) "" else "_${email.lowercase()}"
-        preferences.edit().putBoolean("fingerprint_registered" + suffix, registered).apply()
+        val suffix = suffix(email)
+        preferences.edit().putBoolean(KEY_DEVICE_VERIFIED + suffix, registered).apply()
     }
 
     fun clearPin(email: String? = null) {
-        val suffix = if (email.isNullOrBlank()) "" else "_${email.lowercase()}"
+        val suffix = suffix(email)
         preferences.edit()
             .remove(KEY_PIN_SALT + suffix)
             .remove(KEY_PIN_HASH + suffix)
             .remove("fingerprint_registered" + suffix)
+            .remove(KEY_DEVICE_VERIFIED + suffix)
             .apply()
     }
 
+    // Server preferences are not proof of a native scan on this phone.
+    @Suppress("UNUSED_PARAMETER") // Retain compatibility with existing authentication call sites.
     fun syncFromBackend(email: String, hash: String, salt: String, biometricEnabled: Boolean = false) {
-        val suffix = "_${email.lowercase().trim()}"
+        val suffix = suffix(email)
         // Only sync if we don't already have a local PIN for this user
         if (!preferences.contains(KEY_PIN_SALT + suffix)) {
             preferences.edit()
                 .putString(KEY_PIN_SALT + suffix, salt)
                 .putString(KEY_PIN_HASH + suffix, hash)
-                .putBoolean("fingerprint_registered" + suffix, biometricEnabled)
                 .apply()
         }
     }
 
     fun getLocalHash(email: String?): String? {
-        val suffix = if (email.isNullOrBlank()) "" else "_${email.lowercase()}"
+        val suffix = suffix(email)
         return preferences.getString(KEY_PIN_HASH + suffix, null)
     }
 
     fun getLocalSalt(email: String?): String? {
-        val suffix = if (email.isNullOrBlank()) "" else "_${email.lowercase()}"
+        val suffix = suffix(email)
         return preferences.getString(KEY_PIN_SALT + suffix, null)
     }
+
+    private fun suffix(email: String?): String =
+        if (email.isNullOrBlank()) "" else "_${email.trim().lowercase(Locale.ROOT)}"
 
     private fun hashPin(
         pin: String,
@@ -150,6 +153,9 @@ class PinStorage @Inject constructor(
     companion object {
         private const val PREFS_NAME = "devledger_security"
 
+        // Old fingerprint_registered keys may have been written from a server flag,
+        // so require one fresh native verification after this patch is installed.
+        private const val KEY_DEVICE_VERIFIED = "biometric_verified_v3"
         private const val KEY_PIN_HASH = "pin_hash"
         private const val KEY_PIN_SALT = "pin_salt"
 

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="bio_verify_title">Qinisekisa ubuwena</string>
+    <string name="bio_verify_subtitle">Sebenzisa umnwe okanye ukubonwa kobuso okuxhaswayo ukuvula iDevLedger</string>
+    <string name="bio_enable_title">Vumela ukungena ngebhayometriki</string>
+    <string name="bio_enable_subtitle">Qinisekisa ngeAndroid, uze ucofe Gcina utshintsho kwiDevLedger</string>
+    <string name="bio_cancel">Rhoxisa</string>
+    <string name="bio_scan_failed">Ibhayometriki ayiqatshelwanga. Zama kwakhona okanye usebenzise iPIN yakho yeDevLedger.</string>
+    <string name="bio_not_enrolled">Akukho bhayometriki ixhaswayo ibhalisiweyo. Yifake kwiiSetingi zeAndroid uze uzame kwakhona.</string>
+    <string name="bio_no_hardware">Esi sixhobo asixhasi ibhayometriki. Sebenzisa iPIN yakho yeDevLedger.</string>
+    <string name="bio_unavailable">Ukuqinisekiswa ngebhayometriki akufumaneki. Zama kwakhona okanye usebenzise iPIN yakho yeDevLedger.</string>
+    <string name="bio_update_required">Faka uhlaziyo lokhuseleko lweAndroid ngaphambi kokusebenzisa ibhayometriki.</string>
+    <string name="bio_settings_title">Ukhuseleko</string>
+    <string name="bio_settings_subtitle">Khetha indlela yokuvula iDevLedger kwesi sixhobo.</string>
+    <string name="bio_settings_toggle">Ukuvula ngebhayometriki</string>
+    <string name="bio_settings_description">Qinisekisa ukuze uyivule, uze ugcine. Xa icinyiwe, iPIN yakho yeDevLedger isakhusela ukungena.</string>
+    <string name="bio_privacy">IAndroid ilawula idatha yebhayometriki. IDevLedger ifumana kuphela isiphumo sokuqinisekiswa.</string>
+</resources>

@@ -27,7 +27,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.fragment.app.FragmentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -38,6 +37,14 @@ import com.devledger.app.ui.components.DevLedgerTextField
 import com.devledger.app.ui.theme.DevLedgerColors
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
+import com.devledger.app.util.DevLedgerResult
+import com.devledger.app.R
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -52,28 +59,60 @@ class SecuritySetupViewModel @Inject constructor(
     var isFingerprintVerified by mutableStateOf(false)
     var errorText by mutableStateOf<String?>(null)
     var isSaved by mutableStateOf(false)
+    var isSaving by mutableStateOf(false)
     var isLoggedOut by mutableStateOf(false)
 
-    fun saveSetup() {
-        if (pin.length != 4 || !pin.all { it.isDigit() }) {
+    fun saveSetup(): Job? {
+        if (isSaving) return null
+        if (pin.length != 4 || !pin.all { it in '0'..'9' }) {
             errorText = "PIN must be exactly 4 digits."
-            return
+            return null
         }
         if (pin != confirmPin) {
             errorText = "PINs do not match."
-            return
+            return null
         }
         if (isFingerprintEnabled && !isFingerprintVerified) {
             errorText = "Please verify your fingerprint to enable biometric access."
-            return
+            return null
         }
-        
+
         errorText = null
-        viewModelScope.launch {
-            val email = authRepository.currentUser.first()?.email
-            pinStorage.savePin(pin, email)
-            pinStorage.setFingerprintRegistered(isFingerprintEnabled, email)
-            isSaved = true
+        isSaving = true
+        val requestedPin = pin
+        val requestedBiometrics = isFingerprintEnabled && isFingerprintVerified
+        return viewModelScope.launch {
+            try {
+                val user = authRepository.currentUser.first()
+                    ?: error("Sign in before configuring security.")
+                val credentials = withContext(Dispatchers.Default) {
+                    pinStorage.createPinCredentials(requestedPin)
+                }
+                val result = withTimeout(10_000L) {
+                    authRepository.saveSecurityProfile(credentials.hash, credentials.salt,
+                        requestedBiometrics)
+                }
+                when (result) {
+                    is DevLedgerResult.Error -> errorText =
+                        "Security setup could not be saved. Check your connection and retry."
+                    is DevLedgerResult.Success -> {
+                        check(authRepository.currentUser.first()?.userId == user.userId) {
+                            "The account changed. Sign in again."
+                        }
+                        pinStorage.savePinCredentials(credentials, user.email)
+                        pinStorage.setFingerprintRegistered(requestedBiometrics, user.email)
+                        isSaved = true
+                    }
+                }
+            } catch (_: TimeoutCancellationException) {
+                errorText = "Saving security setup timed out. Check your connection and retry."
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                errorText = "Security setup could not be saved. Check your connection and retry."
+            } finally {
+                isSaving = false
+            }
         }
     }
 
@@ -92,24 +131,28 @@ fun SecuritySetupScreen(
     viewModel: SecuritySetupViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
-    val activity = context as? FragmentActivity
+    val activity = context.findFragmentActivity()
+    val helper = remember(activity) { activity?.let { BiometricAuthHelper(it) } }
+    DisposableEffect(helper) { onDispose { helper?.cancel() } }
     var showLogoutDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(viewModel.isSaved) {
         if (viewModel.isSaved) onComplete()
     }
-    
+
     LaunchedEffect(viewModel.isLoggedOut) {
         if (viewModel.isLoggedOut) onLogout()
     }
 
     fun triggerBiometricVerification() {
-        if (activity == null) return
-        val helper = BiometricAuthHelper(activity)
+        if (helper == null) {
+            viewModel.errorText = context.getString(R.string.bio_unavailable)
+            return
+        }
         if (helper.canAuthenticate()) {
             helper.authenticate(
-                title = "Link Fingerprint",
-                subtitle = "Touch the sensor to verify and link your device biometric to this DevLedger account",
+                title = context.getString(R.string.bio_enable_title),
+                subtitle = context.getString(R.string.bio_enable_subtitle),
                 onSuccess = {
                     viewModel.isFingerprintVerified = true
                     viewModel.errorText = null
@@ -117,7 +160,8 @@ fun SecuritySetupScreen(
                 onError = { message ->
                     viewModel.errorText = "Verification failed: $message"
                     viewModel.isFingerprintVerified = false
-                }
+                },
+                onFailed = { message -> viewModel.errorText = message },
             )
         } else {
             viewModel.errorText = "Biometric hardware unavailable."
@@ -229,7 +273,7 @@ fun SecuritySetupScreen(
 
         // PIN Fields with visual validation colors
         val pinMatch = viewModel.pin.length == 4 && viewModel.pin == viewModel.confirmPin
-        
+
         DevLedgerTextField(
             value = viewModel.pin,
             onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) viewModel.pin = it },
@@ -291,8 +335,11 @@ fun SecuritySetupScreen(
             }
             Switch(
                 checked = viewModel.isFingerprintEnabled,
-                onCheckedChange = { 
-                    viewModel.isFingerprintEnabled = it 
+                enabled = !viewModel.isSaving,
+                onCheckedChange = {
+                    helper?.cancel()
+                    viewModel.isFingerprintVerified = false
+                    viewModel.isFingerprintEnabled = it
                     if (it && !viewModel.isFingerprintVerified) {
                         triggerBiometricVerification()
                     }
@@ -326,6 +373,8 @@ fun SecuritySetupScreen(
         } else {
             DevLedgerPrimaryButton(
                 text = "Save & Continue",
+                enabled = !viewModel.isSaving,
+                loading = viewModel.isSaving,
                 onClick = { viewModel.saveSetup() }
             )
         }
@@ -335,6 +384,7 @@ fun SecuritySetupScreen(
         // Red Logout Button as requested
         Button(
             onClick = { showLogoutDialog = true },
+            enabled = !viewModel.isSaving,
             modifier = Modifier.fillMaxWidth().height(52.dp),
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(

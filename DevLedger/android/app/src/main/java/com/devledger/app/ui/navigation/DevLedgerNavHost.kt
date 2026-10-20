@@ -383,13 +383,16 @@ class AuthEntryPoint @Inject constructor(
                 return false
             }
 
+            if (user.pinHash != null && user.pinSalt != null) {
+                pinStorage.syncFromBackend(user.email, user.pinHash, user.pinSalt)
+            }
             if (pinStorage.hasPin(user.email)) {
-                Log.i("AuthEntryPoint", "needsSecuritySetup: Local PIN found for ${user.email}")
+                Log.i("AuthEntryPoint", "Security entry: account PIN available")
                 return false
             }
 
-            val needsSetup = user.pinHash == null
-            Log.i("AuthEntryPoint", "needsSecuritySetup: email=${user.email}, needsSetup=$needsSetup")
+            val needsSetup = true
+            Log.i("AuthEntryPoint", "Security entry: PIN setup required")
             needsSetup
         } catch (e: Exception) {
             Log.e("AuthEntryPoint", "needsSecuritySetup: Failed", e)

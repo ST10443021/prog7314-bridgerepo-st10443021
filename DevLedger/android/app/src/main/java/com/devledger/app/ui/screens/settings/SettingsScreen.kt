@@ -45,6 +45,10 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import com.devledger.app.ui.screens.biometric.BiometricAuthHelper
+import com.devledger.app.ui.screens.biometric.findFragmentActivity
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -78,6 +82,14 @@ fun SettingsScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val activity = context.findFragmentActivity()
+    val biometricHelper = remember(activity) { activity?.let { BiometricAuthHelper(it) } }
+    DisposableEffect(biometricHelper) {
+        onDispose {
+            biometricHelper?.cancel()
+            viewModel.cancelBiometricVerification()
+        }
+    }
 
     LaunchedEffect(state.appliedLanguage) {
         state.appliedLanguage?.let { languageTag ->
@@ -97,7 +109,23 @@ fun SettingsScreen(
         onOpenSync = onOpenSync,
         onOpenRecycle = onOpenRecycle,
         onLanguageChange = viewModel::setLanguage,
-        onBiometricEnabledChange = viewModel::setBiometricEnabled,
+        onBiometricEnabledChange = { enabled ->
+            if (!enabled) {
+                viewModel.setBiometricEnabled(false)
+            } else if (viewModel.beginBiometricVerification()) {
+                if (biometricHelper == null) {
+                    viewModel.biometricVerificationFailed(context.getString(R.string.bio_unavailable))
+                } else {
+                    biometricHelper.authenticate(
+                        title = context.getString(R.string.bio_enable_title),
+                        subtitle = context.getString(R.string.bio_enable_subtitle),
+                        onSuccess = viewModel::biometricVerificationSucceeded,
+                        onError = viewModel::biometricVerificationFailed,
+                        onFailed = viewModel::biometricScanNotRecognised,
+                    )
+                }
+            }
+        },
         onWifiOnlySyncChange = viewModel::setWifiOnlySync,
         onSyncNow = {
             SyncScheduler.syncNow(
@@ -108,8 +136,7 @@ fun SettingsScreen(
         onBaseCurrencyChange = viewModel::setBaseCurrency,
         onSaveChanges = viewModel::saveSettings,
         onSignOut = {
-            viewModel.signOut()
-            onSignedOut()
+            viewModel.signOut(onSignedOut)
         },
         onRetryLoading = viewModel::loadSettings,
     )
@@ -220,15 +247,17 @@ fun SettingsScreenContent(
         item {
             SettingsSectionCard(
                 icon = Icons.Filled.Lock,
-                title = "Security",
-                subtitle = "Manage how access to your account is protected.",
+                title = stringResource(R.string.bio_settings_title),
+                subtitle = stringResource(R.string.bio_settings_subtitle),
                 accentColor = DevLedgerColors.AccentBlue,
             ) {
                 ToggleSettingRow(
-                    title = "Biometric Login",
-                    description = "Use fingerprint or face recognition to log in.",
+                    title = stringResource(R.string.bio_settings_toggle),
+                    description = stringResource(R.string.bio_settings_description),
                     checked = state.biometricEnabled,
                     onCheckedChange = onBiometricEnabledChange,
+                    enabled = state.isLoaded && !state.isLoading && !state.isSaving &&
+                        !state.isVerifyingBiometrics,
                 )
             }
         }
@@ -312,6 +341,7 @@ fun SettingsScreenContent(
                 enabled = state.isLoaded &&
                         !state.isLoading &&
                         !state.isSaving &&
+                        !state.isVerifyingBiometrics &&
                         state.hasChanges,
                 loading = state.isSaving,
             )
@@ -320,6 +350,7 @@ fun SettingsScreenContent(
         item {
             OutlinedButton(
                 onClick = onSignOut,
+                enabled = !state.isSaving && !state.isVerifyingBiometrics,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 border = BorderStroke(
@@ -506,6 +537,7 @@ private fun ToggleSettingRow(
     description: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
+    enabled: Boolean = true,
 ) {
     Row(
         modifier = Modifier.padding(
@@ -535,6 +567,7 @@ private fun ToggleSettingRow(
 
         Switch(
             checked = checked,
+            enabled = enabled,
             onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = Color.White,

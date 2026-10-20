@@ -49,6 +49,11 @@ class TransactionRepositoryTest {
 
         repository = TransactionRepository(
             dao = dao,
+            deletedDao = mockk(relaxed = true),
+            userDao = mockk(relaxed = true),
+            notificationRepository = mockk(relaxed = true),
+            api = mockk(relaxed = true),
+            tokenManager = mockk(relaxed = true),
             settingsRepository = settingsRepository,
             context = context,
         )
@@ -68,6 +73,15 @@ class TransactionRepositoryTest {
             currency = "ZAR",
             category = "Hosting",
             description = "Azure App Service",
+            clientOrFrom = "Test client",
+            relatedProject = null,
+            paymentMethod = null,
+            referenceNumber = null,
+            isRecurring = false,
+            recurringFrequency = null,
+            nextOccurrenceDate = null,
+            attachmentFileName = null,
+            attachmentBase64 = null,
             transactionDate = 1_700_000_000_000L,
         )
 
@@ -89,6 +103,15 @@ class TransactionRepositoryTest {
             currency = "ZAR",
             category = "Freelance",
             description = null,
+            clientOrFrom = "Test client",
+            relatedProject = null,
+            paymentMethod = null,
+            referenceNumber = null,
+            isRecurring = false,
+            recurringFrequency = null,
+            nextOccurrenceDate = null,
+            attachmentFileName = null,
+            attachmentBase64 = null,
             transactionDate = 1_700_000_000_000L,
         )
 

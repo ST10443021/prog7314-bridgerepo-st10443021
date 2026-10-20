@@ -1,17 +1,20 @@
 package com.devledger.app.viewmodel
 
-import app.cash.turbine.test
 import com.devledger.app.data.local.entity.UserEntity
 import com.devledger.app.data.repository.AuthRepository
 import com.devledger.app.ui.screens.auth.AuthViewModel
 import com.devledger.app.util.DevLedgerResult
 import com.google.common.truth.Truth.assertThat
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
@@ -19,17 +22,22 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * Verifies [AuthViewModel]'s SSO and email sign-in flows, including the "Email and
- * password are required" client-side validation before any network call is made.
+ * Exercises the current provider-specific SSO loading flow and email validation.
+ * A deferred repository response keeps loading observable until the test explicitly
+ * supplies the result; assertions do not depend on transient StateFlow emissions.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class AuthViewModelTest {
-
     private val dispatcher = StandardTestDispatcher()
     private lateinit var authRepository: AuthRepository
     private lateinit var viewModel: AuthViewModel
 
-    private val fakeUser = UserEntity(userId = "u1", email = "dev@devledger.app", fullName = "Test Dev", ssoProvider = "GOOGLE")
+    private val fakeUser = UserEntity(
+        userId = "u1",
+        email = "dev@devledger.app",
+        fullName = "Test Dev",
+        ssoProvider = "GOOGLE",
+    )
 
     @Before
     fun setUp() {
@@ -44,59 +52,75 @@ class AuthViewModelTest {
     }
 
     @Test
-    fun `signInWithGoogle sets isAuthenticated true on success`() = runTest {
-        coEvery { authRepository.signInWithSso("GOOGLE", any()) } returns DevLedgerResult.Success(fakeUser)
+    fun `signInWithGoogle sets isAuthenticated true on success`() = runTest(dispatcher) {
+        val response = CompletableDeferred<DevLedgerResult<UserEntity>>()
+        coEvery {
+            authRepository.signInWithSso("GOOGLE", idToken = "token-123", code = null)
+        } coAnswers { response.await() }
 
-        viewModel.uiState.test {
-            assertThat(awaitItem().isAuthenticated).isFalse()
-            viewModel.signInWithGoogle("token-123")
-            dispatcher.scheduler.advanceUntilIdle()
-            // Loading, then authenticated
-            val loading = awaitItem()
-            assertThat(loading.isLoading).isTrue()
-            val done = awaitItem()
-            assertThat(done.isAuthenticated).isTrue()
-            assertThat(done.isLoading).isFalse()
+        assertThat(viewModel.uiState.value.isAuthenticated).isFalse()
+        // AuthScreen starts provider loading before it launches the Google UI.
+        viewModel.onGoogleSignInClicked()
+        viewModel.signInWithGoogle("token-123")
+        runCurrent()
+
+        assertThat(viewModel.uiState.value.isGoogleLoading).isTrue()
+        assertThat(viewModel.uiState.value.isAuthenticated).isFalse()
+        coVerify(exactly = 1) {
+            authRepository.signInWithSso("GOOGLE", idToken = "token-123", code = null)
+        }
+
+        response.complete(DevLedgerResult.Success(fakeUser))
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertThat(state.isAuthenticated).isTrue()
+        assertThat(state.isGoogleLoading).isFalse()
+        assertThat(state.isGitHubLoading).isFalse()
+        assertThat(state.isLoading).isFalse()
+        assertThat(state.errorMessage).isNull()
+    }
+
+    @Test
+    fun `signInWithGoogle surfaces the repository error message on failure`() = runTest(dispatcher) {
+        val response = CompletableDeferred<DevLedgerResult<UserEntity>>()
+        coEvery {
+            authRepository.signInWithSso("GOOGLE", idToken = "bad-token", code = null)
+        } coAnswers { response.await() }
+
+        viewModel.onGoogleSignInClicked()
+        viewModel.signInWithGoogle("bad-token")
+        runCurrent()
+        assertThat(viewModel.uiState.value.isGoogleLoading).isTrue()
+        assertThat(viewModel.uiState.value.isAuthenticated).isFalse()
+
+        response.complete(DevLedgerResult.Error("SSO sign-in failed: HTTP 401"))
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertThat(state.errorMessage).isEqualTo("SSO sign-in failed: HTTP 401")
+        assertThat(state.isAuthenticated).isFalse()
+        assertThat(state.isGoogleLoading).isFalse()
+        assertThat(state.isGitHubLoading).isFalse()
+        assertThat(state.isLoading).isFalse()
+        coVerify(exactly = 1) {
+            authRepository.signInWithSso("GOOGLE", idToken = "bad-token", code = null)
         }
     }
 
     @Test
-    fun `signInWithGoogle surfaces the repository error message on failure`() = runTest {
-        coEvery { authRepository.signInWithSso("GOOGLE", any()) } returns
-            DevLedgerResult.Error("SSO sign-in failed: HTTP 401")
-
-        viewModel.uiState.test {
-            awaitItem() // initial
-            viewModel.signInWithGoogle("bad-token")
-            dispatcher.scheduler.advanceUntilIdle()
-            awaitItem() // loading
-            val errorState = awaitItem()
-            assertThat(errorState.errorMessage).isEqualTo("SSO sign-in failed: HTTP 401")
-            assertThat(errorState.isAuthenticated).isFalse()
-        }
-    }
-
-    @Test
-    fun `signInWithEmail rejects blank credentials without calling the repository`() = runTest {
+    fun `signInWithEmail rejects blank credentials without calling the repository`() = runTest(dispatcher) {
         viewModel.onEmailChange("")
         viewModel.onPasswordChange("")
+        viewModel.signInWithEmail()
+        advanceUntilIdle()
 
-        viewModel.uiState.test {
-            awaitItem()
-
-            viewModel.signInWithEmail()
-
-            val result = awaitItem()
-
-            assertThat(result.emailError)
-                .isEqualTo("Enter your email address.")
-
-            assertThat(result.passwordError)
-                .isEqualTo("Enter your password.")
-
-            assertThat(result.errorMessage).isNull()
-            assertThat(result.isLoading).isFalse()
-            assertThat(result.isAuthenticated).isFalse()
-        }
+        val state = viewModel.uiState.value
+        assertThat(state.emailError).isEqualTo("Enter your email address.")
+        assertThat(state.passwordError).isEqualTo("Enter your password.")
+        assertThat(state.errorMessage).isNull()
+        assertThat(state.isLoading).isFalse()
+        assertThat(state.isAuthenticated).isFalse()
+        coVerify(exactly = 0) { authRepository.signInWithEmail(any(), any()) }
     }
 }

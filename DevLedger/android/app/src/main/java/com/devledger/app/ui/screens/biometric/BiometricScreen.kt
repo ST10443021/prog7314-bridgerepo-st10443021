@@ -20,12 +20,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.fragment.app.FragmentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -35,7 +35,7 @@ import com.devledger.app.data.repository.AuthRepository
 import com.devledger.app.ui.components.DevLedgerPrimaryButton
 import com.devledger.app.ui.theme.DevLedgerColors
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -48,8 +48,11 @@ class BiometricViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            val email = authRepository.currentUser.first { it != null }?.email
-            isFingerprintRegistered.value = pinStorage.isFingerprintRegistered(email)
+            // Never enter the workspace from a preference alone.
+            authRepository.currentUser.collect { user ->
+                isFingerprintRegistered.value = user != null && user.biometricEnabled &&
+                    pinStorage.isFingerprintRegistered(user.email)
+            }
         }
     }
 }
@@ -61,7 +64,9 @@ fun BiometricScreen(
     viewModel: BiometricViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
-    val activity = context as? FragmentActivity
+    val activity = context.findFragmentActivity()
+    val helper = remember(activity) { activity?.let { BiometricAuthHelper(it) } }
+    DisposableEffect(helper) { onDispose { helper?.cancel() } }
     var errorText by remember { mutableStateOf<String?>(null) }
     val isRegistered = viewModel.isFingerprintRegistered.value
 
@@ -79,19 +84,26 @@ fun BiometricScreen(
             return
         }
         errorText = null
-        if (activity != null) {
-            val helper = BiometricAuthHelper(activity)
+        if (helper != null) {
             if (helper.canAuthenticate()) {
                 helper.authenticate(
-                    title = "Verify Identity",
-                    subtitle = "Touch the sensor to unlock your workspace",
+                    title = context.getString(R.string.bio_verify_title),
+                    subtitle = context.getString(R.string.bio_verify_subtitle),
                     onSuccess = { onVerified() },
-                    onError = { message -> errorText = message }
+                    onError = { message -> errorText = message },
+                    onFailed = { message -> errorText = message },
                 )
             } else {
-                errorText = "Biometric not available on this device."
+                errorText = context.getString(R.string.bio_unavailable)
             }
+        } else {
+            errorText = context.getString(R.string.bio_unavailable)
         }
+    }
+
+    fun usePin() {
+        helper?.cancel()
+        onUsePinInstead()
     }
 
     Column(
@@ -137,7 +149,7 @@ fun BiometricScreen(
         )
 
         Text(
-            text = if (isRegistered) "Use your biometric to securely access your DevLedger vault" 
+            text = if (isRegistered) "Use your biometric to securely access your DevLedger vault"
                    else "Please use your security PIN to access your vault",
             color = DevLedgerColors.TextMuted,
             fontSize = 14.sp,
@@ -148,7 +160,7 @@ fun BiometricScreen(
         if (isRegistered) {
             // Large Glowing Fingerprint with Full Ring per request
             Box(
-                contentAlignment = Alignment.Center, 
+                contentAlignment = Alignment.Center,
                 modifier = Modifier.size(200.dp).clickable { triggerBiometric() }
             ) {
                 CircularProgressIndicator(
@@ -200,7 +212,7 @@ fun BiometricScreen(
         } else {
             // If not registered, show a lock icon instead of fingerprint
             Box(
-                contentAlignment = Alignment.Center, 
+                contentAlignment = Alignment.Center,
                 modifier = Modifier.size(200.dp)
             ) {
                 Box(
@@ -225,7 +237,7 @@ fun BiometricScreen(
         BiometricActionCard(
             icon = Icons.Default.Lock,
             title = "Your data stays secure",
-            subtitle = "Your biometric data is stored only on this device and never shared with DevLedger.",
+            subtitle = stringResource(R.string.bio_privacy),
             showChevron = false
         )
 
@@ -234,9 +246,9 @@ fun BiometricScreen(
         BiometricActionCard(
             icon = Icons.Default.Info,
             title = "Having trouble?",
-            subtitle = "Try using your pattern, PIN or password instead.",
+            subtitle = "Use your DevLedger security PIN instead.",
             trailingText = "Use PIN",
-            onTrailingClick = onUsePinInstead
+            onTrailingClick = ::usePin
         )
 
         Spacer(modifier = Modifier.height(40.dp))
@@ -250,7 +262,7 @@ fun BiometricScreen(
         } else {
             DevLedgerPrimaryButton(
                 text = "Use PIN Verification",
-                onClick = onUsePinInstead
+                onClick = ::usePin
             )
         }
 
@@ -258,7 +270,7 @@ fun BiometricScreen(
 
         // Large Bottom PIN Button matching design
         OutlinedButton(
-            onClick = onUsePinInstead,
+            onClick = ::usePin,
             modifier = Modifier.fillMaxWidth().height(56.dp),
             shape = RoundedCornerShape(12.dp),
             border = BorderStroke(1.dp, DevLedgerColors.AccentBlue),
@@ -267,7 +279,7 @@ fun BiometricScreen(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(imageVector = Icons.Default.Dialpad, contentDescription = null, modifier = Modifier.size(20.dp))
                 Spacer(modifier = Modifier.width(12.dp))
-                Text("Use PIN or Password", fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                Text("Use DevLedger PIN", fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
             }
         }
 

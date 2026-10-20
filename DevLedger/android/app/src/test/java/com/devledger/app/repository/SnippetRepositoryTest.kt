@@ -68,6 +68,8 @@ class SnippetRepositoryTest {
 
         repository = SnippetRepository(
             dao = dao,
+            deletedDao = mockk(relaxed = true),
+            notificationRepository = mockk(relaxed = true),
             userDao = userDao,
             settingsRepository = settingsRepository,
             api = api,
@@ -97,7 +99,7 @@ class SnippetRepositoryTest {
         assertThat(snippet.tagsCsv).isEqualTo("shell,ci")
 
         coVerify(exactly = 1) {
-            dao.upsert(any())
+            dao.saveUnlessDeleted(any())
         }
     }
 

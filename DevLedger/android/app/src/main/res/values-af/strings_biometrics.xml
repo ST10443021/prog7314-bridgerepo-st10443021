@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="bio_verify_title">Bevestig jou identiteit</string>
+    <string name="bio_verify_subtitle">Gebruik jou vingerafdruk of ondersteunde gesigsherkenning om DevLedger te ontsluit</string>
+    <string name="bio_enable_title">Aktiveer biometriese toegang</string>
+    <string name="bio_enable_subtitle">Bevestig met Android en tik dan Stoor veranderinge in DevLedger</string>
+    <string name="bio_cancel">Kanselleer</string>
+    <string name="bio_scan_failed">Biometrie nie herken nie. Probeer weer of gebruik jou DevLedger-PIN.</string>
+    <string name="bio_not_enrolled">Geen ondersteunde biometrie is geregistreer nie. Voeg dit in Android-instellings by en probeer weer.</string>
+    <string name="bio_no_hardware">Hierdie toestel het geen ondersteunde biometriese hardeware nie. Gebruik jou DevLedger-PIN.</string>
+    <string name="bio_unavailable">Biometriese bevestiging is nie beskikbaar nie. Probeer weer of gebruik jou DevLedger-PIN.</string>
+    <string name="bio_update_required">Installeer die Android-sekuriteitsopdatering voordat jy biometrie gebruik.</string>
+    <string name="bio_settings_title">Sekuriteit</string>
+    <string name="bio_settings_subtitle">Kies hoe jy DevLedger op hierdie toestel ontsluit.</string>
+    <string name="bio_settings_toggle">Biometriese ontsluiting</string>
+    <string name="bio_settings_description">Bevestig om te aktiveer en stoor dan. Jou DevLedger-PIN beskerm steeds toegang wanneer biometrie af is.</string>
+    <string name="bio_privacy">Android bestuur biometriese data. DevLedger ontvang slegs die bevestigingsuitslag.</string>
+</resources>

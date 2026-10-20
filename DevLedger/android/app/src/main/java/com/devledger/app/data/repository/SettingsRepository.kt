@@ -1,5 +1,8 @@
 package com.devledger.app.data.repository
 
+import com.devledger.app.data.local.PinStorage
+import com.devledger.app.data.local.dao.UserDao
+import com.devledger.app.data.local.entity.UserEntity
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -26,6 +29,8 @@ private val Context.dataStore by preferencesDataStore(name = "devledger_settings
 class SettingsRepository @Inject constructor(
     @ApplicationContext context: Context,
     private val api: DevLedgerApiService,
+    private val userDao: UserDao,
+    private val pinStorage: PinStorage,
 )
 {
 
@@ -44,7 +49,10 @@ class SettingsRepository @Inject constructor(
     }
 
     val language: Flow<String> = store.data.map { it[Keys.LANGUAGE] ?: "en" }
-    val biometricEnabled: Flow<Boolean> = store.data.map { it[Keys.BIOMETRIC_ENABLED] ?: true }
+    // Account-scoped Room state is authoritative; never reuse another account's global cache.
+    val biometricEnabled: Flow<Boolean> = userDao.observeCurrentUser().map { user ->
+        user != null && user.biometricEnabled && pinStorage.isFingerprintRegistered(user.email)
+    }
     val wifiOnlySync: Flow<Boolean> = store.data.map { it[Keys.WIFI_ONLY_SYNC] ?: false }
     val baseCurrency: Flow<String> = store.data.map { it[Keys.BASE_CURRENCY] ?: "ZAR" }
     val autoSyncEnabled: Flow<Boolean> = store.data.map { it[Keys.AUTO_SYNC_ENABLED] ?: true }
@@ -56,6 +64,11 @@ class SettingsRepository @Inject constructor(
     }
 
     suspend fun setBiometricEnabled(enabled: Boolean) {
+        val user = currentUser()
+        require(!enabled || pinStorage.isFingerprintRegistered(user.email)) {
+            "Verify biometrics on this device before enabling biometric access."
+        }
+        userDao.updateSettings(user.userId, user.preferredLanguage, enabled, user.baseCurrency)
         store.edit { it[Keys.BIOMETRIC_ENABLED] = enabled }
     }
 
@@ -84,9 +97,12 @@ class SettingsRepository @Inject constructor(
      * the local DataStore cache only after a successful response.
      */
     suspend fun loadFromApi(): UserSettingsDto = remoteMutex.withLock {
+        val user = currentUser()
         val settings = fetchRemoteSettings()
-        cacheSettings(settings)
-        settings
+        cacheSettings(settings, user)
+        // A true server preference never enrols or verifies this device.
+        settings.copy(biometricEnabled = settings.biometricEnabled &&
+            pinStorage.isFingerprintRegistered(user.email))
     }
 
     /**
@@ -98,8 +114,16 @@ class SettingsRepository @Inject constructor(
         biometricEnabled: Boolean,
         wifiOnlySync: Boolean,
         baseCurrency: String,
+        biometricVerified: Boolean = false,
     ): UserSettingsDto = remoteMutex.withLock {
+        val user = currentUser()
+        require(pinStorage.hasPin(user.email)) { "Configure a fallback PIN first." }
+        require(!biometricEnabled || biometricVerified ||
+            (user.biometricEnabled && pinStorage.isFingerprintRegistered(user.email))) {
+            "Verify biometrics before enabling biometric access."
+        }
         val current = fetchRemoteSettings()
+        ensureCurrentUser(user)
 
         val updated = current.copy(
             language = language,
@@ -116,7 +140,15 @@ class SettingsRepository @Inject constructor(
         val saved = response.body()
             ?: throw IllegalStateException("The API returned no saved settings.")
 
-        cacheSettings(saved)
+        ensureCurrentUser(user)
+        check(saved.biometricEnabled == biometricEnabled) {
+            "The API did not save the requested biometric preference."
+        }
+        // Only commit device verification after the server acknowledges the save.
+        if (biometricEnabled && biometricVerified) {
+            pinStorage.setFingerprintRegistered(true, user.email)
+        }
+        cacheSettings(saved, user)
         saved
     }
 
@@ -130,7 +162,19 @@ class SettingsRepository @Inject constructor(
             ?: throw IllegalStateException("The API returned no settings.")
     }
 
-    private suspend fun cacheSettings(settings: UserSettingsDto) {
+    private suspend fun currentUser(): UserEntity =
+        userDao.getCurrentUser() ?: error("Sign in before accessing settings.")
+
+    private suspend fun ensureCurrentUser(expected: UserEntity) {
+        check(userDao.getCurrentUser()?.userId == expected.userId) {
+            "The account changed. Reopen Settings and retry."
+        }
+    }
+
+    private suspend fun cacheSettings(settings: UserSettingsDto, user: UserEntity) {
+        ensureCurrentUser(user)
+        userDao.updateSettings(user.userId, settings.language,
+            settings.biometricEnabled, settings.baseCurrency)
         store.edit { preferences ->
             preferences[Keys.LANGUAGE] = settings.language
             preferences[Keys.BIOMETRIC_ENABLED] = settings.biometricEnabled

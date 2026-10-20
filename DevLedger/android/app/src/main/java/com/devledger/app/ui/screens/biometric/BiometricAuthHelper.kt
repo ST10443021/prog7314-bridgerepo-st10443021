@@ -1,120 +1,100 @@
 package com.devledger.app.ui.screens.biometric
 
+import android.content.Context
+import android.content.ContextWrapper
+import android.util.Log
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
-import java.util.concurrent.Executor
+import com.devledger.app.R
 
 /**
- * Handles device biometric authentication for DevLedger.
- *
- * The primary biometric action uses BIOMETRIC_STRONG only.
- * PIN/password fallback is handled separately by the DevLedger UI.
+ * Native Class 3 biometric verification. A failed scan is retryable; only success
+ * verifies the user. DevLedger's own PIN remains a separate fallback.
+ * Reference: https://developer.android.com/identity/sign-in/biometric-auth
  */
-class BiometricAuthHelper(
-    private val activity: FragmentActivity
-) {
+class BiometricAuthHelper(private val activity: FragmentActivity) {
+    private val authenticators = BiometricManager.Authenticators.BIOMETRIC_STRONG
+    private var prompt: BiometricPrompt? = null
+    private var active = false
 
-    private val authenticators =
-        BiometricManager.Authenticators.BIOMETRIC_STRONG
+    fun authenticationStatus(): Int =
+        BiometricManager.from(activity).canAuthenticate(authenticators)
 
-    /**
-     * Returns the Android BiometricManager authentication status.
-     */
-    fun authenticationStatus(): Int {
-        return BiometricManager
-            .from(activity)
-            .canAuthenticate(authenticators)
-    }
-
-    fun canAuthenticate(): Boolean {
-        return authenticationStatus() == BiometricManager.BIOMETRIC_SUCCESS
-    }
+    fun canAuthenticate(): Boolean =
+        authenticationStatus() == BiometricManager.BIOMETRIC_SUCCESS
 
     fun authenticate(
-        title: String = "Verify your identity",
-        subtitle: String = "Use your fingerprint to unlock DevLedger",
+        title: String = activity.getString(R.string.bio_verify_title),
+        subtitle: String = activity.getString(R.string.bio_verify_subtitle),
         onSuccess: () -> Unit,
-        onError: (String) -> Unit
+        onError: (String) -> Unit,
+        onFailed: (String) -> Unit = {},
     ) {
+        if (active) return
         val status = authenticationStatus()
-
         if (status != BiometricManager.BIOMETRIC_SUCCESS) {
+            Log.i(TAG, "Biometric capability unavailable: $status")
             onError(statusMessage(status))
             return
         }
-
-        val executor: Executor =
-            ContextCompat.getMainExecutor(activity)
-
-        val callback =
-            object : BiometricPrompt.AuthenticationCallback() {
-
-                override fun onAuthenticationSucceeded(
-                    result: BiometricPrompt.AuthenticationResult
-                ) {
-                    super.onAuthenticationSucceeded(result)
-                    onSuccess()
-                }
-
-                override fun onAuthenticationError(
-                    errorCode: Int,
-                    errString: CharSequence
-                ) {
-                    super.onAuthenticationError(errorCode, errString)
-                    onError(errString.toString())
-                }
-
-                override fun onAuthenticationFailed() {
-                    super.onAuthenticationFailed()
-                    onError(
-                        "Fingerprint not recognised. Use a finger enrolled on this device."
-                    )
-                }
+        active = true
+        val callback = object : BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                if (!active) return
+                active = false
+                Log.i(TAG, "Native biometric verification succeeded")
+                onSuccess()
             }
 
-        val biometricPrompt =
-            BiometricPrompt(
-                activity,
-                executor,
-                callback
-            )
+            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                if (!active) return
+                active = false
+                Log.i(TAG, "Biometric prompt ended: $errorCode")
+                onError(errString.toString())
+            }
 
-        val promptInfo =
-            BiometricPrompt.PromptInfo.Builder()
-                .setTitle(title)
-                .setSubtitle(subtitle)
-                .setAllowedAuthenticators(authenticators)
-                .setNegativeButtonText("Cancel")
-                .build()
-
-        biometricPrompt.authenticate(promptInfo)
-    }
-
-    private fun statusMessage(status: Int): String {
-        return when (status) {
-
-            BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE ->
-                "This device does not have supported biometric hardware."
-
-            BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE ->
-                "The biometric sensor is currently unavailable."
-
-            BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED ->
-                "No fingerprint is enrolled. Add a fingerprint in your device settings first."
-
-            BiometricManager.BIOMETRIC_ERROR_SECURITY_UPDATE_REQUIRED ->
-                "A device security update is required before biometric authentication can be used."
-
-            BiometricManager.BIOMETRIC_ERROR_UNSUPPORTED ->
-                "Biometric authentication is not supported on this device."
-
-            BiometricManager.BIOMETRIC_STATUS_UNKNOWN ->
-                "The biometric authentication status could not be determined."
-
-            else ->
-                "Biometric authentication is currently unavailable."
+            override fun onAuthenticationFailed() {
+                if (active) onFailed(activity.getString(R.string.bio_scan_failed))
+            }
+        }
+        prompt = BiometricPrompt(activity, ContextCompat.getMainExecutor(activity), callback)
+        val info = BiometricPrompt.PromptInfo.Builder()
+            .setTitle(title)
+            .setSubtitle(subtitle)
+            .setAllowedAuthenticators(authenticators)
+            .setNegativeButtonText(activity.getString(R.string.bio_cancel))
+            .build()
+        try {
+            prompt?.authenticate(info)
+        } catch (_: IllegalStateException) {
+            active = false
+            onError(activity.getString(R.string.bio_unavailable))
         }
     }
+
+    /** Ignore late callbacks when a screen exits or the PIN route is selected. */
+    fun cancel() {
+        active = false
+        prompt?.cancelAuthentication()
+        prompt = null
+    }
+
+    private fun statusMessage(status: Int): String = activity.getString(when (status) {
+        BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED -> R.string.bio_not_enrolled
+        BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE -> R.string.bio_no_hardware
+        BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE -> R.string.bio_unavailable
+        BiometricManager.BIOMETRIC_ERROR_SECURITY_UPDATE_REQUIRED -> R.string.bio_update_required
+        else -> R.string.bio_unavailable
+    })
+
+    private companion object { const val TAG = "DevLedgerBiometrics" }
+}
+
+/** Compose may supply a themed ContextWrapper rather than the activity itself. */
+fun Context.findFragmentActivity(): FragmentActivity? = when (this) {
+    is FragmentActivity -> this
+    is ContextWrapper -> if (baseContext === this) null else baseContext.findFragmentActivity()
+    else -> null
 }

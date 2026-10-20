@@ -1,5 +1,6 @@
 package com.devledger.app.ui.screens.settings
 
+import com.devledger.app.data.local.PinStorage
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.devledger.app.data.remote.dto.UserSettingsDto
@@ -10,6 +11,7 @@ import java.io.IOException
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -20,7 +22,8 @@ import kotlinx.coroutines.withTimeout
 
 data class SettingsUiState(
     val language: String = "en",
-    val biometricEnabled: Boolean = true,
+    val biometricEnabled: Boolean = false,
+    val isVerifyingBiometrics: Boolean = false,
     val wifiOnlySync: Boolean = false,
     val baseCurrency: String = "ZAR",
     val isLoading: Boolean = true,
@@ -37,17 +40,22 @@ data class SettingsUiState(
 class SettingsViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val authRepository: AuthRepository,
+    private val pinStorage: PinStorage,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState = _uiState.asStateFlow()
+
+    private var biometricVerified = false
+    private var loadedAccountId: String? = null
 
     init {
         loadSettings()
     }
 
     fun loadSettings() {
-        if (_uiState.value.isSaving) return
+        if (_uiState.value.isSaving || _uiState.value.isLoading && _uiState.value.isLoaded ||
+            _uiState.value.isVerifyingBiometrics) return
 
         _uiState.update {
             it.copy(
@@ -60,6 +68,8 @@ class SettingsViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
+                loadedAccountId = authRepository.currentUser.first()?.userId
+                    ?: error("Sign in before loading settings.")
                 val settings = withTimeout(10_000L) {
                     settingsRepository.loadFromApi()
                 }
@@ -102,8 +112,43 @@ class SettingsViewModel @Inject constructor(
 
     fun setLanguage(tag: String) = edit { it.copy(language = tag) }
 
-    fun setBiometricEnabled(enabled: Boolean) =
-        edit { it.copy(biometricEnabled = enabled) }
+    /** Enabling can only enter through the successful native prompt callback. */
+    fun setBiometricEnabled(enabled: Boolean) {
+        if (enabled) return
+        if (_uiState.value.isVerifyingBiometrics) return
+        biometricVerified = false
+        edit { it.copy(biometricEnabled = false) }
+    }
+
+    fun beginBiometricVerification(): Boolean {
+        val state = _uiState.value
+        if (!state.isLoaded || state.isLoading || state.isSaving ||
+            state.isVerifyingBiometrics) return false
+        _uiState.update { it.copy(isVerifyingBiometrics = true, error = null, message = null) }
+        return true
+    }
+
+    fun biometricVerificationSucceeded() {
+        if (!_uiState.value.isVerifyingBiometrics) return
+        biometricVerified = true
+        _uiState.update { it.copy(isVerifyingBiometrics = false) }
+        edit { it.copy(biometricEnabled = true) }
+    }
+
+    fun biometricVerificationFailed(message: String) {
+        if (!_uiState.value.isVerifyingBiometrics) return
+        _uiState.update { it.copy(isVerifyingBiometrics = false, error = message) }
+    }
+
+    fun biometricScanNotRecognised(message: String) {
+        if (_uiState.value.isVerifyingBiometrics) {
+            _uiState.update { it.copy(error = message) }
+        }
+    }
+
+    fun cancelBiometricVerification() {
+        _uiState.update { it.copy(isVerifyingBiometrics = false) }
+    }
 
     fun setWifiOnlySync(enabled: Boolean) =
         edit { it.copy(wifiOnlySync = enabled) }
@@ -116,8 +161,8 @@ class SettingsViewModel @Inject constructor(
     ) {
         val current = _uiState.value
 
-        // Only block changes while an actual save is in progress.
-        if (current.isSaving) return
+        // Freeze edits while loading, saving, or waiting for native verification.
+        if (current.isSaving || current.isLoading || current.isVerifyingBiometrics) return
 
         _uiState.value = change(current).copy(
             hasChanges = true,
@@ -132,6 +177,7 @@ class SettingsViewModel @Inject constructor(
         if (!current.isLoaded ||
             current.isLoading ||
             current.isSaving ||
+            current.isVerifyingBiometrics ||
             !current.hasChanges
         ) return
 
@@ -146,12 +192,17 @@ class SettingsViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
+                val user = authRepository.currentUser.first()
+                    ?: error("Sign in before saving settings.")
+                check(user.userId == loadedAccountId) { "The account changed. Reopen Settings." }
+                check(pinStorage.hasPin(user.email)) { "Configure a fallback PIN first." }
                 val saved = withTimeout(10_000L) {
                     settingsRepository.saveToApi(
                         language = current.language,
                         biometricEnabled = current.biometricEnabled,
                         wifiOnlySync = current.wifiOnlySync,
                         baseCurrency = current.baseCurrency,
+                        biometricVerified = biometricVerified,
                     )
                 }
 
@@ -185,6 +236,7 @@ class SettingsViewModel @Inject constructor(
         settings: UserSettingsDto,
         message: String? = null,
     ) {
+        biometricVerified = false
         _uiState.value = SettingsUiState(
             language = settings.language,
             biometricEnabled = settings.biometricEnabled,
@@ -209,7 +261,8 @@ class SettingsViewModel @Inject constructor(
         else -> "Could not complete the settings request. Please retry."
     }
 
-    fun signOut() = viewModelScope.launch {
+    fun signOut(onComplete: () -> Unit = {}) = viewModelScope.launch {
         authRepository.signOut()
+        onComplete()
     }
 }
