@@ -92,6 +92,19 @@ object SyncBatchPlanner {
         return uploads
     }
 
+    /** A 409 rejects the whole batch. Only reported snippet upserts may be held
+     * for recovery; do not acknowledge any of the other operations in that batch. */
+    fun conflictedSnippets(batch: List<PlannedSyncUpload>, response: SyncBatchResponse): List<SnippetEntity> {
+        check(response.applied.isEmpty() && response.conflicts.isNotEmpty() &&
+            response.conflicts.distinct().size == response.conflicts.size) { "Invalid conflict acknowledgement." }
+        val sent = batch.associateBy { it.id }
+        return response.conflicts.map { id ->
+            val source = sent[id]?.source
+            check(source is SyncUploadSource.Snippet) { "The conflict does not match a submitted snippet." }
+            source.row
+        }
+    }
+
     /** Never clear queued work for a missing, duplicated, or unrelated acknowledgement. */
     fun validateAcknowledgement(batch: List<PlannedSyncUpload>, response: SyncBatchResponse) {
         check(response.conflicts.isEmpty()) { "The server reported sync conflicts. Local changes were retained." }

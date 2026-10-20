@@ -70,4 +70,20 @@ class SyncBatchPlannerTest {
         assertEquals(user, payload.userId)
         assertEquals(1234L, batch.single().operation.clientTimestamp)
     }
+    @Test fun `conflict acknowledgement identifies only submitted snippet upserts`() {
+        val row = SnippetEntity("s", user, null, "Code", "local", "kotlin", null, "", createdAt = 1, updatedAt = 2)
+        val batch = plan(snippets = listOf(row), folders = listOf(folder("f")))
+        assertEquals(listOf(row), SyncBatchPlanner.conflictedSnippets(batch,
+            SyncBatchResponse(emptyList(), listOf("s"))))
+    }
+    @Test fun `malformed conflict responses cannot hold arbitrary rows or acknowledge partial batches`() {
+        val row = SnippetEntity("s", user, null, "Code", "local", "kotlin", null, "", createdAt = 1, updatedAt = 2)
+        val batch = plan(snippets = listOf(row), folders = listOf(folder("f")))
+        for (response in listOf(SyncBatchResponse(emptyList(), emptyList()),
+            SyncBatchResponse(listOf("f"), listOf("s")), SyncBatchResponse(emptyList(), listOf("s", "s")),
+            SyncBatchResponse(emptyList(), listOf("other")), SyncBatchResponse(emptyList(), listOf("f")))) {
+            assertThrows(IllegalStateException::class.java) { SyncBatchPlanner.conflictedSnippets(batch, response) }
+        }
+    }
+
 }

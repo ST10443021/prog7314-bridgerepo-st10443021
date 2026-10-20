@@ -24,6 +24,44 @@ interface SnippetDao {
     """)
     fun searchSnippets(query: String): Flow<List<SnippetEntity>>
 
+    @Query("SELECT * FROM snippets WHERE userId = :userId AND syncStatus != 'DELETED' ORDER BY updatedAt DESC")
+    fun observeForSync(userId: String): Flow<List<SnippetEntity>>
+
+    @Query("SELECT COUNT(*) FROM snippets WHERE userId = :userId AND syncStatus = 'CONFLICT'")
+    suspend fun conflictCount(userId: String): Int
+
+    @Transaction
+    suspend fun flagConflictIfUnchanged(uploaded: SnippetEntity): Boolean {
+        if (uploaded.syncStatus != "PENDING" || getById(uploaded.snippetId) != uploaded) return false
+        upsert(uploaded.copy(syncStatus = "CONFLICT"))
+        return true
+    }
+
+    /** Atomic, explicit recovery: preserve the local content under a fresh ID and
+     * install the downloaded server version (or its permanent-deletion marker). */
+    @Transaction
+    suspend fun keepBothConflictVersions(
+        expected: SnippetEntity, remote: SnippetEntity?, serverDeleted: Boolean,
+        copyId: String, now: Long,
+    ): String {
+        check(expected.syncStatus == "CONFLICT" && getById(expected.snippetId) == expected) {
+            "The snippet changed during recovery. Review it and try again."
+        }
+        require(copyId != expected.snippetId && getById(copyId) == null)
+        require((remote != null) != serverDeleted) { "A confirmed server version or deletion is required." }
+        require(remote == null || (remote.snippetId == expected.snippetId && remote.userId == expected.userId))
+        val copyFolder = expected.folderId?.takeUnless { hasDeletedFolder(expected.userId, it) }
+        upsert(expected.copy(snippetId = copyId, folderId = copyFolder, createdAt = now,
+            updatedAt = now, syncStatus = "PENDING"))
+        if (serverDeleted) markDeleted(expected.userId, expected.snippetId)
+        else {
+            val server = requireNotNull(remote)
+            val folder = server.folderId?.takeUnless { hasDeletedFolder(expected.userId, it) }
+            upsert(server.copy(folderId = folder, syncStatus = "SYNCED"))
+        }
+        return copyId
+    }
+
     @Query("SELECT * FROM snippets WHERE snippetId = :id LIMIT 1")
     suspend fun getById(id: String): SnippetEntity?
 
@@ -40,7 +78,7 @@ interface SnippetDao {
     UPDATE snippets
     SET isArchived = :archived,
         updatedAt = MAX(updatedAt + 1, :changedAt),
-        syncStatus = 'PENDING'
+        syncStatus = CASE WHEN syncStatus = 'CONFLICT' THEN 'CONFLICT' ELSE 'PENDING' END
     WHERE snippetId = :id AND syncStatus NOT IN ('DELETE_PENDING', 'DELETED')
 """)
     suspend fun setArchived(
@@ -53,7 +91,7 @@ interface SnippetDao {
     UPDATE snippets
     SET isFavourite = :favourite,
         updatedAt = MAX(updatedAt + 1, :changedAt),
-        syncStatus = 'PENDING'
+        syncStatus = CASE WHEN syncStatus = 'CONFLICT' THEN 'CONFLICT' ELSE 'PENDING' END
     WHERE snippetId = :id AND syncStatus NOT IN ('DELETE_PENDING', 'DELETED')
 """)
     suspend fun setFavourite(
@@ -117,7 +155,7 @@ interface SnippetDao {
 """)
     fun observeActiveCountForUser(userId: String): Flow<Int>
 
-    @Query("UPDATE snippets SET folderId = :newFolderId, syncStatus = 'PENDING', updatedAt = :now WHERE folderId = :oldFolderId")
+    @Query("UPDATE snippets SET folderId = :newFolderId, syncStatus = CASE WHEN syncStatus = 'CONFLICT' THEN 'CONFLICT' ELSE 'PENDING' END, updatedAt = MAX(updatedAt + 1, :now) WHERE folderId = :oldFolderId")
     suspend fun reassignFolder(oldFolderId: String, newFolderId: String?, now: Long = System.currentTimeMillis())
 
     @Transaction
@@ -127,7 +165,11 @@ interface SnippetDao {
         deletedIds: List<String> = emptyList(),
     ) {
         // Ghosting protection: Ensure items the server says are deleted remain marked as DELETED locally
-        for (id in deletedIds) markDeleted(userId, id)
+        for (id in deletedIds) {
+            // A conflict is an unresolved local draft; preserve it until the user
+            // explicitly saves a copy, even if the server original was deleted.
+            if (getById(id)?.syncStatus != "CONFLICT") markDeleted(userId, id)
+        }
 
         for (source in remoteSnippets) {
             val remote = if (source.folderId != null && hasDeletedFolder(userId, source.folderId))
@@ -186,7 +228,8 @@ interface SnippetDao {
         check(current == null || current.syncStatus !in listOf("DELETE_PENDING", "DELETED")) {
             "This snippet was permanently deleted. Create a new snippet instead."
         }
-        upsert(snippet)
+        // Edits to a held draft remain held until explicit recovery.
+        upsert(if (current?.syncStatus == "CONFLICT") snippet.copy(syncStatus = "CONFLICT") else snippet)
     }
 
     @Query("SELECT EXISTS(SELECT 1 FROM deleted_entities WHERE userId = :userId AND entityType = 'folder' AND entityId = :id)")
