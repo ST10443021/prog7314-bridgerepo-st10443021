@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sync_delete_transaction">Delete transaction</string>
+    <string name="sync_delete_transaction_explanation">Remove this transaction from this device? The deletion will synchronise when you are online. This cannot be undone.</string>
+    <string name="sync_delete_confirm">Delete</string>
+    <string name="sync_delete_cancel">Cancel</string>
+    <string name="sync_deleting">Deleting…</string>
+    <string name="sync_delete_failed">Could not delete the transaction. Please retry.</string>
+</resources>

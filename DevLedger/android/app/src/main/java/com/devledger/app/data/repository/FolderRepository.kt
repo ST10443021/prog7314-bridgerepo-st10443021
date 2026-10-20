@@ -54,7 +54,7 @@ class FolderRepository @Inject constructor(
         val response = api.getFolders()
         if (!response.isSuccessful) throw HttpException(response)
         val remote = response.body() ?: error("The API returned no folder list.")
-        
+
         val entities = remote.map { dto ->
             FolderEntity(
                 folderId = dto.folderId,
@@ -65,11 +65,16 @@ class FolderRepository @Inject constructor(
                 syncStatus = SyncStatus.SYNCED
             )
         }
+        check(userDao.getCurrentUser()?.userId == user.userId) { "Account session changed." }
         dao.mergeRemoteFolders(user.userId, entities)
     }
 
     suspend fun create(name: String, parentFolderId: String? = null): DevLedgerResult<FolderEntity> = DevLedgerResult.safeCall {
         val user = userDao.getCurrentUser() ?: error("Sign in before creating a folder.")
+        require(name.trim().isNotEmpty()) { "Folder name is required." }
+        if (parentFolderId != null) require(dao.getById(parentFolderId)?.userId == user.userId) {
+            "The parent folder must belong to this account."
+        }
         val entity = FolderEntity(
             folderId = IdGenerator.newId(),
             userId = user.userId,
@@ -84,7 +89,10 @@ class FolderRepository @Inject constructor(
     }
 
     suspend fun rename(id: String, name: String): DevLedgerResult<Unit> = DevLedgerResult.safeCall {
+        val user = userDao.getCurrentUser() ?: error("Sign in before renaming a folder.")
         val existing = dao.getById(id) ?: error("Folder not found.")
+        require(existing.userId == user.userId) { "Folder account mismatch." }
+        require(name.trim().isNotEmpty()) { "Folder name is required." }
         val updated = existing.copy(
             name = name.trim(),
             syncStatus = SyncStatus.PENDING
@@ -96,22 +104,23 @@ class FolderRepository @Inject constructor(
     suspend fun delete(id: String, reassignToFolderId: String?): DevLedgerResult<Unit> = DevLedgerResult.safeCall {
         val user = userDao.getCurrentUser() ?: error("Sign in before deleting.")
         val existing = dao.getById(id) ?: return@safeCall
-        
-        // Reassign snippets locally first so the change is synced
-        snippetDao.reassignFolder(id, reassignToFolderId)
-        
-        deletedDao.insert(DeletedEntity(
-            entityId = existing.folderId,
-            userId = user.userId,
-            entityType = "folder"
-        ))
-        dao.delete(id)
+
+        require(existing.userId == user.userId) { "Folder account mismatch." }
+        require(reassignToFolderId != id) { "Choose a different reassignment folder." }
+        if (reassignToFolderId != null) require(dao.getById(reassignToFolderId)?.userId == user.userId) {
+            "The reassignment folder must belong to this account."
+        }
+        deletedDao.queueFolderDeletion(DeletedEntity(
+            entityId = id, userId = user.userId, entityType = "folder",
+            reassignToFolderId = reassignToFolderId,
+        ), existing.parentFolderId)
         queueSync()
     }
 
     suspend fun getById(id: String): FolderEntity? = dao.getById(id)
 
     suspend fun getPendingSyncForUser(userId: String) = dao.getPendingSyncForUser(userId)
+    suspend fun markSyncedIfUnchanged(folder: FolderEntity) = dao.markSyncedIfUnchanged(folder)
     suspend fun markSynced(id: String) = dao.updateSyncStatus(id, SyncStatus.SYNCED)
 
     private suspend fun queueSync() {

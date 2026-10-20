@@ -129,7 +129,9 @@ interface SnippetDao {
         // Ghosting protection: Ensure items the server says are deleted remain marked as DELETED locally
         for (id in deletedIds) markDeleted(userId, id)
 
-        for (remote in remoteSnippets) {
+        for (source in remoteSnippets) {
+            val remote = if (source.folderId != null && hasDeletedFolder(userId, source.folderId))
+                source.copy(folderId = null) else source
             if (remote.snippetId in deletedIds) continue
             require(remote.userId == userId) { "The downloaded snippet belongs to a different account." }
 
@@ -186,4 +188,7 @@ interface SnippetDao {
         }
         upsert(snippet)
     }
+
+    @Query("SELECT EXISTS(SELECT 1 FROM deleted_entities WHERE userId = :userId AND entityType = 'folder' AND entityId = :id)")
+    suspend fun hasDeletedFolder(userId: String, id: String): Boolean
 }

@@ -52,14 +52,25 @@ interface TransactionDao {
     suspend fun mergeRemoteTransactions(userId: String, remoteTransactions: List<TransactionEntity>) {
         for (remote in remoteTransactions) {
             require(remote.userId == userId) { "The downloaded transaction belongs to a different account." }
+            if (hasDeletionMarker(userId, remote.transactionId)) continue
             val local = getById(remote.transactionId)
             require(local == null || local.userId == userId) { "A transaction ID conflicts with another cached account." }
-            
+
             if (local == null) {
                 upsert(remote)
             } else if (local.syncStatus == "SYNCED") {
                 upsert(remote)
             }
         }
+    }
+
+    @Query("SELECT EXISTS(SELECT 1 FROM deleted_entities WHERE userId = :userId AND entityType = 'transaction' AND entityId = :id)")
+    suspend fun hasDeletionMarker(userId: String, id: String): Boolean
+
+    @Transaction
+    suspend fun markSyncedIfUnchanged(uploaded: TransactionEntity): Boolean {
+        if (getById(uploaded.transactionId) != uploaded) return false
+        updateSyncStatus(uploaded.transactionId, "SYNCED")
+        return true
     }
 }

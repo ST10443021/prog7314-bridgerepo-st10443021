@@ -93,6 +93,9 @@ interface DevLedgerApiService {
     @GET("api/tags")
     suspend fun getTags(): Response<List<UserTagDto>>
 
+    @GET("api/sync/deletions")
+    suspend fun getSyncDeletions(): Response<List<SyncDeletionDto>>
+
     @POST("api/sync/batch")
     suspend fun syncBatch(@Body request: SyncBatchRequest): Response<SyncBatchResponse>
 

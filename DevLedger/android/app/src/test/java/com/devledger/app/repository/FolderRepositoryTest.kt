@@ -57,6 +57,7 @@ class FolderRepositoryTest {
 
     @Test
     fun `create stores a pending folder`() = runTest {
+        coEvery { dao.getById("parent") } returns FolderEntity("parent", "u1", "Parent", null, 1L, "SYNCED")
         val result = repository.create("  Projects  ", "parent")
         assertThat(result).isInstanceOf(DevLedgerResult.Success::class.java)
         val folder = (result as DevLedgerResult.Success).data
@@ -76,14 +77,15 @@ class FolderRepositoryTest {
     }
 
     @Test
-    fun `delete reassigns snippets before recording the folder deletion`() = runTest {
+    fun `delete queues an atomic folder deletion with reassignment target`() = runTest {
         val existing = FolderEntity("f1", "u1", "Old", null, 1L, "SYNCED")
         coEvery { dao.getById("f1") } returns existing
+        coEvery { dao.getById("f2") } returns FolderEntity("f2", "u1", "Target", null, 1L, "SYNCED")
         val result = repository.delete("f1", "f2")
         assertThat(result).isInstanceOf(DevLedgerResult.Success::class.java)
-        coVerify(exactly = 1) { snippetDao.reassignFolder("f1", "f2", any()) }
-        coVerify(exactly = 1) { deletedDao.insert(match { it.entityId == "f1" && it.entityType == "folder" && it.userId == "u1" }) }
-        coVerify(exactly = 1) { dao.delete("f1") }
+        coVerify(exactly = 1) { deletedDao.queueFolderDeletion(match {
+            it.entityId == "f1" && it.entityType == "folder" && it.userId == "u1" && it.reassignToFolderId == "f2"
+        }, null) }
     }
 
     @Test

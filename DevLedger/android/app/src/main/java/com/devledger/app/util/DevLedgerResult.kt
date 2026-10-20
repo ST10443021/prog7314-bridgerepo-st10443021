@@ -14,6 +14,8 @@ sealed class DevLedgerResult<out T> {
     companion object {
         inline fun <T> safeCall(block: () -> T): DevLedgerResult<T> = try {
             Success(block())
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
         } catch (io: IOException) {
             Error(io.message ?: "Network unavailable — action queued for sync.", isOffline = true)
         } catch (e: Exception) {

@@ -62,11 +62,9 @@ class TransactionRepositoryTest {
 
         repository = TransactionRepository(
             dao = dao,
-            deletedDao = mockk(relaxed = true),
-            userDao = mockk(relaxed = true),
-            notificationRepository = mockk(relaxed = true),
-            api = mockk(relaxed = true),
-            tokenManager = mockk(relaxed = true),
+            deletedDao = deletedDao,
+            userDao = userDao,
+            notificationRepository = notificationRepository,
             settingsRepository = settingsRepository,
             api = api,
             tokenManager = tokenManager,

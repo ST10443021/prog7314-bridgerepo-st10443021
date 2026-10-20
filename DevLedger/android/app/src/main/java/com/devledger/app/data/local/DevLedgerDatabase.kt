@@ -21,7 +21,7 @@ import com.devledger.app.data.local.entity.*
         UserTagEntity::class,
         DeletedEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = true,
 )
 /**

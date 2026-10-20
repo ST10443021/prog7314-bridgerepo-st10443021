@@ -47,14 +47,16 @@ class TransactionRepository @Inject constructor(
     suspend fun refreshFromApi() {
         val token = tokenManager.getAccessToken()?.takeIf { it.isNotBlank() } ?: return
         val user = userDao.getCurrentUser() ?: return
-        
+
         val response = api.getTransactions()
         if (!response.isSuccessful) throw HttpException(response)
-        
-        val remoteTransactions = response.body() ?: return
-        
-        if (tokenManager.getAccessToken() != token) return
-        
+
+        val remoteTransactions = response.body() ?: error("The API returned no transaction list.")
+
+        check(tokenManager.getAccessToken() == token && userDao.getCurrentUser()?.userId == user.userId) {
+            "Account session changed."
+        }
+
         val entities = remoteTransactions.map { remote ->
             TransactionEntity(
                 transactionId = remote.transactionId,
@@ -81,7 +83,10 @@ class TransactionRepository @Inject constructor(
         dao.mergeRemoteTransactions(user.userId, entities)
     }
 
-    suspend fun getById(id: String): TransactionEntity? = dao.getById(id)
+    suspend fun getById(id: String): TransactionEntity? {
+        val user = userDao.getCurrentUser() ?: return null
+        return dao.getById(id)?.takeIf { it.userId == user.userId }
+    }
 
     suspend fun getDistinctProjects(userId: String): List<String> = dao.getDistinctProjects(userId)
 
@@ -133,25 +138,23 @@ class TransactionRepository @Inject constructor(
             syncStatus = SyncStatus.PENDING,
         )
         dao.upsert(tx)
-        
+
         notificationRepository.notify(
             title = if (tx.type == "INCOME") "Income Added" else "Expense Added",
             message = "${if (tx.type == "INCOME") "Received" else "Spent"} ${tx.currency} ${tx.amount} for ${tx.category}.",
             type = "TRANSACTION"
         )
-        
+
         queueSync()
         return tx
     }
 
     suspend fun delete(transaction: TransactionEntity) {
-        val user = userDao.getCurrentUser() ?: return
-        deletedDao.insert(DeletedEntity(
-            entityId = transaction.transactionId,
-            userId = user.userId,
-            entityType = "transaction"
+        val user = userDao.getCurrentUser() ?: error("Sign in before deleting a transaction.")
+        require(transaction.userId == user.userId) { "Transaction account mismatch." }
+        deletedDao.queueTransactionDeletion(DeletedEntity(
+            entityId = transaction.transactionId, userId = user.userId, entityType = "transaction"
         ))
-        dao.delete(transaction)
         queueSync()
     }
 
@@ -168,13 +171,13 @@ class TransactionRepository @Inject constructor(
         )
         dao.upsert(newTransaction)
         dao.upsert(original.copy(nextOccurrenceDate = nextDate, syncStatus = SyncStatus.PENDING))
-        
+
         notificationRepository.notify(
             title = "Recurring ${if (newTransaction.type == "INCOME") "Income" else "Expense"}",
             message = "New occurrence of \"${newTransaction.category}\" processed: ${newTransaction.currency} ${newTransaction.amount}.",
             type = "TRANSACTION"
         )
-        
+
         queueSync()
         return newTransaction
     }
@@ -182,6 +185,7 @@ class TransactionRepository @Inject constructor(
     suspend fun getDueRecurring(): List<TransactionEntity> = dao.getDueRecurring(System.currentTimeMillis())
 
     suspend fun getPendingSyncForUser(userId: String): List<TransactionEntity> = dao.getPendingSyncForUser(userId)
+    suspend fun markSyncedIfUnchanged(transaction: TransactionEntity) = dao.markSyncedIfUnchanged(transaction)
     suspend fun markSynced(id: String) = dao.updateSyncStatus(id, SyncStatus.SYNCED)
 
     private fun advanceDate(fromMillis: Long, frequency: String?): Long {

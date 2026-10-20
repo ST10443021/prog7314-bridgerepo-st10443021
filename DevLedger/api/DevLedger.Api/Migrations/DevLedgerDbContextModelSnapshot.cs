@@ -22,6 +22,29 @@ namespace DevLedger.Api.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("DevLedger.Api.Models.DeletedSyncEntity", b =>
+                {
+                    b.Property<string>("EntityType").HasColumnType("text");
+                    b.Property<Guid>("EntityId").HasColumnType("uuid");
+                    b.Property<Guid>("UserId").HasColumnType("uuid");
+                    b.Property<DateTime>("DeletedAt").HasColumnType("timestamp with time zone");
+                    b.HasKey("EntityType", "EntityId");
+                    b.HasIndex("UserId");
+                    b.ToTable("DeletedSyncEntities");
+                });
+
+            modelBuilder.Entity("DevLedger.Api.Models.UserTag", b =>
+                {
+                    b.Property<Guid>("TagId").ValueGeneratedOnAdd().HasColumnType("uuid");
+                    b.Property<Guid>("UserId").HasColumnType("uuid");
+                    b.Property<string>("Name").IsRequired().HasColumnType("text");
+                    b.Property<string>("ColorHex").HasColumnType("text");
+                    b.Property<DateTime>("CreatedAt").HasColumnType("timestamp with time zone");
+                    b.HasKey("TagId");
+                    b.HasIndex("UserId");
+                    b.ToTable("UserTags");
+                });
+
             modelBuilder.Entity("DevLedger.Api.Models.DeletedSnippet", b =>
                 {
                     b.Property<Guid>("SnippetId")

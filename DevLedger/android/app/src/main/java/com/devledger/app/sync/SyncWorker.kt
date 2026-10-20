@@ -1,36 +1,35 @@
 package com.devledger.app.sync
 
 import android.content.Context
+import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.devledger.app.data.local.dao.DeletedDao
 import com.devledger.app.data.local.dao.SyncLogDao
-import com.devledger.app.data.local.entity.SnippetEntity
+import com.devledger.app.data.local.entity.DeletedEntity
 import com.devledger.app.data.local.entity.SyncLogEntity
+import com.devledger.app.data.local.entity.SyncStatus
 import com.devledger.app.data.remote.DevLedgerApiService
 import com.devledger.app.data.remote.auth.TokenManager
-import com.devledger.app.data.remote.dto.*
+import com.devledger.app.data.remote.dto.SyncBatchRequest
 import com.devledger.app.data.repository.*
+import com.devledger.app.util.DevLedgerResult
 import com.devledger.app.util.IdGenerator
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import java.io.IOException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+import retrofit2.HttpException
 
 /**
- * Orchestrates bidirectional synchronization.
- * Handles Snippets (marker-based delete), and Transactions/Folders/Tags (table-based delete).
+ * Uploads dependency-ordered batches and acknowledges only the submitted versions.
+ * Room remains authoritative for UI; deletion markers survive acknowledgement.
+ * Reference: https://developer.android.com/topic/architecture/data-layer/offline-first
  */
 @HiltWorker
-/**
- * Reference scope: WorkManager background execution.
- * (Google Developers, n.d.c). See REFERENCES-CODE.md for full entries.
- */
 class SyncWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
@@ -45,170 +44,118 @@ class SyncWorker @AssistedInject constructor(
     private val syncLogDao: SyncLogDao,
     private val deletedDao: DeletedDao,
 ) : CoroutineWorker(context, params) {
-
-    private val json = Json { encodeDefaults = true }
-
     override suspend fun doWork(): Result {
-        var currentUserId: String? = null
-        var processedItems = 0
-
+        var userId: String? = null
+        var processed = 0
         return try {
-            val startingToken = tokenManager.getAccessToken()
-                ?.takeIf { it.isNotBlank() }
-                ?: return failure("Sign in before synchronising.", userId = null)
-
+            val token = tokenManager.getAccessToken()?.takeIf { it.isNotBlank() }
+                ?: return failure("Sign in before synchronising.", null)
             val user = authRepository.currentUser.first()
-                ?: return failure("The current account could not be loaded.", userId = null)
-
-            currentUserId = user.userId
-
-            // 1. Gather all pending changes
-            val pendingDeletesMarkers = snippetRepository.getPendingDeletesForUser(user.userId)
-            val pendingSnippets = snippetRepository.getPendingSyncForUser(user.userId)
-            val pendingTransactions = transactionRepository.getPendingSyncForUser(user.userId)
-            val pendingFolders = folderRepository.getPendingSyncForUser(user.userId)
-            val pendingTags = userTagRepository.getPendingSyncForUser(user.userId)
-            val pendingGenericDeletions = deletedDao.getForUser(user.userId)
-
-            if (pendingDeletesMarkers.isEmpty() && pendingSnippets.isEmpty() && 
-                pendingTransactions.isEmpty() && pendingFolders.isEmpty() && 
-                pendingTags.isEmpty() && pendingGenericDeletions.isEmpty()) {
-                
-                ensureSameSession(startingToken, currentUserId, processedItems)?.let { return it }
-                downloadLatest()
-                return success(itemsSynced = 0, userId = user.userId)
-            }
-
-            val totalItems = pendingDeletesMarkers.size + pendingSnippets.size + 
-                             pendingTransactions.size + pendingFolders.size + 
-                             pendingTags.size + pendingGenericDeletions.size
-
-            publishProgress(processedItems, totalItems, "Preparing")
-
-            // 2. Perform Batch Upload
-            val operations = mutableListOf<SyncOperation>()
-
-            // Snippet marker-based deletions first
-            pendingDeletesMarkers.forEach { s ->
-                operations.add(SyncOperation("snippet", "delete", json.encodeToString(
-                    SnippetDeletePayload(s.snippetId, s.userId)
-                ), s.updatedAt))
-            }
-
-            // Generic deletions (Folders, Tags, Transactions)
-            pendingGenericDeletions.forEach { del ->
-                operations.add(SyncOperation(del.entityType, "delete", json.encodeToString(
-                    DeleteSyncPayload(del.entityId)
-                ), del.deletedAt))
-            }
-
-            // Upserts
-            pendingSnippets.forEach { s ->
-                operations.add(SyncOperation("snippet", "upsert", json.encodeToString(
-                    SnippetSyncPayload(s.snippetId, s.userId, s.folderId, s.title, s.content, s.language, s.description, 
-                                       s.tagsCsv.split(",").filter { it.isNotBlank() }, s.isFavourite, s.isArchived, s.createdAt, s.updatedAt)
-                ), s.updatedAt))
-            }
-
-            pendingTransactions.forEach { t ->
-                operations.add(SyncOperation("transaction", "upsert", json.encodeToString(
-                    TransactionSyncPayload(t.transactionId, t.userId, t.type, t.amount, t.currency, t.category, t.description, 
-                                           t.clientOrFrom, t.relatedProject, t.paymentMethod, t.referenceNumber, t.isRecurring, 
-                                           t.recurringFrequency, t.nextOccurrenceDate, t.attachmentFileName, t.attachmentBase64, 
-                                           t.transactionDate, t.createdAt)
-                ), t.createdAt))
-            }
-
-            pendingFolders.forEach { f ->
-                operations.add(SyncOperation("folder", "upsert", json.encodeToString(
-                    FolderSyncPayload(f.folderId, f.userId, f.name, f.parentFolderId, f.createdAt)
-                ), f.createdAt))
-            }
-
-            pendingTags.forEach { tg ->
-                operations.add(SyncOperation("tag", "upsert", json.encodeToString(
-                    UserTagSyncPayload(tg.tagId, tg.userId, tg.name, tg.colorHex, tg.createdAt)
-                ), tg.createdAt))
-            }
-
-            // Chunk upload
-            for (batchOps in operations.chunked(100)) {
-                ensureSameSession(startingToken, currentUserId, processedItems)?.let { return it }
-
-                val response = api.syncBatch(SyncBatchRequest(batchOps))
-                if (!response.isSuccessful) return responseFailure(response.code(), "batch", currentUserId, processedItems)
-
-                val acknowledgement = response.body() ?: return failure("No acknowledgement received.", currentUserId, processedItems)
-                
-                acknowledgement.applied.forEach { id ->
-                    // Safely acknowledge deletions (only works if status is DELETE_PENDING)
-                    snippetRepository.acknowledgeDelete(user.userId, id)
-                    
-                    // Safely mark upserts as synced (only works if status is PENDING)
-                    snippetRepository.markSynced(id)
-                    transactionRepository.markSynced(id)
-                    folderRepository.markSynced(id)
-                    userTagRepository.markSynced(id)
-                    
-                    // Cleanup generic deletion tracking
-                    deletedDao.delete(id)
+                ?: return failure("The current account could not be loaded.", null)
+            userId = user.userId
+            ensureSession(token, user.userId)
+            val plan = SyncBatchPlanner.plan(
+                user.userId,
+                snippetRepository.getPendingSyncForUser(user.userId),
+                transactionRepository.getPendingSyncForUser(user.userId),
+                folderRepository.getPendingSyncForUser(user.userId),
+                userTagRepository.getPendingSyncForUser(user.userId),
+                snippetRepository.getPendingDeletesForUser(user.userId),
+                deletedDao.getForUser(user.userId),
+            )
+            var changedDuringUpload = false
+            for (batch in plan.chunked(100)) {
+                ensureSession(token, user.userId)
+                val response = api.syncBatch(SyncBatchRequest(batch.map { it.operation }))
+                ensureSession(token, user.userId)
+                if (!response.isSuccessful) throw HttpException(response)
+                val acknowledgement = response.body() ?: error("No acknowledgement received.")
+                SyncBatchPlanner.validateAcknowledgement(batch, acknowledgement)
+                // Match each acknowledgement to its entity/action and original snapshot.
+                for (upload in batch) {
+                    ensureSession(token, user.userId)
+                    when (val source = upload.source) {
+                        is SyncUploadSource.Snippet -> if (!snippetRepository.markSyncedIfUnchanged(source.row)) changedDuringUpload = true
+                        is SyncUploadSource.Transaction -> if (!transactionRepository.markSyncedIfUnchanged(source.row)) changedDuringUpload = true
+                        is SyncUploadSource.Folder -> if (!folderRepository.markSyncedIfUnchanged(source.row)) changedDuringUpload = true
+                        is SyncUploadSource.Tag -> if (!userTagRepository.markSyncedIfUnchanged(source.row)) changedDuringUpload = true
+                        is SyncUploadSource.SnippetDelete -> snippetRepository.acknowledgeDelete(user.userId, upload.id)
+                        is SyncUploadSource.Delete -> deletedDao.acknowledge(user.userId, source.row.entityType, upload.id, source.row.deletedAt)
+                    }
                 }
-                
-                processedItems += batchOps.size
-                publishProgress(processedItems, totalItems, "Uploading")
+                processed += batch.size
+                publishProgress(processed, plan.size, "Uploading")
             }
-
-            // 3. Bidirectional Sync
-            downloadLatest()
-
-            success(itemsSynced = processedItems, userId = user.userId)
+            downloadLatest(token, user.userId)
+            if (changedDuringUpload) {
+                Log.i("DevLedgerSync", "An uploaded record changed locally; retaining pending work for retry")
+                Result.retry()
+            } else success(processed, user.userId)
         } catch (cancelled: CancellationException) {
             throw cancelled
-        } catch (error: IOException) {
+        } catch (http: HttpException) {
+            if (http.code() in setOf(408, 429) || http.code() in 500..599) Result.retry()
+            else failure("The API rejected sync (${http.code()}). Pending work was retained.", userId, processed)
+        } catch (_: IOException) {
+            Log.i("DevLedgerSync", "Network interrupted; pending work retained for retry")
             Result.retry()
         } catch (error: Exception) {
-            failure("Synchronisation failed: ${error.message}", currentUserId, processedItems)
+            failure(error.message ?: "Synchronisation failed.", userId, processed)
         }
     }
 
-    private suspend fun downloadLatest() {
+    private suspend fun downloadLatest(token: String, userId: String) {
         publishProgress(0, 1, "Downloading")
-        try {
-            snippetRepository.refreshFromApi()
-            transactionRepository.refreshFromApi()
-            folderRepository.refreshFromApi()
-            userTagRepository.refreshFromApi()
-        } catch (e: Exception) {
-            // Ignore download errors to preserve upload success
+        applyServerDeletions(token, userId)
+        ensureSession(token, userId)
+        folderRepository.refreshFromApi().requireDownloaded("folders")
+        ensureSession(token, userId)
+        userTagRepository.refreshFromApi().requireDownloaded("tags")
+        ensureSession(token, userId)
+        snippetRepository.refreshFromApi()
+        ensureSession(token, userId)
+        transactionRepository.refreshFromApi()
+        // Catch a deletion committed while a list/snapshot request was in flight.
+        applyServerDeletions(token, userId)
+        ensureSession(token, userId)
+    }
+
+    private suspend fun applyServerDeletions(token: String, userId: String) {
+        ensureSession(token, userId)
+        val response = api.getSyncDeletions()
+        ensureSession(token, userId)
+        if (!response.isSuccessful) throw HttpException(response)
+        for (marker in response.body() ?: error("The API returned no deletion list.")) {
+            ensureSession(token, userId)
+            deletedDao.applyRemoteDeletion(DeletedEntity(marker.entityId, userId, marker.entityType,
+                syncStatus = SyncStatus.SYNCED))
         }
     }
 
-    private suspend fun ensureSameSession(startingToken: String, userId: String?, itemsSynced: Int): Result? {
-        return if (tokenManager.getAccessToken() != startingToken) failure("Account session changed.", userId, itemsSynced) else null
-    }
-
-    private suspend fun responseFailure(statusCode: Int, entityName: String, userId: String?, itemsSynced: Int): Result {
-        return when (statusCode) {
-            408, 429 -> Result.retry()
-            in 500..599 -> Result.retry()
-            else -> failure("The API rejected the $entityName request ($statusCode).", userId, itemsSynced)
+    private fun DevLedgerResult<Unit>.requireDownloaded(entity: String) {
+        if (this is DevLedgerResult.Error) {
+            if (isOffline) throw IOException("Could not download $entity.")
+            error("Could not download $entity: $message")
         }
     }
 
-    private suspend fun publishProgress(processed: Int, total: Int, currentEntity: String) {
-        setProgress(workDataOf(KEY_PROCESSED_ITEMS to processed, KEY_TOTAL_ITEMS to total, KEY_CURRENT_ENTITY to currentEntity))
+    private suspend fun ensureSession(token: String, userId: String) {
+        check(tokenManager.getAccessToken() == token && authRepository.currentUser.first()?.userId == userId) {
+            "Account session changed. Pending work was retained."
+        }
     }
 
-    private suspend fun success(itemsSynced: Int, userId: String): Result {
-        syncLogDao.insert(SyncLogEntity(IdGenerator.newId(), userId, "COMPLETED", itemsSynced, null, System.currentTimeMillis()))
-        
+    private suspend fun publishProgress(processed: Int, total: Int, entity: String) {
+        setProgress(workDataOf(KEY_PROCESSED_ITEMS to processed, KEY_TOTAL_ITEMS to total, KEY_CURRENT_ENTITY to entity))
+    }
+
+    private suspend fun success(items: Int, userId: String): Result {
+        syncLogDao.insert(SyncLogEntity(IdGenerator.newId(), userId, "COMPLETED", items, null, System.currentTimeMillis()))
         return Result.success(workDataOf(KEY_COMPLETED_AT to System.currentTimeMillis()))
     }
 
-    private suspend fun failure(message: String, userId: String?, itemsSynced: Int = 0): Result {
-        if (userId != null) {
-            syncLogDao.insert(SyncLogEntity(IdGenerator.newId(), userId, "FAILED", itemsSynced, message, System.currentTimeMillis()))
-        }
+    private suspend fun failure(message: String, userId: String?, items: Int = 0): Result {
+        if (userId != null) syncLogDao.insert(SyncLogEntity(IdGenerator.newId(), userId, "FAILED", items, message, System.currentTimeMillis()))
         return Result.failure(workDataOf(KEY_SYNC_ERROR to message))
     }
 
