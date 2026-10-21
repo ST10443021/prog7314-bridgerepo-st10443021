@@ -3,6 +3,7 @@ using System.Text.Json;
 using DevLedger.Api.Data;
 using DevLedger.Api.DTOs;
 using DevLedger.Api.Models;
+using DevLedger.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -23,7 +24,12 @@ namespace DevLedger.Api.Controllers;
 public class FoldersController : ControllerBase
 {
     private readonly DevLedgerDbContext _db;
-    public FoldersController(DevLedgerDbContext db) => _db = db;
+    private readonly BudgetAlertService _budgetAlerts;
+    public FoldersController(DevLedgerDbContext db, BudgetAlertService budgetAlerts)
+    {
+        _db = db;
+        _budgetAlerts = budgetAlerts;
+    }
 
     private Guid CurrentUserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)
         ?? User.FindFirst("sub")?.Value
@@ -86,7 +92,7 @@ public class FoldersController : ControllerBase
             if (!Guid.TryParse(request.ReassignToFolderId, out var parsed)) return BadRequest("Invalid reassignment folder ID.");
             target = parsed;
         }
-        var sync = new SyncController(_db) { ControllerContext = ControllerContext };
+        var sync = new SyncController(_db, _budgetAlerts) { ControllerContext = ControllerContext };
         var result = await sync.Batch(new SyncBatchRequest(new List<SyncOperation> {
             new("folder", "delete", JsonSerializer.Serialize(new {
                 entityId = id, userId = CurrentUserId, reassignToFolderId = target

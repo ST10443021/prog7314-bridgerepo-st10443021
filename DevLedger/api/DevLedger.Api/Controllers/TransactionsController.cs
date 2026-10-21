@@ -98,10 +98,17 @@ public class TransactionsController : ControllerBase
             AttachmentBase64 = request.AttachmentBase64,
             TransactionDate = DateTimeOffset.FromUnixTimeMilliseconds(request.TransactionDate).UtcDateTime,
         };
-        _db.Transactions.Add(tx);
-        await _db.SaveChangesAsync();
-
-        await _budgetAlertService.CheckAndNotifyAsync(CurrentUserId);
+        BudgetAlert? budgetAlert;
+        var cancellationToken = HttpContext.RequestAborted;
+        await using (var mutation = await SnippetMutationLock.BeginAsync(_db, tx.UserId, cancellationToken))
+        {
+            var before = await _budgetAlertService.CaptureAsync(tx.UserId, cancellationToken);
+            _db.Transactions.Add(tx);
+            await _db.SaveChangesAsync(cancellationToken);
+            budgetAlert = before is null ? null : await _budgetAlertService.PrepareAfterWriteAsync(before, cancellationToken);
+            await mutation.CommitAsync(cancellationToken);
+        }
+        await _budgetAlertService.DeliverAsync(budgetAlert);
 
         return CreatedAtAction(nameof(GetById), new { id = tx.TransactionId }, ToDto(tx));
     }

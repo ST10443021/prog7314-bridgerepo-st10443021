@@ -1,4 +1,4 @@
-﻿using FirebaseAdmin;
+using FirebaseAdmin;
 using FirebaseAdmin.Messaging;
 
 namespace DevLedger.Api.Services;
@@ -23,7 +23,7 @@ public class NotificationService
         _logger = logger;
     }
 
-    public async Task SendToTokensAsync(IEnumerable<string> fcmTokens, string title, string body, string type)
+    public virtual async Task SendToTokensAsync(IEnumerable<string> fcmTokens, string title, string body, string type)
     {
         if (FirebaseApp.DefaultInstance is null)
         {
@@ -47,7 +47,7 @@ public class NotificationService
             {
                 // A single stale/uninstalled-device token should never block delivery
                 // to the user's other devices, so this is logged and skipped, not thrown.
-                _logger.LogWarning(ex, "Failed to deliver push notification to token {Token}", token);
+                _logger.LogWarning(ex, "Failed to deliver push notification to a registered device.");
             }
         }
     }

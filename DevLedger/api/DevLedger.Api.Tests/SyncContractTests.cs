@@ -4,6 +4,8 @@ using DevLedger.Api.Controllers;
 using DevLedger.Api.Data;
 using DevLedger.Api.DTOs;
 using DevLedger.Api.Models;
+using DevLedger.Api.Services;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -31,6 +33,8 @@ public sealed class SyncContractTests
         db.SaveChanges();
     }
     private DevLedgerDbContext Open() => new(_options);
+    private static BudgetAlertService Alerts(DevLedgerDbContext db) => new(db,
+        new NotificationService(NullLogger<NotificationService>.Instance), NullLogger<BudgetAlertService>.Instance);
     private ControllerContext Context(Guid user) => new() {
         HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity(
             new[] { new Claim("sub", user.ToString()) }, "Test")) }
@@ -47,7 +51,7 @@ public sealed class SyncContractTests
     private async Task<ActionResult<SyncBatchResponse>> Post(params SyncOperation[] operations)
     {
         await using var db = Open();
-        return await new SyncController(db) { ControllerContext = Context(_owner) }
+        return await new SyncController(db, Alerts(db)) { ControllerContext = Context(_owner) }
             .Batch(new SyncBatchRequest(operations.ToList()), CancellationToken.None);
     }
     private static SyncBatchResponse Accepted(ActionResult<SyncBatchResponse> result) =>
@@ -223,7 +227,7 @@ public sealed class SyncContractTests
     {
         using (var db = Open()) { db.DeletedSyncEntities.AddRange(new DeletedSyncEntity { EntityId = Guid.NewGuid(), EntityType = "tag", UserId = _owner }, new DeletedSyncEntity { EntityId = Guid.NewGuid(), EntityType = "transaction", UserId = _other }); db.SaveChanges(); }
         using var check = Open();
-        var result = Assert.IsType<OkObjectResult>(await new SyncController(check) { ControllerContext = Context(_owner) }.Deletions(CancellationToken.None));
+        var result = Assert.IsType<OkObjectResult>(await new SyncController(check, Alerts(check)) { ControllerContext = Context(_owner) }.Deletions(CancellationToken.None));
         var rows = JsonSerializer.SerializeToElement(result.Value, Json);
         Assert.Equal(1, rows.GetArrayLength()); Assert.Equal("tag", rows[0].GetProperty("entityType").GetString());
     }
@@ -247,7 +251,7 @@ public sealed class SyncContractTests
     public async Task MissingIdentityIsRejected()
     {
         using var db = Open();
-        var controller = new SyncController(db) { ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() } };
+        var controller = new SyncController(db, Alerts(db)) { ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() } };
         Assert.IsType<UnauthorizedResult>((await controller.Batch(new SyncBatchRequest(new()), CancellationToken.None)).Result);
     }
     private object SnippetPayload(Guid id, string content, long updatedAt, Guid? folderId = null) => new {
