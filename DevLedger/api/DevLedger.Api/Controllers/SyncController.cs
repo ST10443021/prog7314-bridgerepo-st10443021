@@ -3,6 +3,7 @@ using System.Text.Json;
 using DevLedger.Api.Data;
 using DevLedger.Api.DTOs;
 using DevLedger.Api.Models;
+using DevLedger.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -24,13 +25,15 @@ namespace DevLedger.Api.Controllers;
 public class SyncController : ControllerBase
 {
     private readonly DevLedgerDbContext _db;
+    private readonly BudgetAlertService _budgetAlerts;
 
     private static readonly JsonSerializerOptions JsonOptions =
         new(JsonSerializerDefaults.Web);
 
-    public SyncController(DevLedgerDbContext db)
+    public SyncController(DevLedgerDbContext db, BudgetAlertService budgetAlerts)
     {
         _db = db;
+        _budgetAlerts = budgetAlerts;
     }
 
     [HttpPost("batch")]
@@ -57,438 +60,446 @@ public class SyncController : ControllerBase
         if (request.Operations.Count > 100)
             return BadRequest("Send at most 100 operations per batch.");
 
-        await using var transactionScope = await SnippetMutationLock.BeginAsync(_db, userId, cancellationToken);
-
-        var applied = new List<string>();
-
-        var seenOperations = new HashSet<string>(
-            StringComparer.OrdinalIgnoreCase);
-
         if (request.Operations.Any(op => op is null)) return BadRequest("A sync operation cannot be null.");
-        // Existing Android versions sent snippets before folders. Stage parents/catalogue
-        // before dependent records; defer folder parent validation until all upserts exist.
-        var changedFolders = new List<Folder>();
-        foreach (var operation in request.Operations.OrderBy(OperationPriority))
+        var applied = new List<string>();
+        BudgetAlert? budgetAlert = null;
+        await using (var transactionScope = await SnippetMutationLock.BeginAsync(_db, userId, cancellationToken))
         {
-            if (operation is null)
-                return BadRequest("A sync operation cannot be null.");
+            var budgetBefore = request.Operations.Any(op => op.Entity == "transaction" && op.Action == "upsert")
+                ? await _budgetAlerts.CaptureAsync(userId, cancellationToken) : null;
 
-            if (operation.Action is not ("upsert" or "delete"))
+            var seenOperations = new HashSet<string>(
+                StringComparer.OrdinalIgnoreCase);
+
+            // Existing Android versions sent snippets before folders. Stage parents/catalogue
+            // before dependent records; defer folder parent validation until all upserts exist.
+            var changedFolders = new List<Folder>();
+            foreach (var operation in request.Operations.OrderBy(OperationPriority))
             {
-                return BadRequest(
-                    "Only upsert and delete operations are supported.");
-            }
+                if (operation is null)
+                    return BadRequest("A sync operation cannot be null.");
 
-            if (string.IsNullOrWhiteSpace(operation.Payload))
-                return BadRequest("A sync payload is required.");
-
-            if (operation.Action == "delete" && operation.Entity != "snippet")
-            {
-                var deletionError = await DeleteEntity(operation, userId, cancellationToken);
-                if (deletionError is not null) return deletionError;
-                var deletePayload = JsonSerializer.Deserialize<DeletePayload>(operation.Payload, JsonOptions)!;
-                if (!seenOperations.Add($"{operation.Entity}:{deletePayload.EntityId}"))
-                    return BadRequest("A batch cannot contain duplicate entity IDs.");
-                applied.Add(deletePayload.EntityId.ToString());
-                continue;
-            }
-
-            switch (operation.Entity)
-            {
-                case "snippet":
+                if (operation.Action is not ("upsert" or "delete"))
                 {
-                    SnippetSyncPayload? payload;
+                    return BadRequest(
+                        "Only upsert and delete operations are supported.");
+                }
 
-                    try
+                if (string.IsNullOrWhiteSpace(operation.Payload))
+                    return BadRequest("A sync payload is required.");
+
+                if (operation.Action == "delete" && operation.Entity != "snippet")
+                {
+                    var deletionError = await DeleteEntity(operation, userId, cancellationToken);
+                    if (deletionError is not null) return deletionError;
+                    var deletePayload = JsonSerializer.Deserialize<DeletePayload>(operation.Payload, JsonOptions)!;
+                    if (!seenOperations.Add($"{operation.Entity}:{deletePayload.EntityId}"))
+                        return BadRequest("A batch cannot contain duplicate entity IDs.");
+                    applied.Add(deletePayload.EntityId.ToString());
+                    continue;
+                }
+
+                switch (operation.Entity)
+                {
+                    case "snippet":
                     {
-                        payload = JsonSerializer.Deserialize<SnippetSyncPayload>(
-                            operation.Payload,
-                            JsonOptions);
-                    }
-                    catch (JsonException)
-                    {
-                        return BadRequest(
-                            "A snippet payload contains invalid JSON or values.");
-                    }
+                        SnippetSyncPayload? payload;
 
-                    if (payload is null || payload.SnippetId == Guid.Empty)
-                        return BadRequest("A valid snippet ID is required.");
+                        try
+                        {
+                            payload = JsonSerializer.Deserialize<SnippetSyncPayload>(
+                                operation.Payload,
+                                JsonOptions);
+                        }
+                        catch (JsonException)
+                        {
+                            return BadRequest(
+                                "A snippet payload contains invalid JSON or values.");
+                        }
 
-                    if (payload.UserId != userId)
-                        return Forbid();
+                        if (payload is null || payload.SnippetId == Guid.Empty)
+                            return BadRequest("A valid snippet ID is required.");
 
-                    var operationKey = $"snippet:{payload.SnippetId}";
+                        if (payload.UserId != userId)
+                            return Forbid();
 
-                    if (!seenOperations.Add(operationKey))
-                    {
-                        return BadRequest(
-                            "A batch cannot contain duplicate snippet IDs.");
-                    }
+                        var operationKey = $"snippet:{payload.SnippetId}";
 
-                    var deleted = await _db.Set<DeletedSnippet>().SingleOrDefaultAsync(
-                        item => item.SnippetId == payload.SnippetId, cancellationToken);
-                    if (deleted is not null && deleted.UserId != userId) return Forbid();
+                        if (!seenOperations.Add(operationKey))
+                        {
+                            return BadRequest(
+                                "A batch cannot contain duplicate snippet IDs.");
+                        }
 
-                    // A permanent deletion wins over an old offline edit or restore.
-                    // Acknowledge retries; the client's snapshot pull removes stale copies.
-                    if (deleted is not null)
-                    {
-                        applied.Add(payload.SnippetId.ToString());
-                        break;
-                    }
-
-                    if (operation.Action == "delete")
-                    {
-                        var toDelete = await _db.Snippets.SingleOrDefaultAsync(
+                        var deleted = await _db.Set<DeletedSnippet>().SingleOrDefaultAsync(
                             item => item.SnippetId == payload.SnippetId, cancellationToken);
-                        if (toDelete is not null && toDelete.UserId != userId) return Forbid();
-                        if (toDelete is not null) _db.Snippets.Remove(toDelete);
-                        // Also records deletes of snippets created and deleted offline.
-                        _db.Set<DeletedSnippet>().Add(new DeletedSnippet {
-                            SnippetId = payload.SnippetId, UserId = userId,
-                        });
+                        if (deleted is not null && deleted.UserId != userId) return Forbid();
+
+                        // A permanent deletion wins over an old offline edit or restore.
+                        // Acknowledge retries; the client's snapshot pull removes stale copies.
+                        if (deleted is not null)
+                        {
+                            applied.Add(payload.SnippetId.ToString());
+                            break;
+                        }
+
+                        if (operation.Action == "delete")
+                        {
+                            var toDelete = await _db.Snippets.SingleOrDefaultAsync(
+                                item => item.SnippetId == payload.SnippetId, cancellationToken);
+                            if (toDelete is not null && toDelete.UserId != userId) return Forbid();
+                            if (toDelete is not null) _db.Snippets.Remove(toDelete);
+                            // Also records deletes of snippets created and deleted offline.
+                            _db.Set<DeletedSnippet>().Add(new DeletedSnippet {
+                                SnippetId = payload.SnippetId, UserId = userId,
+                            });
+                            applied.Add(payload.SnippetId.ToString());
+                            break;
+                        }
+
+                        if (string.IsNullOrWhiteSpace(payload.Title) ||
+                            string.IsNullOrWhiteSpace(payload.Content) ||
+                            string.IsNullOrWhiteSpace(payload.Language))
+                        {
+                            return BadRequest(
+                                "Each snippet requires a title, content and language.");
+                        }
+
+                        if (payload.UpdatedAt != operation.ClientTimestamp ||
+                            payload.CreatedAt < 0 ||
+                            payload.UpdatedAt < payload.CreatedAt)
+                        {
+                            return BadRequest(
+                                "The snippet timestamps are invalid.");
+                        }
+
+                        try
+                        {
+                            _ = DateTimeOffset.FromUnixTimeMilliseconds(
+                                payload.CreatedAt);
+
+                            _ = DateTimeOffset.FromUnixTimeMilliseconds(
+                                payload.UpdatedAt);
+                        }
+                        catch (ArgumentOutOfRangeException)
+                        {
+                            return BadRequest(
+                                "The snippet timestamps are outside the supported range.");
+                        }
+
+                        var snippet = await _db.Snippets.SingleOrDefaultAsync(
+                            item => item.SnippetId == payload.SnippetId,
+                            cancellationToken);
+
+                        if (snippet is not null &&
+                            snippet.UserId != userId)
+                        {
+                            return Forbid();
+                        }
+
+                        if (snippet is not null)
+                        {
+                            var serverTimestamp =
+                                new DateTimeOffset(snippet.UpdatedAt)
+                                    .ToUnixTimeMilliseconds();
+
+                            if (serverTimestamp > payload.UpdatedAt ||
+                                (serverTimestamp == payload.UpdatedAt &&
+                                 !HasSameSnippetContent(snippet, payload)))
+                            {
+                                return Conflict(
+                                    new SyncBatchResponse(
+                                        Applied: new List<string>(),
+                                        Conflicts: new List<string>
+                                        {
+                                            payload.SnippetId.ToString()
+                                        }));
+                            }
+                        }
+                        else
+                        {
+                            snippet = new Snippet
+                            {
+                                SnippetId = payload.SnippetId,
+                                UserId = userId,
+                                CreatedAt = DateTimeOffset
+                                    .FromUnixTimeMilliseconds(payload.CreatedAt)
+                                    .UtcDateTime,
+                            };
+
+                            _db.Snippets.Add(snippet);
+                        }
+
+                        if (payload.FolderId is not null)
+                        {
+                            var parent = await _db.Folders.FindAsync(new object[] { payload.FolderId.Value }, cancellationToken);
+                            if (parent is not null && parent.UserId != userId) return Forbid();
+                            if (parent is null)
+                            {
+                                var removed = await _db.DeletedSyncEntities.FindAsync(
+                                    new object[] { "folder", payload.FolderId.Value }, cancellationToken);
+                                if (removed is null) return BadRequest("The snippet folder does not exist. Upload folders first.");
+                                if (removed.UserId != userId) return Forbid();
+                            }
+                            snippet.FolderId = parent?.FolderId;
+                        }
+                        else snippet.FolderId = null;
+                        snippet.Title = payload.Title!;
+                        snippet.Content = payload.Content!;
+                        snippet.Language = payload.Language!;
+                        snippet.Description = payload.Description;
+                        snippet.TagsCsv = PayloadTags(payload);
+                        snippet.IsFavourite = payload.IsFavourite;
+                        snippet.IsArchived = payload.IsArchived;
+                        snippet.UpdatedAt = DateTimeOffset
+                            .FromUnixTimeMilliseconds(payload.UpdatedAt)
+                            .UtcDateTime;
+
                         applied.Add(payload.SnippetId.ToString());
+
                         break;
                     }
 
-                    if (string.IsNullOrWhiteSpace(payload.Title) ||
-                        string.IsNullOrWhiteSpace(payload.Content) ||
-                        string.IsNullOrWhiteSpace(payload.Language))
+                    case "transaction":
                     {
-                        return BadRequest(
-                            "Each snippet requires a title, content and language.");
-                    }
+                        TransactionSyncPayload? payload;
 
-                    if (payload.UpdatedAt != operation.ClientTimestamp ||
-                        payload.CreatedAt < 0 ||
-                        payload.UpdatedAt < payload.CreatedAt)
-                    {
-                        return BadRequest(
-                            "The snippet timestamps are invalid.");
-                    }
-
-                    try
-                    {
-                        _ = DateTimeOffset.FromUnixTimeMilliseconds(
-                            payload.CreatedAt);
-
-                        _ = DateTimeOffset.FromUnixTimeMilliseconds(
-                            payload.UpdatedAt);
-                    }
-                    catch (ArgumentOutOfRangeException)
-                    {
-                        return BadRequest(
-                            "The snippet timestamps are outside the supported range.");
-                    }
-
-                    var snippet = await _db.Snippets.SingleOrDefaultAsync(
-                        item => item.SnippetId == payload.SnippetId,
-                        cancellationToken);
-
-                    if (snippet is not null &&
-                        snippet.UserId != userId)
-                    {
-                        return Forbid();
-                    }
-
-                    if (snippet is not null)
-                    {
-                        var serverTimestamp =
-                            new DateTimeOffset(snippet.UpdatedAt)
-                                .ToUnixTimeMilliseconds();
-
-                        if (serverTimestamp > payload.UpdatedAt ||
-                            (serverTimestamp == payload.UpdatedAt &&
-                             !HasSameSnippetContent(snippet, payload)))
+                        try
                         {
-                            return Conflict(
-                                new SyncBatchResponse(
-                                    Applied: new List<string>(),
-                                    Conflicts: new List<string>
-                                    {
-                                        payload.SnippetId.ToString()
-                                    }));
+                            payload = JsonSerializer.Deserialize<TransactionSyncPayload>(
+                                operation.Payload,
+                                JsonOptions);
                         }
-                    }
-                    else
-                    {
-                        snippet = new Snippet
+                        catch (JsonException)
                         {
-                            SnippetId = payload.SnippetId,
-                            UserId = userId,
-                            CreatedAt = DateTimeOffset
-                                .FromUnixTimeMilliseconds(payload.CreatedAt)
-                                .UtcDateTime,
-                        };
-
-                        _db.Snippets.Add(snippet);
-                    }
-
-                    if (payload.FolderId is not null)
-                    {
-                        var parent = await _db.Folders.FindAsync(new object[] { payload.FolderId.Value }, cancellationToken);
-                        if (parent is not null && parent.UserId != userId) return Forbid();
-                        if (parent is null)
-                        {
-                            var removed = await _db.DeletedSyncEntities.FindAsync(
-                                new object[] { "folder", payload.FolderId.Value }, cancellationToken);
-                            if (removed is null) return BadRequest("The snippet folder does not exist. Upload folders first.");
-                            if (removed.UserId != userId) return Forbid();
+                            return BadRequest("A transaction payload contains invalid JSON or values.");
                         }
-                        snippet.FolderId = parent?.FolderId;
-                    }
-                    else snippet.FolderId = null;
-                    snippet.Title = payload.Title!;
-                    snippet.Content = payload.Content!;
-                    snippet.Language = payload.Language!;
-                    snippet.Description = payload.Description;
-                    snippet.TagsCsv = PayloadTags(payload);
-                    snippet.IsFavourite = payload.IsFavourite;
-                    snippet.IsArchived = payload.IsArchived;
-                    snippet.UpdatedAt = DateTimeOffset
-                        .FromUnixTimeMilliseconds(payload.UpdatedAt)
-                        .UtcDateTime;
 
-                    applied.Add(payload.SnippetId.ToString());
+                        if (payload is null || payload.TransactionId == Guid.Empty)
+                        {
+                            return BadRequest("A valid transaction ID is required.");
+                        }
 
-                    break;
-                }
+                        if (payload.UserId != userId)
+                            return Forbid();
 
-                case "transaction":
-                {
-                    TransactionSyncPayload? payload;
+                        var operationKey = $"transaction:{payload.TransactionId}";
 
-                    try
-                    {
-                        payload = JsonSerializer.Deserialize<TransactionSyncPayload>(
-                            operation.Payload,
-                            JsonOptions);
-                    }
-                    catch (JsonException)
-                    {
-                        return BadRequest("A transaction payload contains invalid JSON or values.");
-                    }
+                        if (!seenOperations.Add(operationKey))
+                        {
+                            return BadRequest("A batch cannot contain duplicate transaction IDs.");
+                        }
 
-                    if (payload is null || payload.TransactionId == Guid.Empty)
-                    {
-                        return BadRequest("A valid transaction ID is required.");
-                    }
+                        var deletedTransaction = await _db.DeletedSyncEntities.FindAsync(
+                            new object[] { "transaction", payload.TransactionId }, cancellationToken);
+                        if (deletedTransaction is not null)
+                        {
+                            if (deletedTransaction.UserId != userId) return Forbid();
+                            applied.Add(payload.TransactionId.ToString());
+                            break;
+                        }
 
-                    if (payload.UserId != userId)
-                        return Forbid();
+                        if (payload.Type is not ("INCOME" or "EXPENSE"))
+                        {
+                            return BadRequest("Transaction type must be INCOME or EXPENSE.");
+                        }
 
-                    var operationKey = $"transaction:{payload.TransactionId}";
+                        if (payload.Amount <= 0)
+                        {
+                            return BadRequest("Transaction amount must be greater than zero.");
+                        }
 
-                    if (!seenOperations.Add(operationKey))
-                    {
-                        return BadRequest("A batch cannot contain duplicate transaction IDs.");
-                    }
+                        if (string.IsNullOrWhiteSpace(payload.Currency) || payload.Currency.Trim().Length != 3)
+                        {
+                            return BadRequest("A valid three-letter currency code is required.");
+                        }
 
-                    var deletedTransaction = await _db.DeletedSyncEntities.FindAsync(
-                        new object[] { "transaction", payload.TransactionId }, cancellationToken);
-                    if (deletedTransaction is not null)
-                    {
-                        if (deletedTransaction.UserId != userId) return Forbid();
+                        if (string.IsNullOrWhiteSpace(payload.Category))
+                        {
+                            return BadRequest("Transaction category is required.");
+                        }
+
+                        if (string.IsNullOrWhiteSpace(payload.ClientOrFrom) ||
+                            (payload.IsRecurring && string.IsNullOrWhiteSpace(payload.RecurringFrequency)))
+                            return BadRequest("Client/From and recurring frequency (when recurring) are required.");
+
+                        if (payload.CreatedAt != operation.ClientTimestamp)
+                        {
+                            return BadRequest("The transaction client timestamp is invalid.");
+                        }
+
+                        DateTime createdAt;
+                        DateTime transactionDate;
+                        DateTime? nextOccurrenceDate;
+
+                        try
+                        {
+                            createdAt = DateTimeOffset.FromUnixTimeMilliseconds(payload.CreatedAt).UtcDateTime;
+                            transactionDate = DateTimeOffset.FromUnixTimeMilliseconds(payload.TransactionDate).UtcDateTime;
+                            nextOccurrenceDate = payload.NextOccurrenceDate is null ? null :
+                                DateTimeOffset.FromUnixTimeMilliseconds(payload.NextOccurrenceDate.Value).UtcDateTime;
+                        }
+                        catch (ArgumentOutOfRangeException)
+                        {
+                            return BadRequest("The transaction timestamps are outside the supported range.");
+                        }
+
+                        var transaction = await _db.Transactions.SingleOrDefaultAsync(
+                            item => item.TransactionId == payload.TransactionId,
+                            cancellationToken);
+
+                        if (transaction is not null && transaction.UserId != userId)
+                        {
+                            return Forbid();
+                        }
+
+                        if (transaction is null)
+                        {
+                            transaction = new Transaction
+                            {
+                                TransactionId = payload.TransactionId,
+                                UserId = userId,
+                                Type = payload.Type,
+                                Amount = payload.Amount,
+                                Currency = payload.Currency.Trim().ToUpperInvariant(),
+                                Category = payload.Category.Trim(),
+                                Description = string.IsNullOrWhiteSpace(payload.Description) ? null : payload.Description.Trim(),
+                                ClientOrFrom = payload.ClientOrFrom,
+                                RelatedProject = payload.RelatedProject,
+                                PaymentMethod = payload.PaymentMethod,
+                                ReferenceNumber = payload.ReferenceNumber,
+                                IsRecurring = payload.IsRecurring,
+                                RecurringFrequency = payload.RecurringFrequency,
+                                NextOccurrenceDate = nextOccurrenceDate,
+                                AttachmentFileName = payload.AttachmentFileName,
+                                AttachmentBase64 = payload.AttachmentBase64,
+                                TransactionDate = transactionDate,
+                                CreatedAt = createdAt,
+                            };
+
+                            _db.Transactions.Add(transaction);
+                        }
+                        else
+                        {
+                            transaction.Type = payload.Type;
+                            transaction.Amount = payload.Amount;
+                            transaction.Currency = payload.Currency.Trim().ToUpperInvariant();
+                            transaction.Category = payload.Category.Trim();
+                            transaction.Description = string.IsNullOrWhiteSpace(payload.Description) ? null : payload.Description.Trim();
+                            transaction.ClientOrFrom = payload.ClientOrFrom;
+                            transaction.RelatedProject = payload.RelatedProject;
+                            transaction.PaymentMethod = payload.PaymentMethod;
+                            transaction.ReferenceNumber = payload.ReferenceNumber;
+                            transaction.IsRecurring = payload.IsRecurring;
+                            transaction.RecurringFrequency = payload.RecurringFrequency;
+                            transaction.NextOccurrenceDate = nextOccurrenceDate;
+                            transaction.AttachmentFileName = payload.AttachmentFileName;
+                            transaction.AttachmentBase64 = payload.AttachmentBase64;
+                            transaction.TransactionDate = transactionDate;
+                        }
+
                         applied.Add(payload.TransactionId.ToString());
+
                         break;
                     }
 
-                    if (payload.Type is not ("INCOME" or "EXPENSE"))
+                    case "folder":
                     {
-                        return BadRequest("Transaction type must be INCOME or EXPENSE.");
-                    }
-
-                    if (payload.Amount <= 0)
-                    {
-                        return BadRequest("Transaction amount must be greater than zero.");
-                    }
-
-                    if (string.IsNullOrWhiteSpace(payload.Currency) || payload.Currency.Trim().Length != 3)
-                    {
-                        return BadRequest("A valid three-letter currency code is required.");
-                    }
-
-                    if (string.IsNullOrWhiteSpace(payload.Category))
-                    {
-                        return BadRequest("Transaction category is required.");
-                    }
-
-                    if (string.IsNullOrWhiteSpace(payload.ClientOrFrom) ||
-                        (payload.IsRecurring && string.IsNullOrWhiteSpace(payload.RecurringFrequency)))
-                        return BadRequest("Client/From and recurring frequency (when recurring) are required.");
-
-                    if (payload.CreatedAt != operation.ClientTimestamp)
-                    {
-                        return BadRequest("The transaction client timestamp is invalid.");
-                    }
-
-                    DateTime createdAt;
-                    DateTime transactionDate;
-                    DateTime? nextOccurrenceDate;
-
-                    try
-                    {
-                        createdAt = DateTimeOffset.FromUnixTimeMilliseconds(payload.CreatedAt).UtcDateTime;
-                        transactionDate = DateTimeOffset.FromUnixTimeMilliseconds(payload.TransactionDate).UtcDateTime;
-                        nextOccurrenceDate = payload.NextOccurrenceDate is null ? null :
-                            DateTimeOffset.FromUnixTimeMilliseconds(payload.NextOccurrenceDate.Value).UtcDateTime;
-                    }
-                    catch (ArgumentOutOfRangeException)
-                    {
-                        return BadRequest("The transaction timestamps are outside the supported range.");
-                    }
-
-                    var transaction = await _db.Transactions.SingleOrDefaultAsync(
-                        item => item.TransactionId == payload.TransactionId,
-                        cancellationToken);
-
-                    if (transaction is not null && transaction.UserId != userId)
-                    {
-                        return Forbid();
-                    }
-
-                    if (transaction is null)
-                    {
-                        transaction = new Transaction
+                        FolderPayload? payload;
+                        try { payload = JsonSerializer.Deserialize<FolderPayload>(operation.Payload, JsonOptions); }
+                        catch (JsonException) { return BadRequest("Invalid folder payload."); }
+                        if (payload is null || payload.FolderId == Guid.Empty || string.IsNullOrWhiteSpace(payload.Name))
+                            return BadRequest("A folder ID and name are required.");
+                        if (payload.UserId != userId) return Forbid();
+                        if (!seenOperations.Add($"folder:{payload.FolderId}")) return BadRequest("Duplicate folder ID.");
+                        var removed = await _db.DeletedSyncEntities.FindAsync(new object[] { "folder", payload.FolderId }, cancellationToken);
+                        if (removed is not null)
                         {
-                            TransactionId = payload.TransactionId,
-                            UserId = userId,
-                            Type = payload.Type,
-                            Amount = payload.Amount,
-                            Currency = payload.Currency.Trim().ToUpperInvariant(),
-                            Category = payload.Category.Trim(),
-                            Description = string.IsNullOrWhiteSpace(payload.Description) ? null : payload.Description.Trim(),
-                            ClientOrFrom = payload.ClientOrFrom,
-                            RelatedProject = payload.RelatedProject,
-                            PaymentMethod = payload.PaymentMethod,
-                            ReferenceNumber = payload.ReferenceNumber,
-                            IsRecurring = payload.IsRecurring,
-                            RecurringFrequency = payload.RecurringFrequency,
-                            NextOccurrenceDate = nextOccurrenceDate,
-                            AttachmentFileName = payload.AttachmentFileName,
-                            AttachmentBase64 = payload.AttachmentBase64,
-                            TransactionDate = transactionDate,
-                            CreatedAt = createdAt,
-                        };
-
-                        _db.Transactions.Add(transaction);
+                            if (removed.UserId != userId) return Forbid();
+                            applied.Add(payload.FolderId.ToString()); break;
+                        }
+                        if (!ValidTimestamp(payload.CreatedAt) || payload.CreatedAt != operation.ClientTimestamp)
+                            return BadRequest("Invalid folder timestamp.");
+                        var folder = await _db.Folders.FindAsync(new object[] { payload.FolderId }, cancellationToken);
+                        if (folder is not null && folder.UserId != userId) return Forbid();
+                        if (folder is null)
+                        {
+                            folder = new Folder { FolderId = payload.FolderId, UserId = userId,
+                                CreatedAt = DateTimeOffset.FromUnixTimeMilliseconds(payload.CreatedAt).UtcDateTime };
+                            _db.Folders.Add(folder);
+                        }
+                        folder.Name = payload.Name.Trim();
+                        folder.ParentFolderId = payload.ParentFolderId;
+                        changedFolders.Add(folder);
+                        applied.Add(payload.FolderId.ToString());
+                        break;
                     }
-                    else
+                    case "tag":
                     {
-                        transaction.Type = payload.Type;
-                        transaction.Amount = payload.Amount;
-                        transaction.Currency = payload.Currency.Trim().ToUpperInvariant();
-                        transaction.Category = payload.Category.Trim();
-                        transaction.Description = string.IsNullOrWhiteSpace(payload.Description) ? null : payload.Description.Trim();
-                        transaction.ClientOrFrom = payload.ClientOrFrom;
-                        transaction.RelatedProject = payload.RelatedProject;
-                        transaction.PaymentMethod = payload.PaymentMethod;
-                        transaction.ReferenceNumber = payload.ReferenceNumber;
-                        transaction.IsRecurring = payload.IsRecurring;
-                        transaction.RecurringFrequency = payload.RecurringFrequency;
-                        transaction.NextOccurrenceDate = nextOccurrenceDate;
-                        transaction.AttachmentFileName = payload.AttachmentFileName;
-                        transaction.AttachmentBase64 = payload.AttachmentBase64;
-                        transaction.TransactionDate = transactionDate;
+                        TagPayload? payload;
+                        try { payload = JsonSerializer.Deserialize<TagPayload>(operation.Payload, JsonOptions); }
+                        catch (JsonException) { return BadRequest("Invalid tag payload."); }
+                        if (payload is null || payload.TagId == Guid.Empty || string.IsNullOrWhiteSpace(payload.Name))
+                            return BadRequest("A tag ID and name are required.");
+                        if (payload.UserId != userId) return Forbid();
+                        if (!seenOperations.Add($"tag:{payload.TagId}")) return BadRequest("Duplicate tag ID.");
+                        var removed = await _db.DeletedSyncEntities.FindAsync(new object[] { "tag", payload.TagId }, cancellationToken);
+                        if (removed is not null)
+                        {
+                            if (removed.UserId != userId) return Forbid();
+                            applied.Add(payload.TagId.ToString()); break;
+                        }
+                        if (!ValidTimestamp(payload.CreatedAt) || payload.CreatedAt != operation.ClientTimestamp)
+                            return BadRequest("Invalid tag timestamp.");
+                        if (payload.ColorHex is not null && !System.Text.RegularExpressions.Regex.IsMatch(payload.ColorHex, "^#[0-9a-fA-F]{6}$"))
+                            return BadRequest("Tag colour must be #RRGGBB.");
+                        var tag = await _db.UserTags.FindAsync(new object[] { payload.TagId }, cancellationToken);
+                        if (tag is not null && tag.UserId != userId) return Forbid();
+                        if (tag is null)
+                        {
+                            tag = new UserTag { TagId = payload.TagId, UserId = userId,
+                                CreatedAt = DateTimeOffset.FromUnixTimeMilliseconds(payload.CreatedAt).UtcDateTime };
+                            _db.UserTags.Add(tag);
+                        }
+                        tag.Name = payload.Name.Trim(); tag.ColorHex = payload.ColorHex;
+                        applied.Add(payload.TagId.ToString());
+                        break;
                     }
-
-                    applied.Add(payload.TransactionId.ToString());
-
-                    break;
+                    default:
+                        return BadRequest($"Unsupported sync entity '{operation.Entity}'.");
                 }
-
-                case "folder":
-                {
-                    FolderPayload? payload;
-                    try { payload = JsonSerializer.Deserialize<FolderPayload>(operation.Payload, JsonOptions); }
-                    catch (JsonException) { return BadRequest("Invalid folder payload."); }
-                    if (payload is null || payload.FolderId == Guid.Empty || string.IsNullOrWhiteSpace(payload.Name))
-                        return BadRequest("A folder ID and name are required.");
-                    if (payload.UserId != userId) return Forbid();
-                    if (!seenOperations.Add($"folder:{payload.FolderId}")) return BadRequest("Duplicate folder ID.");
-                    var removed = await _db.DeletedSyncEntities.FindAsync(new object[] { "folder", payload.FolderId }, cancellationToken);
-                    if (removed is not null)
-                    {
-                        if (removed.UserId != userId) return Forbid();
-                        applied.Add(payload.FolderId.ToString()); break;
-                    }
-                    if (!ValidTimestamp(payload.CreatedAt) || payload.CreatedAt != operation.ClientTimestamp)
-                        return BadRequest("Invalid folder timestamp.");
-                    var folder = await _db.Folders.FindAsync(new object[] { payload.FolderId }, cancellationToken);
-                    if (folder is not null && folder.UserId != userId) return Forbid();
-                    if (folder is null)
-                    {
-                        folder = new Folder { FolderId = payload.FolderId, UserId = userId,
-                            CreatedAt = DateTimeOffset.FromUnixTimeMilliseconds(payload.CreatedAt).UtcDateTime };
-                        _db.Folders.Add(folder);
-                    }
-                    folder.Name = payload.Name.Trim();
-                    folder.ParentFolderId = payload.ParentFolderId;
-                    changedFolders.Add(folder);
-                    applied.Add(payload.FolderId.ToString());
-                    break;
-                }
-                case "tag":
-                {
-                    TagPayload? payload;
-                    try { payload = JsonSerializer.Deserialize<TagPayload>(operation.Payload, JsonOptions); }
-                    catch (JsonException) { return BadRequest("Invalid tag payload."); }
-                    if (payload is null || payload.TagId == Guid.Empty || string.IsNullOrWhiteSpace(payload.Name))
-                        return BadRequest("A tag ID and name are required.");
-                    if (payload.UserId != userId) return Forbid();
-                    if (!seenOperations.Add($"tag:{payload.TagId}")) return BadRequest("Duplicate tag ID.");
-                    var removed = await _db.DeletedSyncEntities.FindAsync(new object[] { "tag", payload.TagId }, cancellationToken);
-                    if (removed is not null)
-                    {
-                        if (removed.UserId != userId) return Forbid();
-                        applied.Add(payload.TagId.ToString()); break;
-                    }
-                    if (!ValidTimestamp(payload.CreatedAt) || payload.CreatedAt != operation.ClientTimestamp)
-                        return BadRequest("Invalid tag timestamp.");
-                    if (payload.ColorHex is not null && !System.Text.RegularExpressions.Regex.IsMatch(payload.ColorHex, "^#[0-9a-fA-F]{6}$"))
-                        return BadRequest("Tag colour must be #RRGGBB.");
-                    var tag = await _db.UserTags.FindAsync(new object[] { payload.TagId }, cancellationToken);
-                    if (tag is not null && tag.UserId != userId) return Forbid();
-                    if (tag is null)
-                    {
-                        tag = new UserTag { TagId = payload.TagId, UserId = userId,
-                            CreatedAt = DateTimeOffset.FromUnixTimeMilliseconds(payload.CreatedAt).UtcDateTime };
-                        _db.UserTags.Add(tag);
-                    }
-                    tag.Name = payload.Name.Trim(); tag.ColorHex = payload.ColorHex;
-                    applied.Add(payload.TagId.ToString());
-                    break;
-                }
-                default:
-                    return BadRequest($"Unsupported sync entity '{operation.Entity}'.");
             }
-        }
 
-        foreach (var folder in changedFolders)
-        {
-            if (_db.Entry(folder).State == EntityState.Deleted) continue;
-            var visited = new HashSet<Guid> { folder.FolderId };
-            var parentId = folder.ParentFolderId;
-            while (parentId is not null)
+            foreach (var folder in changedFolders)
             {
-                if (!visited.Add(parentId.Value)) return BadRequest("Folder parents cannot form a cycle.");
-                var parent = await _db.Folders.FindAsync(new object[] { parentId.Value }, cancellationToken);
-                if (parent is null || _db.Entry(parent).State == EntityState.Deleted)
+                if (_db.Entry(folder).State == EntityState.Deleted) continue;
+                var visited = new HashSet<Guid> { folder.FolderId };
+                var parentId = folder.ParentFolderId;
+                while (parentId is not null)
                 {
-                    var removed = await _db.DeletedSyncEntities.FindAsync(new object[] { "folder", parentId.Value }, cancellationToken);
-                    if (removed is null) return BadRequest("A parent folder does not exist.");
-                    if (removed.UserId != userId) return Forbid();
-                    folder.ParentFolderId = null;
-                    break;
+                    if (!visited.Add(parentId.Value)) return BadRequest("Folder parents cannot form a cycle.");
+                    var parent = await _db.Folders.FindAsync(new object[] { parentId.Value }, cancellationToken);
+                    if (parent is null || _db.Entry(parent).State == EntityState.Deleted)
+                    {
+                        var removed = await _db.DeletedSyncEntities.FindAsync(new object[] { "folder", parentId.Value }, cancellationToken);
+                        if (removed is null) return BadRequest("A parent folder does not exist.");
+                        if (removed.UserId != userId) return Forbid();
+                        folder.ParentFolderId = null;
+                        break;
+                    }
+                    if (parent.UserId != userId) return Forbid();
+                    parentId = parent.ParentFolderId;
                 }
-                if (parent.UserId != userId) return Forbid();
-                parentId = parent.ParentFolderId;
             }
-        }
 
-        // EF Core commits the complete batch atomically.
-        await _db.SaveChangesAsync(cancellationToken);
-        await transactionScope.CommitAsync(cancellationToken);
+            // EF Core commits the complete batch atomically.
+            await _db.SaveChangesAsync(cancellationToken);
+            if (budgetBefore is not null)
+                budgetAlert = await _budgetAlerts.PrepareAfterWriteAsync(budgetBefore, cancellationToken);
+            await transactionScope.CommitAsync(cancellationToken);
+        }
+        // Never contact Firebase while an uncommitted database transaction/lock is held.
+        await _budgetAlerts.DeliverAsync(budgetAlert);
 
         return Ok(
             new SyncBatchResponse(
