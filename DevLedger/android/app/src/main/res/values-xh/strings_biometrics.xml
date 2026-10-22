@@ -6,7 +6,7 @@
     <string name="bio_enable_subtitle">Qinisekisa ngeAndroid, uze ucofe Gcina utshintsho kwiDevLedger</string>
     <string name="bio_cancel">Rhoxisa</string>
     <string name="bio_scan_failed">Ibhayometriki ayiqatshelwanga. Zama kwakhona okanye usebenzise iPIN yakho yeDevLedger.</string>
-    <string name="bio_not_enrolled">Akukho bhayometriki ixhaswayo ibhalisiweyo. Yifake kwiiSetingi zeAndroid uze uzame kwakhona.</string>
+    <string name="bio_not_enrolled">Akukho bhayometriki ixhaswayo ibhalisiweyo. Yifake kuSeto lweAndroid uze uzame kwakhona.</string>
     <string name="bio_no_hardware">Esi sixhobo asixhasi ibhayometriki. Sebenzisa iPIN yakho yeDevLedger.</string>
     <string name="bio_unavailable">Ukuqinisekiswa ngebhayometriki akufumaneki. Zama kwakhona okanye usebenzise iPIN yakho yeDevLedger.</string>
     <string name="bio_update_required">Faka uhlaziyo lokhuseleko lweAndroid ngaphambi kokusebenzisa ibhayometriki.</string>

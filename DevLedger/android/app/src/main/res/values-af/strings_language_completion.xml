@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="lang_ok">Goed</string>
+    <string name="bio_prompt_cancelled">Biometriese bevestiging is gekanselleer. Probeer weer of gebruik jou DevLedger-PIN.</string>
+    <string name="bio_prompt_timeout">Bevestiging het te lank geneem. Probeer weer of gebruik jou DevLedger-PIN.</string>
+    <string name="bio_prompt_unable_to_process">Die skandering kon nie gelees word nie. Probeer weer of gebruik jou DevLedger-PIN.</string>
+    <string name="bio_prompt_locked_out">Te veel pogings. Wag voordat jy weer probeer, of gebruik jou DevLedger-PIN.</string>
+    <string name="bio_prompt_locked_out_permanent">Biometrie is gesluit. Ontsluit jou foon met sy PIN, patroon of wagwoord en probeer dan weer, of gebruik jou DevLedger-PIN.</string>
+</resources>

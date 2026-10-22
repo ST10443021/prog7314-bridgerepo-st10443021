@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="lang_ok">Kulungile</string>
+    <string name="bio_prompt_cancelled">Ukuqinisekiswa ngebhayometriki kurhoxisiwe. Zama kwakhona okanye usebenzise iPIN yakho yeDevLedger.</string>
+    <string name="bio_prompt_timeout">Ukuqinisekiswa kuphelelwe lixesha. Zama kwakhona okanye usebenzise iPIN yakho yeDevLedger.</string>
+    <string name="bio_prompt_unable_to_process">Iskeni asifundekanga. Zama kwakhona okanye usebenzise iPIN yakho yeDevLedger.</string>
+    <string name="bio_prompt_locked_out">Uzamile amaxesha amaninzi. Linda ngaphambi kokuzama kwakhona, okanye usebenzise iPIN yakho yeDevLedger.</string>
+    <string name="bio_prompt_locked_out_permanent">Ibhayometriki itshixiwe. Vula ifowuni yakho ngePIN yayo, ipateni okanye igama lokugqitha uze uzame kwakhona, okanye usebenzise iPIN yakho yeDevLedger.</string>
+</resources>

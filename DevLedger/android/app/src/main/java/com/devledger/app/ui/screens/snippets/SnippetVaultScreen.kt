@@ -317,7 +317,7 @@ private fun VaultTopBar(onOpenDrawer: () -> Unit, onOpenNotifications: () -> Uni
 
         IconButton(onClick = onOpenNotifications) {
             Box {
-                Icon(Icons.Filled.Notifications, contentDescription = "Notifications", tint = Color.White)
+                Icon(Icons.Filled.Notifications, contentDescription = strings.get(R.string.lang_notifications), tint = Color.White)
                 Box(
                     modifier = Modifier
                         .size(10.dp)

@@ -3,6 +3,7 @@ package com.devledger.app.ui.screens.biometric
 import android.content.Context
 import android.content.ContextWrapper
 import android.util.Log
+import androidx.annotation.StringRes
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
@@ -52,7 +53,8 @@ class BiometricAuthHelper(private val activity: FragmentActivity) {
                 if (!active) return
                 active = false
                 Log.i(TAG, "Biometric prompt ended: $errorCode")
-                onError(errString.toString())
+                // App-owned messages follow the selected app language, independent of OS wording.
+                onError(activity.getString(biometricErrorMessageRes(errorCode)))
             }
 
             override fun onAuthenticationFailed() {
@@ -97,4 +99,24 @@ fun Context.findFragmentActivity(): FragmentActivity? = when (this) {
     is FragmentActivity -> this
     is ContextWrapper -> if (baseContext === this) null else baseContext.findFragmentActivity()
     else -> null
+}
+
+/**
+ * Error codes are stable; native/OEM error text can follow the phone's language.
+ * Resolve the returned resource in the current activity when the callback arrives.
+ * Reference: https://developer.android.com/reference/androidx/biometric/BiometricPrompt
+ */
+@StringRes
+internal fun biometricErrorMessageRes(errorCode: Int): Int = when (errorCode) {
+    BiometricPrompt.ERROR_CANCELED,
+    BiometricPrompt.ERROR_USER_CANCELED,
+    BiometricPrompt.ERROR_NEGATIVE_BUTTON -> R.string.bio_prompt_cancelled
+    BiometricPrompt.ERROR_TIMEOUT -> R.string.bio_prompt_timeout
+    BiometricPrompt.ERROR_UNABLE_TO_PROCESS -> R.string.bio_prompt_unable_to_process
+    BiometricPrompt.ERROR_LOCKOUT -> R.string.bio_prompt_locked_out
+    BiometricPrompt.ERROR_LOCKOUT_PERMANENT -> R.string.bio_prompt_locked_out_permanent
+    BiometricPrompt.ERROR_NO_BIOMETRICS -> R.string.bio_not_enrolled
+    BiometricPrompt.ERROR_HW_NOT_PRESENT -> R.string.bio_no_hardware
+    BiometricPrompt.ERROR_SECURITY_UPDATE_REQUIRED -> R.string.bio_update_required
+    else -> R.string.bio_unavailable
 }
