@@ -133,7 +133,7 @@ fun BiometricScreen(
                 Icon(
                     painter = painterResource(id = R.drawable.ic_launcher_foreground),
                     contentDescription = null,
-                    tint = DevLedgerColors.AccentBlue,
+                    tint = Color.Unspecified,
                     modifier = Modifier.size(24.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
