@@ -7,7 +7,7 @@
     <string name="splash_initializing">Word geïnisialiseer…</string>
 
     <string name="auth_welcome_back">Welkom terug!</string>
-    <string name="auth_subtitle">Meld aan om voort te gaan na jou werkspasie.</string>
+    <string name="auth_subtitle">Meld aan om voort te gaan na jou werkruimte.</string>
     <string name="auth_sign_in_google">Meld aan met Google</string>
     <string name="auth_sign_in_github">Meld aan met GitHub</string>
     <string name="auth_sign_in_email">Meld aan met e-pos</string>
@@ -29,7 +29,7 @@
 
     <string name="dashboard_welcome_back">Welkom terug,</string>
     <string name="dashboard_overview">Hier is \'n oorsig van jou ontwikkelaarsfinansies.</string>
-    <string name="dashboard_total_snippets">Totale Kodesnitte</string>
+    <string name="dashboard_total_snippets">Totale kodebrokkies</string>
     <string name="dashboard_monthly_income">Maandelikse Inkomste</string>
     <string name="dashboard_monthly_expenses">Maandelikse Uitgawes</string>
     <string name="dashboard_net_income">Netto Inkomste</string>
@@ -41,40 +41,40 @@
     <string name="dashboard_no_recent_activity">Nog geen onlangse aktiwiteit nie.</string>
 
     <string name="nav_dashboard">Paneelbord</string>
-    <string name="nav_snippets">Kodesnitte</string>
+    <string name="nav_snippets">Kodebrokkies</string>
     <string name="nav_finance">Finansies</string>
     <string name="nav_notifications">Kennisgewings</string>
 
-    <string name="vault_title">Kodesnit-kluis</string>
-    <string name="vault_subtitle">Stoor, organiseer en hergebruik jou kodesnitte.</string>
-    <string name="vault_search_hint">Soek kodesnitte…</string>
+    <string name="vault_title">Kodebrokkiekluis</string>
+    <string name="vault_subtitle">Stoor, organiseer en hergebruik jou kodebrokkies.</string>
+    <string name="vault_search_hint">Soek kodebrokkies…</string>
     <string name="vault_new_folder">Nuwe Vouer</string>
-    <string name="vault_all_snippets">Alle Kodesnitte</string>
-    <string name="vault_empty">Nog geen kodesnitte nie. Tik + om jou eerste een te skep.</string>
+    <string name="vault_all_snippets">Alle kodebrokkies</string>
+    <string name="vault_empty">Nog geen kodebrokkies nie. Tik + om jou eerste een te skep.</string>
 
-    <string name="editor_title_new">Nuwe Kodesnit</string>
-    <string name="editor_title_edit">Wysig Kodesnit</string>
+    <string name="editor_title_new">Nuwe kodebrokkie</string>
+    <string name="editor_title_edit">Wysig kodebrokkie</string>
     <string name="editor_field_title">Titel</string>
     <string name="editor_field_folder">Vouer</string>
     <string name="editor_field_language">Taal</string>
-    <string name="editor_field_tags">Etikette</string>
+    <string name="editor_field_tags">Merkers</string>
     <string name="editor_field_code">Kode</string>
     <string name="editor_field_description">Beskrywing (Opsioneel)</string>
     <string name="editor_save">Stoor</string>
     <string name="editor_error_required">Titel en kode word vereis.</string>
     <string name="editor_saved_offline">Plaaslik gestoor. Sal sinkroniseer wanneer aanlyn.</string>
 
-    <string name="finance_title">Finansiële Volger</string>
+    <string name="finance_title">Finansiële spoorder</string>
     <string name="finance_subtitle">Volg jou inkomste, uitgawes en algehele finansiële gesondheid.</string>
     <string name="finance_total_income">Totale Inkomste</string>
     <string name="finance_total_expenses">Totale Uitgawes</string>
     <string name="finance_net_balance">Netto Balans</string>
     <string name="finance_recent_transactions">Onlangse Transaksies</string>
     <string name="finance_add_transaction">Voeg Transaksie By</string>
-    <string name="finance_budget_alert">Bediener-begrotingdrempel bereik</string>
+    <string name="finance_budget_alert">Begrotingsdrempel vir webhuisvesting bereik</string>
 
     <string name="add_tx_title">Voeg Transaksie By</string>
-    <string name="add_tx_subtitle">Rekord \'n nuwe inkomste of uitgawe</string>
+    <string name="add_tx_subtitle">Teken nuwe inkomste of uitgawes aan.</string>
     <string name="add_tx_income">Inkomste</string>
     <string name="add_tx_expense">Uitgawe</string>
     <string name="add_tx_amount">Bedrag</string>
@@ -91,13 +91,13 @@
     <string name="notifications_mark_all_read">Merk alles as gelees</string>
 
     <string name="settings_title">Instellings</string>
-    <string name="settings_subtitle">Bestuur jou voorkeure en toepassinginstellings.</string>
+    <string name="settings_subtitle">Bestuur jou voorkeure en toepassingsinstellings.</string>
     <string name="settings_language">Taal</string>
     <string name="settings_security">Sekuriteit</string>
     <string name="settings_biometric_login">Biometriese Aanmelding</string>
     <string name="settings_notifications">Kennisgewings</string>
-    <string name="settings_push_notifications">Stoot-kennisgewings</string>
-    <string name="settings_sync">Sinkroniseringinstellings</string>
+    <string name="settings_push_notifications">Stootkennisgewings</string>
+    <string name="settings_sync">Sinkroniseringsinstellings</string>
     <string name="settings_auto_sync">Outomatiese Sinkronisering</string>
     <string name="settings_wifi_only">Sinkroniseer Slegs op Wi-Fi</string>
     <string name="settings_sync_now">Sinkroniseer Nou</string>
@@ -110,7 +110,7 @@
     <string name="sync_error">Sommige items het nie gesinkroniseer nie. Tik om weer te probeer.</string>
     <string name="sync_last_synced">Laas gesinkroniseer %1$s</string>
 
-    <string name="language_english">Engels</string>
+    <string name="language_english">English</string>
     <string name="language_afrikaans">Afrikaans</string>
     <string name="language_xhosa">isiXhosa</string>
 

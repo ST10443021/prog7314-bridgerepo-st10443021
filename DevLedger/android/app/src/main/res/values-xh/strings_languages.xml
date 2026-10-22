@@ -122,7 +122,7 @@
     <string name="lang_email_address_is_required">Idilesi ye-imeyile iyafuneka.</string>
     <string name="lang_email_address_label">Idilesi ye-imeyile</string>
     <string name="lang_email_and_password">I-imeyile negama lokugqitha</string>
-    <string name="lang_empty_bin_includes_all_saved_archived_items_even_those_hidde">Ukukhupha umgqomo kuquka zonke izinto ezikuvimba, nezo zifihlwe zizihluzi. Hlaziya kuqala ukuze ulayishe izinto eziselini.</string>
+    <string name="lang_empty_bin_includes_all_saved_archived_items_even_those_hidde">Ukukhupha umgqomo kuquka zonke izinto ezigcinwe kuvimba, nezo zifihlwe zizihluzi. Hlaziya kuqala ukuze ulayishe izinto eziselufini.</string>
     <string name="lang_empty_recycle_bin">Khupha umgqomo?</string>
     <string name="lang_empty_recycle_bin_action">Khupha umgqomo</string>
     <string name="lang_enable_secure_biometric_quick_access">Vumela ukungena ngokukhawuleza ngebhayometriki ekhuselekileyo</string>
@@ -196,7 +196,7 @@
     <string name="lang_maintenance_data">Ulondolozo nedatha</string>
     <string name="lang_make_sure_your_finger_is_clean_and_dry">Qinisekisa ukuba umnwe wakho ucocekile kwaye womile</string>
     <string name="lang_manage">Lawula</string>
-    <string name="lang_manage_data_synchronisation_and_offline_updates">Lawula ungqamaniso lwedatha nohlaziyo olungekho intanethi.</string>
+    <string name="lang_manage_data_synchronisation_and_offline_updates">Lawula ungqamaniso lwedatha nohlaziyo olwenziwa ngaphandle kwe-intanethi.</string>
     <string name="lang_manage_your_account_information_and_preferences">Lawula iinkcukacha zeakhawunti yakho nezinto ozikhethayo.</string>
     <string name="lang_manage_your_deleted_and_archived_snippets">Lawula iziqwenga zakho ezicinyiweyo nezigcinwe kuvimba.</string>
     <string name="lang_marketing">Intengiso</string>
@@ -341,7 +341,7 @@
     <string name="lang_snippets_heading">IZIQWENGA (%1$d)</string>
     <string name="lang_stats">AMANANI</string>
     <string name="lang_stats_overview">Isishwankathelo samanani</string>
-    <string name="lang_store_organize_and_reuse_your_code_snippets">Gcina, lungelelanisa uze usebenzise iziqwenga zakho sekhowudi kwakhona.</string>
+    <string name="lang_store_organize_and_reuse_your_code_snippets">Gcina, lungelelanisa uze usebenzise iziqwenga zakho zekhowudi kwakhona.</string>
     <string name="lang_strong">Yomelele</string>
     <string name="lang_sync">Ngqamanisa</string>
     <string name="lang_sync_diagnostic">Inyathelo longqamaniso aliphumelelanga. Jonga uqhagamshelo uze uzame kwakhona; utshintsho olulindileyo lugciniwe.</string>
@@ -366,7 +366,7 @@
     <string name="lang_terms_8_body">Umsebenzi wokulandelela imali weDevLedger wenzelwe ukuba sisixhobo sokuzilungelelanisa.\n\nUlwazi oluboniswa yiDevLedger malungathathwa njengecebiso leengcali zemali, locwangciso-mali okanye lerhafu. Abasebenzisi banoxanduva lokuqinisekisa iirekhodi zabo zemali.</string>
     <string name="lang_terms_9_body">Kwenziwa iinzame ezifanelekileyo zokugcina iDevLedger ifumaneka kwaye isebenza. Kodwa ukufikelela okungaphazamisekiyo akunakuqinisekiswa.\n\nImisebenzi inokungafumaneki okwethutyana ngenxa yolondolozo, iingxaki zoqhagamshelo okanye iingxaki zobugcisa.</string>
     <string name="lang_terms_conditions">Imiqathango</string>
-    <string name="lang_terms_of_service">Miqathango Yenkonzo</string>
+    <string name="lang_terms_of_service">Imiqathango yenkonzo</string>
     <string name="lang_the_attachment_is_larger_than_2mb_choose_a_smaller_file">Isihlomelo sikhulu kune-2 MB — khetha ifayile encinci.</string>
     <string name="lang_there_are_no_unread_notifications">Akukho zaziso zingafundwanga.</string>
     <string name="lang_these_snippets_are_no_longer_in_this_account_s_archive">Ezi ziqwenga azisekho kuvimba wale akhawunti.</string>

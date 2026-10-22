@@ -176,7 +176,7 @@
     <string name="lang_having_trouble">Sukkel jy?</string>
     <string name="lang_hide_password">Versteek wagwoord</string>
     <string name="lang_history">Geskiedenis</string>
-    <string name="lang_hosting_domains">Huisvesting en domeine</string>
+    <string name="lang_hosting_domains">Webhuisvesting en domeine</string>
     <string name="lang_how_we_use_your_information">Hoe ons jou inligting gebruik</string>
     <string name="lang_income">Inkomste</string>
     <string name="lang_income_added">Inkomste bygevoeg</string>
@@ -242,7 +242,7 @@
     <string name="lang_payment_method">Betaalmetode</string>
     <string name="lang_pin_must_be_exactly_4_digits">PIN moet presies 4 syfers wees.</string>
     <string name="lang_pin_password">PIN / Wagwoord</string>
-    <string name="lang_pins_do_not_match">PIN\'s stem nie ooreen nie.</string>
+    <string name="lang_pins_do_not_match">PIN-kodes stem nie ooreen nie.</string>
     <string name="lang_please_correct_the_highlighted_fields">Maak die gemerkte velde reg.</string>
     <string name="lang_please_sign_in_before_saving_a_transaction">Meld aan voordat jy \'n transaksie stoor.</string>
     <string name="lang_please_use_your_security_pin_to_access_your_vault">Gebruik jou sekuriteits-PIN om jou kluis oop te maak</string>

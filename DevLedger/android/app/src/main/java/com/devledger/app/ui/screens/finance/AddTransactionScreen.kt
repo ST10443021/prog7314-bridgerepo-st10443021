@@ -70,7 +70,7 @@ fun AddTransactionScreen(
         val name = resolver.query(uri, null, null, null, null)?.use { cursor ->
             val idx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
             if (idx >= 0 && cursor.moveToFirst()) cursor.getString(idx) else null
-        } ?: uri.lastPathSegment ?: "attachment"
+        } ?: uri.lastPathSegment ?: strings.get(R.string.lang_attachment)
         viewModel.onAttachmentSelected(name, Base64.encodeToString(bytes, Base64.NO_WRAP), bytes.size.toLong())
     }
 
@@ -234,7 +234,7 @@ fun AddTransactionScreen(
                 TextButton(onClick = {
                     datePickerState.selectedDateMillis?.let(viewModel::onDateChange)
                     showDatePicker = false
-                }) { Text("OK") }
+                }) { Text(strings.get(R.string.lang_ok)) }
             },
             dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text(strings.get(R.string.lang_cancel)) } },
         ) { DatePicker(state = datePickerState) }

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="lang_ok">OK</string>
+    <string name="bio_prompt_cancelled">Biometric verification cancelled. Try again or use your DevLedger PIN.</string>
+    <string name="bio_prompt_timeout">Verification timed out. Try again or use your DevLedger PIN.</string>
+    <string name="bio_prompt_unable_to_process">The scan could not be read. Try again or use your DevLedger PIN.</string>
+    <string name="bio_prompt_locked_out">Too many attempts. Wait before retrying, or use your DevLedger PIN.</string>
+    <string name="bio_prompt_locked_out_permanent">Biometrics are locked. Unlock your phone with its PIN, pattern or password, then retry, or use your DevLedger PIN.</string>
+</resources>
