@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- DevLedger shield/code/book silhouette, inside the central 66dp safe zone.
+     https://developer.android.com/develop/ui/compose/system/icon_design_adaptive -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#00000000" android:strokeColor="#FFFFFFFF" android:strokeWidth="3.2" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M54,23C44,30 35,33 25,36V55C25,68 32,77 41,81M54,23C64,30 73,33 83,36V55C83,68 76,77 67,81" />
+    <path android:fillColor="#00000000" android:strokeColor="#FFFFFFFF" android:strokeWidth="3.2" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M43,33L36,39L43,45M65,33L72,39L65,45M58,30L51,47" />
+    <path android:fillColor="#00000000" android:strokeColor="#FFFFFFFF" android:strokeWidth="2.8" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M52,55C45,51 40,49 33,49V70C37,70 40,71 43,73M56,55C63,51 68,49 75,49V70C71,70 68,71 65,73M54,56V63" />
+    <path android:fillColor="#00000000" android:strokeColor="#FFFFFFFF" android:strokeWidth="2.4" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M38,57L46,60M38,62L44,64M70,57L62,60M70,62L64,64" />
+    <path android:fillColor="#00000000" android:strokeColor="#FFFFFFFF" android:strokeWidth="2.8" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M54,66L63,69V75C63,80 58,83 54,85C50,83 45,80 45,75V69Z" />
+    <path android:fillColor="#00000000" android:strokeColor="#FFFFFFFF" android:strokeWidth="2.6" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M49,75L52,78L59,71" />
+</vector>
