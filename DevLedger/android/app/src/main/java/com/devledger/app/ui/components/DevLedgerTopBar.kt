@@ -1,5 +1,9 @@
 package com.devledger.app.ui.components
 
+import com.devledger.app.util.localization.rememberAppStrings
+
+import com.devledger.app.R
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -24,6 +28,7 @@ fun DevLedgerTopBar(
     onBack: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
+    val strings = rememberAppStrings()
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -33,7 +38,7 @@ fun DevLedgerTopBar(
     ) {
         if (onBack != null) {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = DevLedgerColors.TextPrimary)
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.get(R.string.lang_back), tint = DevLedgerColors.TextPrimary)
             }
         } else {
             Spacer(modifier = Modifier.width(12.dp))

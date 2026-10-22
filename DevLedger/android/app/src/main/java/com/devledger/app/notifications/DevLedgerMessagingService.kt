@@ -1,11 +1,11 @@
 package com.devledger.app.notifications
 
+import com.devledger.app.util.localization.AppStrings
+
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import androidx.core.app.NotificationCompat
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
 import com.devledger.app.MainActivity
 import com.devledger.app.R
 import com.devledger.app.data.local.entity.NotificationEntity
@@ -57,20 +57,16 @@ class DevLedgerMessagingService : FirebaseMessagingService() {
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        // Enqueued via WorkManager (Google Developers, n.d.c) rather than called directly: this
-        // callback runs on a system-managed path outside normal Activity/ViewModel
-        // scope, so a plain network call here would be unsafe if the process is about
-        // to be torn down. RegisterDeviceWorker re-reads the token itself, so the
-        // parameter isn't threaded through — see DeviceRegistrar.
-        val request = OneTimeWorkRequestBuilder<RegisterDeviceWorker>().build()
-        WorkManager.getInstance(applicationContext).enqueue(request)
+        // Re-read the current FCM token in durable work, including after a retry.
+        // Replacing the unique job also covers rotation during an in-flight attempt.
+        RegisterDeviceWorker.enqueue(applicationContext)
     }
 
     private fun showSystemNotification(title: String, body: String) {
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (manager.getNotificationChannel(CHANNEL_ID) == null) {
             manager.createNotificationChannel(
-                NotificationChannel(CHANNEL_ID, "DevLedger Alerts", NotificationManager.IMPORTANCE_HIGH),
+                NotificationChannel(CHANNEL_ID, AppStrings.forContext(this).get(R.string.lang_devledger_alerts), NotificationManager.IMPORTANCE_HIGH),
             )
         }
         val intent = android.content.Intent(this, MainActivity::class.java)

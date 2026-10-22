@@ -3,6 +3,7 @@ package com.devledger.app
 import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import com.devledger.app.notifications.RegisterDeviceWorker
 import com.devledger.app.sync.RecurringTransactionWorker
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
@@ -32,5 +33,7 @@ class DevLedgerApplication : Application(), Configuration.Provider {
 
         // Schedule the recurring transaction worker on application startup
         RecurringTransactionWorker.schedule(this)
+        // Repair missed registration on upgrade/startup without resetting an active retry.
+        RegisterDeviceWorker.enqueue(this, replaceExisting = false)
     }
 }

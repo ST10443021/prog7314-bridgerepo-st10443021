@@ -121,6 +121,7 @@ dependencies {
     // Firebase (Cloud Messaging + Auth — Firebase, n.d.)
     implementation(platform("com.google.firebase:firebase-bom:33.1.2"))
     implementation("com.google.firebase:firebase-messaging-ktx")
+    implementation("com.google.firebase:firebase-installations") // Classify retryable installation errors.
     implementation("com.google.firebase:firebase-auth-ktx")
 
     // Google Sign-In (SSO)
@@ -140,6 +141,7 @@ dependencies {
     testImplementation("com.google.truth:truth:1.4.4")
     testImplementation("androidx.arch.core:core-testing:2.2.0")
     testImplementation("androidx.room:room-testing:2.6.1")
+    testImplementation("androidx.work:work-testing:2.9.1")
     testImplementation("org.robolectric:robolectric:4.13")
     testImplementation("androidx.test:core:1.6.1")
 

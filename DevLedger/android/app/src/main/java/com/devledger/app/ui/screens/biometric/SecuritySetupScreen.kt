@@ -1,5 +1,9 @@
 package com.devledger.app.ui.screens.biometric
 
+import com.devledger.app.util.localization.UiText
+
+import com.devledger.app.util.localization.rememberAppStrings
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -57,7 +61,7 @@ class SecuritySetupViewModel @Inject constructor(
     var confirmPin by mutableStateOf("")
     var isFingerprintEnabled by mutableStateOf(false)
     var isFingerprintVerified by mutableStateOf(false)
-    var errorText by mutableStateOf<String?>(null)
+    var errorText by mutableStateOf<UiText?>(null)
     var isSaved by mutableStateOf(false)
     var isSaving by mutableStateOf(false)
     var isLoggedOut by mutableStateOf(false)
@@ -65,15 +69,15 @@ class SecuritySetupViewModel @Inject constructor(
     fun saveSetup(): Job? {
         if (isSaving) return null
         if (pin.length != 4 || !pin.all { it in '0'..'9' }) {
-            errorText = "PIN must be exactly 4 digits."
+            errorText = UiText.Resource(R.string.lang_pin_must_be_exactly_4_digits)
             return null
         }
         if (pin != confirmPin) {
-            errorText = "PINs do not match."
+            errorText = UiText.Resource(R.string.lang_pins_do_not_match)
             return null
         }
         if (isFingerprintEnabled && !isFingerprintVerified) {
-            errorText = "Please verify your fingerprint to enable biometric access."
+            errorText = UiText.Resource(R.string.lang_please_verify_your_fingerprint_to_enable_biometric_access)
             return null
         }
 
@@ -94,7 +98,7 @@ class SecuritySetupViewModel @Inject constructor(
                 }
                 when (result) {
                     is DevLedgerResult.Error -> errorText =
-                        "Security setup could not be saved. Check your connection and retry."
+                        UiText.Resource(R.string.lang_security_setup_could_not_be_saved_check_your_connection_and_)
                     is DevLedgerResult.Success -> {
                         check(authRepository.currentUser.first()?.userId == user.userId) {
                             "The account changed. Sign in again."
@@ -105,11 +109,11 @@ class SecuritySetupViewModel @Inject constructor(
                     }
                 }
             } catch (_: TimeoutCancellationException) {
-                errorText = "Saving security setup timed out. Check your connection and retry."
+                errorText = UiText.Resource(R.string.lang_saving_security_setup_timed_out_check_your_connection_and_re)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Exception) {
-                errorText = "Security setup could not be saved. Check your connection and retry."
+                errorText = UiText.Resource(R.string.lang_security_setup_could_not_be_saved_check_your_connection_and_)
             } finally {
                 isSaving = false
             }
@@ -130,6 +134,7 @@ fun SecuritySetupScreen(
     onLogout: () -> Unit,
     viewModel: SecuritySetupViewModel = hiltViewModel()
 ) {
+    val strings = rememberAppStrings()
     val context = LocalContext.current
     val activity = context.findFragmentActivity()
     val helper = remember(activity) { activity?.let { BiometricAuthHelper(it) } }
@@ -146,7 +151,7 @@ fun SecuritySetupScreen(
 
     fun triggerBiometricVerification() {
         if (helper == null) {
-            viewModel.errorText = context.getString(R.string.bio_unavailable)
+            viewModel.errorText = UiText.Resource(R.string.bio_unavailable)
             return
         }
         if (helper.canAuthenticate()) {
@@ -158,13 +163,13 @@ fun SecuritySetupScreen(
                     viewModel.errorText = null
                 },
                 onError = { message ->
-                    viewModel.errorText = "Verification failed: $message"
+                    viewModel.errorText = UiText.Resource(R.string.lang_verification_failed, listOf(message))
                     viewModel.isFingerprintVerified = false
                 },
-                onFailed = { message -> viewModel.errorText = message },
+                onFailed = { message -> viewModel.errorText = UiText.Dynamic(message) },
             )
         } else {
-            viewModel.errorText = "Biometric hardware unavailable."
+            viewModel.errorText = UiText.Resource(R.string.lang_biometric_hardware_unavailable)
         }
     }
 
@@ -184,18 +189,18 @@ fun SecuritySetupScreen(
                         Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, tint = DevLedgerColors.AccentBlue, modifier = Modifier.size(18.dp))
                     }
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text("Logout", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text(strings.get(R.string.lang_logout), color = Color.White, fontWeight = FontWeight.Bold)
                 }
             },
-            text = { Text("Are you sure you want to log out and return to the home screen?", color = DevLedgerColors.TextSecondary) },
+            text = { Text(strings.get(R.string.lang_are_you_sure_you_want_to_log_out_and_return_to_the_home_scre), color = DevLedgerColors.TextSecondary) },
             confirmButton = {
                 TextButton(onClick = { viewModel.logout() }) {
-                    Text("Logout", color = DevLedgerColors.ErrorRed, fontWeight = FontWeight.Bold)
+                    Text(strings.get(R.string.lang_logout), color = DevLedgerColors.ErrorRed, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showLogoutDialog = false }) {
-                    Text("Cancel", color = DevLedgerColors.TextMuted)
+                    Text(strings.get(R.string.lang_cancel), color = DevLedgerColors.TextMuted)
                 }
             }
         )
@@ -224,21 +229,21 @@ fun SecuritySetupScreen(
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
+                    contentDescription = strings.get(R.string.lang_back),
                     tint = Color.White,
                     modifier = Modifier.size(20.dp)
                 )
             }
             Spacer(modifier = Modifier.width(16.dp))
             Text(
-                text = "Security Configuration",
+                text = strings.get(R.string.lang_security_configuration),
                 color = DevLedgerColors.AccentBlue,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.weight(1f))
             Text(
-                text = "Registration Step",
+                text = strings.get(R.string.lang_registration_step),
                 color = DevLedgerColors.AccentBlue.copy(alpha = 0.7f),
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold
@@ -257,14 +262,14 @@ fun SecuritySetupScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Register Your Security Vault",
+            text = strings.get(R.string.lang_register_your_security_vault),
             color = Color.White,
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold
         )
 
         Text(
-            text = "Set up your unique security PIN and register your fingerprint for biometric access to this workspace.",
+            text = strings.get(R.string.lang_set_up_your_unique_security_pin_and_register_your_fingerprin),
             color = DevLedgerColors.TextMuted,
             fontSize = 13.sp,
             textAlign = TextAlign.Center,
@@ -277,7 +282,7 @@ fun SecuritySetupScreen(
         DevLedgerTextField(
             value = viewModel.pin,
             onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) viewModel.pin = it },
-            label = "CREATE 4-DIGIT PIN",
+            label = strings.get(R.string.lang_create_4_digit_pin),
             placeholder = "0000",
             isPassword = true,
             isValid = viewModel.pin.length == 4,
@@ -288,7 +293,7 @@ fun SecuritySetupScreen(
         DevLedgerTextField(
             value = viewModel.confirmPin,
             onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) viewModel.confirmPin = it },
-            label = "CONFIRM 4-DIGIT PIN",
+            label = strings.get(R.string.lang_confirm_4_digit_pin),
             placeholder = "0000",
             isPassword = true,
             isValid = pinMatch,
@@ -322,13 +327,13 @@ fun SecuritySetupScreen(
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Register Biometrics",
+                    text = strings.get(R.string.lang_register_biometrics),
                     color = Color.White,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = if (viewModel.isFingerprintVerified) "Fingerprint registered successfully" else "Enable secure biometric quick access",
+                    text = if (viewModel.isFingerprintVerified) strings.get(R.string.lang_fingerprint_registered_successfully) else strings.get(R.string.lang_enable_secure_biometric_quick_access),
                     color = if (viewModel.isFingerprintVerified) DevLedgerColors.SuccessGreen else DevLedgerColors.TextMuted,
                     fontSize = 12.sp
                 )
@@ -355,7 +360,7 @@ fun SecuritySetupScreen(
 
         if (viewModel.errorText != null) {
             Text(
-                text = viewModel.errorText!!,
+                text = viewModel.errorText!!.resolve(strings),
                 color = DevLedgerColors.ErrorRed,
                 fontSize = 13.sp,
                 textAlign = TextAlign.Center
@@ -367,12 +372,12 @@ fun SecuritySetupScreen(
         // Large Bottom Button: Scan Fingerprint (if enabled but not verified) or Save
         if (viewModel.isFingerprintEnabled && !viewModel.isFingerprintVerified) {
             DevLedgerPrimaryButton(
-                text = "Scan Fingerprint to Register",
+                text = strings.get(R.string.lang_scan_fingerprint_to_register),
                 onClick = { triggerBiometricVerification() }
             )
         } else {
             DevLedgerPrimaryButton(
-                text = "Save & Continue",
+                text = strings.get(R.string.lang_save_continue),
                 enabled = !viewModel.isSaving,
                 loading = viewModel.isSaving,
                 onClick = { viewModel.saveSetup() }
@@ -396,7 +401,7 @@ fun SecuritySetupScreen(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Logout & Cancel Setup", fontWeight = FontWeight.Bold)
+                Text(strings.get(R.string.lang_logout_cancel_setup), fontWeight = FontWeight.Bold)
             }
         }
 

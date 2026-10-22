@@ -1,5 +1,9 @@
 package com.devledger.app.viewmodel
 
+import com.devledger.app.util.localization.UiText
+
+import com.devledger.app.R
+
 import com.devledger.app.data.local.entity.UserEntity
 import com.devledger.app.data.repository.AuthRepository
 import com.devledger.app.ui.screens.auth.AuthViewModel
@@ -98,7 +102,7 @@ class AuthViewModelTest {
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
-        assertThat(state.errorMessage).isEqualTo("SSO sign-in failed: HTTP 401")
+        assertThat(state.errorMessage).isEqualTo(UiText.Resource(R.string.auth_error_generic))
         assertThat(state.isAuthenticated).isFalse()
         assertThat(state.isGoogleLoading).isFalse()
         assertThat(state.isGitHubLoading).isFalse()
@@ -116,8 +120,8 @@ class AuthViewModelTest {
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
-        assertThat(state.emailError).isEqualTo("Enter your email address.")
-        assertThat(state.passwordError).isEqualTo("Enter your password.")
+        assertThat(state.emailError).isEqualTo(UiText.Resource(R.string.lang_enter_your_email_address))
+        assertThat(state.passwordError).isEqualTo(UiText.Resource(R.string.lang_enter_your_password))
         assertThat(state.errorMessage).isNull()
         assertThat(state.isLoading).isFalse()
         assertThat(state.isAuthenticated).isFalse()

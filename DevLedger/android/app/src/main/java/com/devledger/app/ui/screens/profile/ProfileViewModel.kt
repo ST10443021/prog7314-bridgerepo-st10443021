@@ -1,5 +1,9 @@
 package com.devledger.app.ui.screens.profile
 
+import com.devledger.app.util.localization.UiText
+
+import com.devledger.app.R
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.devledger.app.data.local.entity.UserEntity
@@ -29,8 +33,8 @@ data class ProfileUiState(
     val isLoading: Boolean = true,
     val isSaving: Boolean = false,
     val isEditing: Boolean = false,
-    val error: String? = null,
-    val message: String? = null,
+    val error: UiText? = null,
+    val message: UiText? = null,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -146,7 +150,7 @@ class ProfileViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            error = result.message,
+                            error = UiText.Resource(R.string.lang_profile_load_failed),
                         )
                     }
                 }
@@ -196,7 +200,7 @@ class ProfileViewModel @Inject constructor(
 
         if (cleanedName.isBlank()) {
             _uiState.update {
-                it.copy(error = "Full name is required.")
+                it.copy(error = UiText.Resource(R.string.lang_full_name_is_required))
             }
             return
         }
@@ -232,7 +236,7 @@ class ProfileViewModel @Inject constructor(
                             editableFullName = result.data.fullName,
                             isSaving = false,
                             isEditing = false,
-                            message = "Profile updated successfully.",
+                            message = UiText.Resource(R.string.lang_profile_updated_successfully),
                         )
                     }
                 }
@@ -241,7 +245,7 @@ class ProfileViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isSaving = false,
-                            error = result.message,
+                            error = UiText.Resource(R.string.lang_your_profile_could_not_be_updated_check_your_connection_and_),
                         )
                     }
                 }

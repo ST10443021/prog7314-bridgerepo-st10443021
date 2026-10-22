@@ -1,5 +1,8 @@
 package com.devledger.app.ui.screens.settings
 
+
+import com.devledger.app.util.localization.rememberAppStrings
+
 import android.content.Context
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -157,6 +160,7 @@ fun SettingsScreenContent(
     onSignOut: () -> Unit,
     onRetryLoading: () -> Unit,
 ) {
+    val strings = rememberAppStrings()
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -187,12 +191,12 @@ fun SettingsScreenContent(
         state.error?.let { error ->
             item {
                 StatusMessage(
-                    message = error,
+                    message = error.resolve(strings),
                     color = DevLedgerColors.ErrorRed,
                     actionText = if (
                         !state.isLoaded && !state.isLoading
                     ) {
-                        "Retry"
+                        strings.get(R.string.lang_retry)
                     } else {
                         null
                     },
@@ -204,7 +208,7 @@ fun SettingsScreenContent(
         state.message?.let { message ->
             item {
                 StatusMessage(
-                    message = message,
+                    message = message.resolve(strings),
                     color = DevLedgerColors.SuccessGreen,
                 )
             }
@@ -214,7 +218,7 @@ fun SettingsScreenContent(
             SettingsSectionCard(
                 icon = Icons.Filled.Language,
                 title = stringResource(R.string.settings_language),
-                subtitle = "Choose your preferred application language.",
+                subtitle = strings.get(R.string.lang_choose_your_preferred_application_language),
                 accentColor = DevLedgerColors.AccentBlue,
             ) {
                 LanguageOption(
@@ -266,12 +270,12 @@ fun SettingsScreenContent(
             SettingsSectionCard(
                 icon = Icons.Filled.Sync,
                 title = stringResource(R.string.settings_sync),
-                subtitle = "Manage data synchronisation and offline updates.",
+                subtitle = strings.get(R.string.lang_manage_data_synchronisation_and_offline_updates),
                 accentColor = DevLedgerColors.AccentBlue,
             ) {
                 ToggleSettingRow(
                     title = stringResource(R.string.settings_wifi_only),
-                    description = "Only synchronise while connected to Wi-Fi.",
+                    description = strings.get(R.string.lang_only_synchronise_while_connected_to_wi_fi),
                     checked = state.wifiOnlySync,
                     onCheckedChange = onWifiOnlySyncChange,
                 )
@@ -280,16 +284,16 @@ fun SettingsScreenContent(
 
                 SettingActionRow(
                     title = stringResource(R.string.settings_sync_now),
-                    description = "Upload pending changes and download updates.",
-                    actionText = "Sync",
+                    description = strings.get(R.string.lang_upload_pending_changes_and_download_updates),
+                    actionText = strings.get(R.string.lang_sync),
                     onClick = onSyncNow,
                 )
 
                 HorizontalDivider(color = DevLedgerColors.Border)
 
                 NavigationSettingRow(
-                    title = "Sync History & Status",
-                    description = "View detailed logs and current synchronization status.",
+                    title = strings.get(R.string.lang_sync_history_status),
+                    description = strings.get(R.string.lang_view_detailed_logs_and_current_synchronization_status),
                     onClick = onOpenSync,
                 )
             }
@@ -298,21 +302,21 @@ fun SettingsScreenContent(
         item {
             SettingsSectionCard(
                 icon = Icons.Filled.RestoreFromTrash,
-                title = "Maintenance & Data",
-                subtitle = "Manage your deleted and archived snippets.",
+                title = strings.get(R.string.lang_maintenance_data),
+                subtitle = strings.get(R.string.lang_manage_your_deleted_and_archived_snippets),
                 accentColor = DevLedgerColors.AccentPurple,
             ) {
                 NavigationSettingRow(
-                    title = "Recycle Bin",
-                    description = "Restore or permanently delete removed snippets.",
+                    title = strings.get(R.string.lang_recycle_bin),
+                    description = strings.get(R.string.lang_restore_or_permanently_delete_removed_snippets),
                     onClick = onOpenRecycle,
                 )
 
                 HorizontalDivider(color = DevLedgerColors.Border)
 
                 NavigationSettingRow(
-                    title = "Archive",
-                    description = "View and manage your archived snippets.",
+                    title = strings.get(R.string.lang_archive),
+                    description = strings.get(R.string.lang_view_and_manage_your_archived_snippets),
                     onClick = onOpenRecycle,
                 )
             }
@@ -322,7 +326,7 @@ fun SettingsScreenContent(
             SettingsSectionCard(
                 icon = Icons.Filled.AttachMoney,
                 title = stringResource(R.string.settings_currency),
-                subtitle = "Choose the currency used for financial totals.",
+                subtitle = strings.get(R.string.lang_choose_the_currency_used_for_financial_totals),
                 accentColor = DevLedgerColors.AccentPurple,
             ) {
                 CurrencyOptions(
@@ -336,7 +340,7 @@ fun SettingsScreenContent(
             Spacer(modifier = Modifier.height(2.dp))
 
             DevLedgerPrimaryButton(
-                text = "Save changes",
+                text = strings.get(R.string.lang_save_changes),
                 onClick = onSaveChanges,
                 enabled = state.isLoaded &&
                         !state.isLoading &&
@@ -382,6 +386,7 @@ fun SettingsScreenContent(
 private fun SettingsHeader(
     onBack: () -> Unit,
 ) {
+    val strings = rememberAppStrings()
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -397,7 +402,7 @@ private fun SettingsHeader(
         ) {
             Icon(
                 imageVector = Icons.Filled.ArrowBack,
-                contentDescription = "Back",
+                contentDescription = strings.get(R.string.lang_back),
                 tint = DevLedgerColors.TextSecondary,
             )
         }

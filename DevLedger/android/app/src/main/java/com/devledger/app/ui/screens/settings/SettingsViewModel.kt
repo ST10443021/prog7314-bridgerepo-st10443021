@@ -1,5 +1,9 @@
 package com.devledger.app.ui.screens.settings
 
+import com.devledger.app.util.localization.UiText
+
+import com.devledger.app.R
+
 import android.util.Log
 import kotlinx.coroutines.withTimeout
 import com.devledger.app.data.local.PinStorage
@@ -28,8 +32,8 @@ data class SettingsUiState(
     val isSaving: Boolean = false,
     val isLoaded: Boolean = false,
     val hasChanges: Boolean = false,
-    val error: String? = null,
-    val message: String? = null,
+    val error: UiText? = null,
+    val message: UiText? = null,
     val appliedLanguage: String? = null,
     val appliedWifiOnlySync: Boolean? = null,
 )
@@ -123,12 +127,12 @@ class SettingsViewModel @Inject constructor(
 
     fun biometricVerificationFailed(message: String) {
         if (!_uiState.value.isVerifyingBiometrics) return
-        _uiState.update { it.copy(isVerifyingBiometrics = false, error = message) }
+        _uiState.update { it.copy(isVerifyingBiometrics = false, error = UiText.Dynamic(message)) }
     }
 
     fun biometricScanNotRecognised(message: String) {
         if (_uiState.value.isVerifyingBiometrics) {
-            _uiState.update { it.copy(error = message) }
+            _uiState.update { it.copy(error = UiText.Dynamic(message)) }
         }
     }
 
@@ -193,7 +197,7 @@ class SettingsViewModel @Inject constructor(
 
                 acceptServerSettings(
                     settings = saved,
-                    message = "Settings saved.",
+                    message = UiText.Resource(R.string.lang_settings_saved),
                 )
             } catch (error: Exception) {
                 Log.e("SettingsVM", "Error saving settings", error)
@@ -210,7 +214,7 @@ class SettingsViewModel @Inject constructor(
 
     private fun acceptServerSettings(
         settings: UserSettingsDto,
-        message: String? = null,
+        message: UiText? = null,
     ) {
         biometricVerified = false
         _uiState.value = SettingsUiState(
@@ -226,15 +230,15 @@ class SettingsViewModel @Inject constructor(
         )
     }
 
-    private fun errorMessage(error: Exception): String = when (error) {
+    private fun errorMessage(error: Exception): UiText = when (error) {
         is HttpException -> when (error.code()) {
-            401 -> "Your session has expired. Please Sign Out and Sign In again to continue."
-            403 -> "You do not have permission to access these settings."
-            404 -> "Settings were not found on the server."
-            else -> "The API request failed (${error.code()})."
+            401 -> UiText.Resource(R.string.lang_your_session_has_expired_please_sign_out_and_sign_in_again_t)
+            403 -> UiText.Resource(R.string.lang_you_do_not_have_permission_to_access_these_settings)
+            404 -> UiText.Resource(R.string.lang_settings_were_not_found_on_the_server)
+            else -> UiText.Resource(R.string.lang_api_request_failed, listOf(error.code()))
         }
-        is IOException -> "Could not reach the API. Please check your internet connection."
-        else -> error.message ?: "An unexpected error occurred. Please try again."
+        is IOException -> UiText.Resource(R.string.lang_could_not_reach_the_api_please_check_your_internet_connectio)
+        else -> UiText.Resource(R.string.lang_an_unexpected_error_occurred_please_try_again)
     }
 
     fun signOut(onComplete: () -> Unit = {}) = viewModelScope.launch {

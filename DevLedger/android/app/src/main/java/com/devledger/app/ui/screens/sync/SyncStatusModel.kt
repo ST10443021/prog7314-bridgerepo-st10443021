@@ -1,5 +1,7 @@
 package com.devledger.app.ui.screens.sync
 
+import com.devledger.app.util.localization.UiText
+
 import com.devledger.app.data.local.entity.*
 
 enum class SyncRunState { IDLE, QUEUED, WAITING, RUNNING, SUCCEEDED, FAILED, RETRYING, PARTIAL, CONFLICT, CANCELLED }
@@ -11,7 +13,7 @@ data class SyncUiState(
     val uploadQueue: List<QueueItem> = emptyList(),
     val conflicts: List<SnippetEntity> = emptyList(),
     val resolvingId: String? = null,
-    val actionError: String? = null,
+    val actionError: UiText? = null,
     val downloadInProgress: Boolean = false,
     val recentLog: List<SyncLogEntity> = emptyList(),
     val wifiOnlySync: Boolean = false, val chargingOnlySync: Boolean = false,

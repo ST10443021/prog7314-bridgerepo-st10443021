@@ -1,5 +1,9 @@
 package com.devledger.app.ui.screens.snippets
 
+import com.devledger.app.util.localization.UiText
+
+import com.devledger.app.R
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.devledger.app.data.local.entity.FolderEntity
@@ -15,10 +19,10 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 
-enum class SnippetSortOption(val label: String) {
-    RECENTLY_UPDATED("Recently Updated"),
-    TITLE_AZ("Title A-Z"),
-    LANGUAGE("Language"),
+enum class SnippetSortOption(@androidx.annotation.StringRes val labelRes: Int) {
+    RECENTLY_UPDATED(R.string.lang_recently_updated),
+    TITLE_AZ(R.string.lang_title_a_z),
+    LANGUAGE(R.string.lang_language),
 }
 
 data class SnippetVaultUiState(
@@ -29,7 +33,7 @@ data class SnippetVaultUiState(
     val selectedTag: String? = null,      // null = "All"
     val sortOption: SnippetSortOption = SnippetSortOption.RECENTLY_UPDATED,
     val isRefreshing: Boolean = false,
-    val errorMessage: String? = null,
+    val errorMessage: UiText? = null,
 ) {
     /** Distinct tags across the unfiltered set, each with its count — the tag chip row
      *  in the Vault mockup ("Kotlin 24", "Compose 18", ...). */
@@ -72,7 +76,7 @@ class SnippetVaultViewModel @Inject constructor(
     private val selectedTag = MutableStateFlow<String?>(null)
     private val sortOption = MutableStateFlow(SnippetSortOption.RECENTLY_UPDATED)
     private val refreshing = MutableStateFlow(false)
-    private val error = MutableStateFlow<String?>(null)
+    private val error = MutableStateFlow<UiText?>(null)
 
     private val localSnippets = query.flatMapLatest { repository.observeSnippets(it) }
     private val folders = folderRepository.observeFolders()
@@ -113,12 +117,12 @@ class SnippetVaultViewModel @Inject constructor(
                 throw cancelled
             } catch (exception: Exception) {
                 error.value = when (exception) {
-                    is IOException -> "Could not reach the API. Saved local snippets remain available."
+                    is IOException -> UiText.Resource(R.string.lang_could_not_reach_the_api_saved_local_snippets_remain_availabl)
                     is HttpException -> when (exception.code()) {
-                        401, 403 -> "Your session was rejected. Sign out and sign in again."
-                        else -> "Could not refresh the vault (${exception.code()}). Please retry."
+                        401, 403 -> UiText.Resource(R.string.lang_your_session_was_rejected_sign_out_and_sign_in_again)
+                        else -> UiText.Resource(R.string.lang_could_not_refresh_the_vault_please_retry)
                     }
-                    else -> "Could not refresh the vault. Please retry."
+                    else -> UiText.Resource(R.string.lang_could_not_refresh_the_vault_please_retry)
                 }
             } finally {
                 refreshing.value = false
@@ -137,7 +141,7 @@ class SnippetVaultViewModel @Inject constructor(
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (exception: Exception) {
-                error.value = "Could not update the snippet. Please retry."
+                error.value = UiText.Resource(R.string.lang_could_not_update_the_snippet_please_retry)
             }
         }
     }

@@ -1,5 +1,7 @@
 package com.devledger.app.ui.screens.biometric
 
+import com.devledger.app.util.localization.rememberAppStrings
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -63,6 +65,7 @@ fun BiometricScreen(
     onUsePinInstead: () -> Unit,
     viewModel: BiometricViewModel = hiltViewModel()
 ) {
+    val strings = rememberAppStrings()
     val context = LocalContext.current
     val activity = context.findFragmentActivity()
     val helper = remember(activity) { activity?.let { BiometricAuthHelper(it) } }
@@ -142,15 +145,15 @@ fun BiometricScreen(
         Spacer(modifier = Modifier.height(32.dp))
 
         Text(
-            text = "Verify Your Identity",
+            text = strings.get(R.string.lang_verify_your_identity),
             color = Color.White,
             fontSize = 26.sp,
             fontWeight = FontWeight.Bold
         )
 
         Text(
-            text = if (isRegistered) "Use your biometric to securely access your DevLedger vault"
-                   else "Please use your security PIN to access your vault",
+            text = if (isRegistered) strings.get(R.string.lang_use_your_biometric_to_securely_access_your_devledger_vault)
+                   else strings.get(R.string.lang_please_use_your_security_pin_to_access_your_vault),
             color = DevLedgerColors.TextMuted,
             fontSize = 14.sp,
             textAlign = TextAlign.Center,
@@ -189,13 +192,13 @@ fun BiometricScreen(
             Spacer(modifier = Modifier.height(32.dp))
 
             Text(
-                text = "Touch the fingerprint sensor",
+                text = strings.get(R.string.lang_touch_the_fingerprint_sensor),
                 color = Color.White,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold
             )
             Text(
-                text = "Make sure your finger is clean and dry",
+                text = strings.get(R.string.lang_make_sure_your_finger_is_clean_and_dry),
                 color = DevLedgerColors.TextMuted,
                 fontSize = 13.sp,
                 modifier = Modifier.padding(top = 4.dp)
@@ -206,7 +209,7 @@ fun BiometricScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(modifier = Modifier.weight(1f).height(1.dp).background(DevLedgerColors.Border))
-                Text("   OR   ", color = DevLedgerColors.TextMuted, fontSize = 12.sp)
+                Text(strings.get(R.string.lang_or), color = DevLedgerColors.TextMuted, fontSize = 12.sp)
                 Box(modifier = Modifier.weight(1f).height(1.dp).background(DevLedgerColors.Border))
             }
         } else {
@@ -236,7 +239,7 @@ fun BiometricScreen(
         // Feature Cards - Removed Face ID
         BiometricActionCard(
             icon = Icons.Default.Lock,
-            title = "Your data stays secure",
+            title = strings.get(R.string.lang_your_data_stays_secure),
             subtitle = stringResource(R.string.bio_privacy),
             showChevron = false
         )
@@ -245,9 +248,9 @@ fun BiometricScreen(
 
         BiometricActionCard(
             icon = Icons.Default.Info,
-            title = "Having trouble?",
-            subtitle = "Use your DevLedger security PIN instead.",
-            trailingText = "Use PIN",
+            title = strings.get(R.string.lang_having_trouble),
+            subtitle = strings.get(R.string.lang_use_your_devledger_security_pin_instead),
+            trailingText = strings.get(R.string.lang_use_pin),
             onTrailingClick = ::usePin
         )
 
@@ -256,12 +259,12 @@ fun BiometricScreen(
         // Updated Bottom Button
         if (isRegistered) {
             DevLedgerPrimaryButton(
-                text = "Scan Fingerprint Again",
+                text = strings.get(R.string.lang_scan_fingerprint_again),
                 onClick = { triggerBiometric() }
             )
         } else {
             DevLedgerPrimaryButton(
-                text = "Use PIN Verification",
+                text = strings.get(R.string.lang_use_pin_verification),
                 onClick = ::usePin
             )
         }
@@ -279,7 +282,7 @@ fun BiometricScreen(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(imageVector = Icons.Default.Dialpad, contentDescription = null, modifier = Modifier.size(20.dp))
                 Spacer(modifier = Modifier.width(12.dp))
-                Text("Use DevLedger PIN", fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                Text(strings.get(R.string.lang_use_devledger_pin), fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
             }
         }
 

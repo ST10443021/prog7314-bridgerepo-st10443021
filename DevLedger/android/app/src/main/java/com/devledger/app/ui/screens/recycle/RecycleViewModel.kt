@@ -1,5 +1,9 @@
 package com.devledger.app.ui.screens.recycle
 
+import com.devledger.app.util.localization.UiText
+
+import com.devledger.app.R
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.devledger.app.data.local.entity.SnippetEntity
@@ -65,16 +69,16 @@ data class RecycleUiState(
     val filters: RecycleFilters = RecycleFilters(),
     val isLoading: Boolean = true,
     val restoringId: String? = null,
-    val error: String? = null,
-    val message: String? = null,
+    val error: UiText? = null,
+    val message: UiText? = null,
 )
 
 private data class RestoreState(
     val deleting: Boolean = false,
     val refreshing: Boolean = false,
     val id: String? = null,
-    val error: String? = null,
-    val message: String? = null,
+    val error: UiText? = null,
+    val message: UiText? = null,
 )
 
 /**
@@ -204,7 +208,7 @@ class RecycleViewModel @Inject constructor(
                     languages = SUPPORTED_SNIPPET_LANGUAGES
                         .sortedBy { it.lowercase() },
                     isLoading = false,
-                    error = "Could not load the archive. Reopen this screen to retry.",
+                    error = UiText.Resource(R.string.lang_could_not_load_the_archive_reopen_this_screen_to_retry),
                 )
             )
         }
@@ -269,7 +273,7 @@ class RecycleViewModel @Inject constructor(
                     it.copy(
                         refreshing = false,
                         error =
-                            "Cloud refresh failed. Showing saved items; check your connection and tap Refresh.",
+                            UiText.Resource(R.string.lang_cloud_refresh_failed_showing_saved_items_check_your_connecti),
                     )
                 }
             }
@@ -300,9 +304,9 @@ class RecycleViewModel @Inject constructor(
                 restoreState.value = RestoreState(
                     message =
                         if (count == 0) {
-                            "These snippets are no longer in this account's archive."
+                            UiText.Resource(R.string.lang_these_snippets_are_no_longer_in_this_account_s_archive)
                         } else {
-                            "$count snippet(s) removed from this device. Cloud deletion is queued."
+                            UiText.Quantity(R.plurals.lang_archive_deleted, count)
                         }
                 )
 
@@ -317,7 +321,7 @@ class RecycleViewModel @Inject constructor(
 
                 restoreState.value = RestoreState(
                     error =
-                        "Could not delete the snippets. Please retry."
+                        UiText.Resource(R.string.lang_could_not_delete_the_snippets_please_retry)
                 )
             }
         }
@@ -400,7 +404,7 @@ class RecycleViewModel @Inject constructor(
                 restoreState.value =
                     RestoreState(
                         message =
-                            "Restored to your vault. Cloud sync is queued."
+                            UiText.Resource(R.string.lang_restored_to_your_vault_cloud_sync_is_queued)
                     )
 
             } catch (cancelled: CancellationException) {
@@ -415,8 +419,7 @@ class RecycleViewModel @Inject constructor(
                 restoreState.value =
                     RestoreState(
                         error =
-                            error.message
-                                ?: "Could not restore the snippet. Please retry."
+                            UiText.Resource(R.string.lang_could_not_restore_the_snippet_please_retry)
                     )
             }
         }

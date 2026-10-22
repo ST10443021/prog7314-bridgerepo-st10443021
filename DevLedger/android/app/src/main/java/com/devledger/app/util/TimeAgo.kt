@@ -1,18 +1,19 @@
 package com.devledger.app.util
 
+import com.devledger.app.R
+import com.devledger.app.util.localization.AppStrings
 import java.util.concurrent.TimeUnit
 
-/** Formats a millis timestamp as a relative "2h ago" label for snippet/notification
- *  cards, matching the relative-time labels in the Part 1 Vault mockup. */
+/** Relative time resolved with Android plurals for the current application language. */
 object TimeAgo {
-    fun format(timestampMillis: Long): String {
-        val diff = System.currentTimeMillis() - timestampMillis
+    fun format(timestampMillis: Long, strings: AppStrings): String {
+        val diff = (System.currentTimeMillis() - timestampMillis).coerceAtLeast(0L)
         return when {
-            diff < TimeUnit.MINUTES.toMillis(1) -> "Just now"
-            diff < TimeUnit.HOURS.toMillis(1) -> "${TimeUnit.MILLISECONDS.toMinutes(diff)}m ago"
-            diff < TimeUnit.DAYS.toMillis(1) -> "${TimeUnit.MILLISECONDS.toHours(diff)}h ago"
-            diff < TimeUnit.DAYS.toMillis(7) -> "${TimeUnit.MILLISECONDS.toDays(diff)}d ago"
-            else -> "${TimeUnit.MILLISECONDS.toDays(diff) / 7}w ago"
+            diff < TimeUnit.MINUTES.toMillis(1) -> strings.get(R.string.lang_just_now)
+            diff < TimeUnit.HOURS.toMillis(1) -> strings.plural(R.plurals.lang_minutes_ago, TimeUnit.MILLISECONDS.toMinutes(diff).toInt())
+            diff < TimeUnit.DAYS.toMillis(1) -> strings.plural(R.plurals.lang_hours_ago, TimeUnit.MILLISECONDS.toHours(diff).toInt())
+            diff < TimeUnit.DAYS.toMillis(7) -> strings.plural(R.plurals.lang_days_ago, TimeUnit.MILLISECONDS.toDays(diff).toInt())
+            else -> strings.plural(R.plurals.lang_weeks_ago, (TimeUnit.MILLISECONDS.toDays(diff) / 7).toInt())
         }
     }
 }

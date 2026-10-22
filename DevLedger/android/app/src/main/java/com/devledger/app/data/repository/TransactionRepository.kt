@@ -1,5 +1,9 @@
 package com.devledger.app.data.repository
 
+import com.devledger.app.util.localization.UiText
+
+import com.devledger.app.R
+
 import android.content.Context
 import android.util.Log
 import com.devledger.app.data.local.dao.DeletedDao
@@ -140,8 +144,8 @@ class TransactionRepository @Inject constructor(
         dao.upsert(tx)
 
         notificationRepository.notify(
-            title = if (tx.type == "INCOME") "Income Added" else "Expense Added",
-            message = "${if (tx.type == "INCOME") "Received" else "Spent"} ${tx.currency} ${tx.amount} for ${tx.category}.",
+            title = UiText.Resource(if (tx.type == "INCOME") R.string.lang_income_added else R.string.lang_expense_added),
+            message = UiText.Resource(if (tx.type == "INCOME") R.string.lang_income_body else R.string.lang_expense_body, listOf(tx.currency, tx.amount, UiText.Domain(tx.category))),
             type = "TRANSACTION"
         )
 
@@ -173,8 +177,8 @@ class TransactionRepository @Inject constructor(
         dao.upsert(original.copy(nextOccurrenceDate = nextDate, syncStatus = SyncStatus.PENDING))
 
         notificationRepository.notify(
-            title = "Recurring ${if (newTransaction.type == "INCOME") "Income" else "Expense"}",
-            message = "New occurrence of \"${newTransaction.category}\" processed: ${newTransaction.currency} ${newTransaction.amount}.",
+            title = UiText.Resource(if (newTransaction.type == "INCOME") R.string.lang_recurring_income else R.string.lang_recurring_expense),
+            message = UiText.Resource(R.string.lang_recurring_body, listOf(UiText.Domain(newTransaction.category), newTransaction.currency, newTransaction.amount)),
             type = "TRANSACTION"
         )
 

@@ -1,5 +1,7 @@
 package com.devledger.app.ui.screens.finance
 
+import com.devledger.app.util.localization.rememberAppStrings
+
 import android.graphics.BitmapFactory
 import android.util.Base64
 import androidx.compose.foundation.BorderStroke
@@ -103,6 +105,7 @@ class TransactionDetailViewModel @Inject constructor(
  * (Google Developers, n.d.a; Google Developers, n.d.f). See REFERENCES-CODE.md for full entries.
  */
 fun TransactionDetailScreen(onBack: () -> Unit, viewModel: TransactionDetailViewModel = hiltViewModel()) {
+    val strings = rememberAppStrings()
     val tx by viewModel.transaction.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val isDeleting by viewModel.isDeleting.collectAsState()
@@ -127,33 +130,33 @@ fun TransactionDetailScreen(onBack: () -> Unit, viewModel: TransactionDetailView
         )
     }
     val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale.forLanguageTag("en-ZA")) }
-    val dateFormat = remember { SimpleDateFormat("d MMMM yyyy", Locale.getDefault()) }
+    val dateFormat = remember(strings.locale) { SimpleDateFormat("d MMMM yyyy", strings.locale) }
 
     Column(modifier = Modifier.fillMaxSize().background(DevLedgerColors.BgDeep)) {
-        DevLedgerTopBar(title = "Transaction Details", onBack = onBack)
+        DevLedgerTopBar(title = strings.get(R.string.lang_transaction_details), onBack = onBack)
         if (isLoading) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
 
         val transaction = tx
         if (transaction == null) {
             if (!isLoading) Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
-                Text("This transaction could not be found.", color = DevLedgerColors.TextMuted)
+                Text(strings.get(R.string.lang_this_transaction_could_not_be_found), color = DevLedgerColors.TextMuted)
             }
         } else {
             val accent = if (transaction.type == "INCOME") DevLedgerColors.SuccessGreen else DevLedgerColors.ErrorRed
             Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
                 DevLedgerCard {
-                    Text(if (transaction.type == "INCOME") "Income" else "Expense", color = accent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Text(if (transaction.type == "INCOME") strings.get(R.string.lang_income) else strings.get(R.string.lang_expense), color = accent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     Text(currencyFormat.format(transaction.amount), color = DevLedgerColors.TextPrimary, fontSize = 26.sp, fontWeight = FontWeight.Bold)
-                    Text(transaction.category, color = DevLedgerColors.TextMuted, fontSize = 13.sp)
+                    Text(strings.label(transaction.category), color = DevLedgerColors.TextMuted, fontSize = 13.sp)
                 }
                 Spacer(Modifier.height(16.dp))
-                DetailRow("Description", transaction.description ?: "—")
-                DetailRow("Client / From", transaction.clientOrFrom)
-                DetailRow("Related Project", transaction.relatedProject ?: "—")
-                DetailRow("Payment Method", transaction.paymentMethod ?: "—")
-                DetailRow("Reference / Invoice #", transaction.referenceNumber ?: "—")
-                DetailRow("Date", dateFormat.format(Date(transaction.transactionDate)))
-                DetailRow("Recurring", if (transaction.isRecurring) "Yes — ${transaction.recurringFrequency?.lowercase()?.replaceFirstChar { it.uppercase() }}" else "No")
+                DetailRow(strings.get(R.string.lang_description_label), transaction.description ?: "—")
+                DetailRow(strings.get(R.string.lang_client_from_label), transaction.clientOrFrom)
+                DetailRow(strings.get(R.string.lang_related_project), transaction.relatedProject ?: "—")
+                DetailRow(strings.get(R.string.lang_payment_method), transaction.paymentMethod?.let(strings::label) ?: "—")
+                DetailRow(strings.get(R.string.lang_reference_invoice), transaction.referenceNumber ?: "—")
+                DetailRow(strings.get(R.string.lang_date_label), dateFormat.format(Date(transaction.transactionDate)))
+                DetailRow(strings.get(R.string.lang_recurring), if (transaction.isRecurring) strings.get(R.string.lang_recurring_value, strings.label(transaction.recurringFrequency.orEmpty())) else strings.get(R.string.lang_no))
 
                 if (transaction.attachmentFileName != null) {
                     AttachmentPreview(transaction.attachmentFileName, transaction.attachmentBase64)
@@ -177,8 +180,9 @@ fun TransactionDetailScreen(onBack: () -> Unit, viewModel: TransactionDetailView
 
 @Composable
 private fun AttachmentPreview(fileName: String, base64: String?) {
+    val strings = rememberAppStrings()
     Column(modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp)) {
-        Text("Attachment", color = DevLedgerColors.TextMuted, fontSize = 11.sp, modifier = Modifier.padding(bottom = 8.dp))
+        Text(strings.get(R.string.lang_attachment), color = DevLedgerColors.TextMuted, fontSize = 11.sp, modifier = Modifier.padding(bottom = 8.dp))
 
         Box(
             modifier = Modifier
@@ -209,7 +213,7 @@ private fun AttachmentPreview(fileName: String, base64: String?) {
                         Spacer(Modifier.height(12.dp))
                         Image(
                             bitmap = bitmap.asImageBitmap(),
-                            contentDescription = "Attachment Preview",
+                            contentDescription = strings.get(R.string.lang_attachment_preview),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .heightIn(max = 400.dp)

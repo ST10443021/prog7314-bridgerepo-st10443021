@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="lang_snippet_count">
+        <item quantity="one">%1$d snippet</item>
+        <item quantity="other">%1$d snippets</item>
+    </plurals>
+    <plurals name="lang_minutes_ago">
+        <item quantity="one">%1$d minute ago</item>
+        <item quantity="other">%1$d minutes ago</item>
+    </plurals>
+    <plurals name="lang_hours_ago">
+        <item quantity="one">%1$d hour ago</item>
+        <item quantity="other">%1$d hours ago</item>
+    </plurals>
+    <plurals name="lang_days_ago">
+        <item quantity="one">%1$d day ago</item>
+        <item quantity="other">%1$d days ago</item>
+    </plurals>
+    <plurals name="lang_weeks_ago">
+        <item quantity="one">%1$d week ago</item>
+        <item quantity="other">%1$d weeks ago</item>
+    </plurals>
+    <plurals name="lang_archive_delete_confirm">
+        <item quantity="one">Permanently delete %1$d archived snippet? This cannot be undone. Cloud deletion will sync when connected.</item>
+        <item quantity="other">Permanently delete %1$d archived snippets? This cannot be undone. Cloud deletion will sync when connected.</item>
+    </plurals>
+    <plurals name="lang_snippets_queued_delete">
+        <item quantity="one">%1$d snippet moved to the deletion queue.</item>
+        <item quantity="other">%1$d snippets moved to the deletion queue.</item>
+    </plurals>
+    <plurals name="lang_archive_deleted">
+        <item quantity="one">%1$d snippet removed from this device. Cloud deletion is queued.</item>
+        <item quantity="other">%1$d snippets removed from this device. Cloud deletion is queued.</item>
+    </plurals>
+</resources>

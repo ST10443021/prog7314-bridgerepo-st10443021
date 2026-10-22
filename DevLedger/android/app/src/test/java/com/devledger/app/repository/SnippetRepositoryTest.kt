@@ -1,5 +1,9 @@
 package com.devledger.app.repository
 
+import com.devledger.app.util.localization.UiText
+
+import com.devledger.app.R
+
 import android.content.Context
 import com.devledger.app.data.local.dao.SnippetDao
 import com.devledger.app.data.local.dao.UserDao
@@ -125,7 +129,7 @@ class SnippetRepositoryTest {
         assertThat(updated.syncStatus).isEqualTo(SyncStatus.PENDING)
         assertThat(updated.updatedAt).isGreaterThan(existing.updatedAt)
         coVerify(exactly = 1) { dao.saveUnlessDeleted(updated) }
-        coVerify(exactly = 0) { notificationRepository.notify("Snippet Created", any(), "SNIPPET") }
+        coVerify(exactly = 0) { notificationRepository.notify(UiText.Resource(R.string.lang_snippet_created), any(), "SNIPPET") }
     }
 
     @Test
@@ -183,7 +187,7 @@ class SnippetRepositoryTest {
 
         assertThat(deleted).isEqualTo(2)
         coVerify(exactly = 1) { dao.queueArchivedDeletes("user-1", listOf("a", "b")) }
-        coVerify(exactly = 1) { notificationRepository.notify("Snippet Deleted", "2 snippet(s) moved to the deletion queue.", "SNIPPET") }
+        coVerify(exactly = 1) { notificationRepository.notify(UiText.Resource(R.string.lang_snippet_deleted), UiText.Quantity(R.plurals.lang_snippets_queued_delete, 2), "SNIPPET") }
     }
 
     @Test

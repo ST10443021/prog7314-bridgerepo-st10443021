@@ -1,5 +1,9 @@
 package com.devledger.app.ui.screens.legal
 
+import com.devledger.app.util.localization.rememberAppStrings
+
+import com.devledger.app.R
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -36,6 +40,7 @@ import com.devledger.app.ui.theme.DevLedgerColors
 fun TermsScreen(
     onBack: () -> Unit,
 ) {
+    val strings = rememberAppStrings()
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -52,12 +57,12 @@ fun TermsScreen(
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Back",
+                contentDescription = strings.get(R.string.lang_back),
                 tint = DevLedgerColors.TextPrimary
             )
 
             Text(
-                text = "Terms & Conditions",
+                text = strings.get(R.string.lang_terms_conditions),
                 color = DevLedgerColors.TextPrimary,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
@@ -77,7 +82,7 @@ fun TermsScreen(
         ) {
 
             Text(
-                text = "DevLedger Terms & Conditions",
+                text = strings.get(R.string.lang_devledger_terms_conditions),
                 color = DevLedgerColors.TextPrimary,
                 fontSize = 26.sp,
                 fontWeight = FontWeight.Bold
@@ -86,7 +91,7 @@ fun TermsScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Last updated: 11 September 2026",
+                text = strings.get(R.string.lang_last_updated_11_september_2026),
                 color = DevLedgerColors.TextMuted,
                 fontSize = 13.sp
             )
@@ -98,7 +103,7 @@ fun TermsScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = "By creating an account or using DevLedger, you agree to these Terms & Conditions.",
+                    text = strings.get(R.string.lang_by_creating_an_account_or_using_devledger_you_agree_to_these),
                     color = DevLedgerColors.TextSecondary,
                     fontSize = 14.sp,
                     lineHeight = 21.sp,
@@ -110,118 +115,74 @@ fun TermsScreen(
 
             LegalSection(
                 number = "1",
-                title = "About DevLedger",
-                body = """
-                    DevLedger is a personal developer utility and asset vault designed to help users manage code snippets, developer assets, financial records and related application preferences.
-
-                    DevLedger is currently an academic application prototype and may contain features that are still under development.
-                """.trimIndent()
+                title = strings.get(R.string.lang_about_devledger),
+                body = strings.get(R.string.lang_terms_1_body)
             )
 
             LegalSection(
                 number = "2",
-                title = "Your Account",
-                body = """
-                    You are responsible for providing accurate account information and for protecting access to your account.
-
-                    You must not knowingly allow another person to use your account credentials. You should immediately take appropriate action if you believe your account or authentication credentials have been compromised.
-                """.trimIndent()
+                title = strings.get(R.string.lang_your_account),
+                body = strings.get(R.string.lang_terms_2_body)
             )
 
             LegalSection(
                 number = "3",
-                title = "Security and Authentication",
-                body = """
-                    DevLedger may use email authentication, Single Sign-On services and device-level biometric or PIN verification to protect access to your account and stored information.
-
-                    You are responsible for maintaining appropriate security on the device used to access DevLedger.
-                """.trimIndent()
+                title = strings.get(R.string.lang_security_and_authentication),
+                body = strings.get(R.string.lang_terms_3_body)
             )
 
             LegalSection(
                 number = "4",
-                title = "Your Content",
-                body = """
-                    You remain responsible for information that you create, upload or store through DevLedger, including code snippets, configuration information and financial records.
-
-                    You should not store content that you do not have permission to use or content that violates applicable laws or third-party rights.
-                """.trimIndent()
+                title = strings.get(R.string.lang_your_content),
+                body = strings.get(R.string.lang_terms_4_body)
             )
 
             LegalSection(
                 number = "5",
-                title = "Acceptable Use",
-                body = """
-                    DevLedger must not be used to intentionally store, distribute or manage malicious, unlawful or unauthorised content.
-
-                    You must not attempt to interfere with the application, its authentication services, REST API, database, synchronisation services or other connected systems.
-                """.trimIndent()
+                title = strings.get(R.string.lang_acceptable_use),
+                body = strings.get(R.string.lang_terms_5_body)
             )
 
             LegalSection(
                 number = "6",
-                title = "Cloud Synchronisation",
-                body = """
-                    DevLedger may synchronise locally stored information with its cloud services when network connectivity is available.
-
-                    Synchronisation may occasionally be delayed or unavailable because of connectivity problems, service maintenance or technical errors.
-                """.trimIndent()
+                title = strings.get(R.string.lang_cloud_synchronisation),
+                body = strings.get(R.string.lang_terms_6_body)
             )
 
             LegalSection(
                 number = "7",
-                title = "Third-Party Services",
-                body = """
-                    Some DevLedger functionality may rely on third-party services such as Google, GitHub and Firebase.
-
-                    Use of these services may also be subject to the terms and policies of the respective third-party providers.
-                """.trimIndent()
+                title = strings.get(R.string.lang_third_party_services),
+                body = strings.get(R.string.lang_terms_7_body)
             )
 
             LegalSection(
                 number = "8",
-                title = "Financial Information",
-                body = """
-                    DevLedger's financial tracking functionality is intended as a personal organisational tool.
-
-                    Information displayed by DevLedger should not be considered professional financial, accounting or tax advice. Users remain responsible for verifying their own financial records.
-                """.trimIndent()
+                title = strings.get(R.string.lang_financial_information),
+                body = strings.get(R.string.lang_terms_8_body)
             )
 
             LegalSection(
                 number = "9",
-                title = "Availability",
-                body = """
-                    Reasonable efforts are made to keep DevLedger available and functional. However, uninterrupted access cannot be guaranteed.
-
-                    Features may temporarily become unavailable because of maintenance, connectivity problems or technical issues.
-                """.trimIndent()
+                title = strings.get(R.string.lang_availability),
+                body = strings.get(R.string.lang_terms_9_body)
             )
 
             LegalSection(
                 number = "10",
-                title = "Privacy",
-                body = """
-                    The collection and handling of personal information is explained separately in the DevLedger Privacy Policy.
-
-                    You should review the Privacy Policy before creating or using a DevLedger account.
-                """.trimIndent()
+                title = strings.get(R.string.lang_privacy),
+                body = strings.get(R.string.lang_terms_10_body)
             )
 
             LegalSection(
                 number = "11",
-                title = "Changes to These Terms",
-                body = """
-                    These Terms & Conditions may be updated as DevLedger develops. Where appropriate, the latest version will be made available through the application.
-                """.trimIndent()
+                title = strings.get(R.string.lang_changes_to_these_terms),
+                body = strings.get(R.string.lang_terms_11_body)
             )
 
             LegalSection(
                 number = "12",
-                title = "Contact",
-                body = """
-                    Questions regarding these Terms & Conditions can be directed to the DevLedger development team.
-                """.trimIndent()
+                title = strings.get(R.string.lang_contact),
+                body = strings.get(R.string.lang_terms_12_body)
             )
 
             Spacer(modifier = Modifier.height(32.dp))

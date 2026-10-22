@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="lang_snippet_count">
+        <item quantity="one">Isiqwenga esi-%1$d</item>
+        <item quantity="other">Iziqwenga ezi-%1$d</item>
+    </plurals>
+    <plurals name="lang_minutes_ago">
+        <item quantity="one">Kumzuzu o-%1$d odlulileyo</item>
+        <item quantity="other">Kwimizuzu e-%1$d edlulileyo</item>
+    </plurals>
+    <plurals name="lang_hours_ago">
+        <item quantity="one">Kwiyure e-%1$d edlulileyo</item>
+        <item quantity="other">Kwiiyure ezi-%1$d ezidlulileyo</item>
+    </plurals>
+    <plurals name="lang_days_ago">
+        <item quantity="one">Kusuku olu-%1$d oludlulileyo</item>
+        <item quantity="other">Kwiintsuku ezi-%1$d ezidlulileyo</item>
+    </plurals>
+    <plurals name="lang_weeks_ago">
+        <item quantity="one">Kwiveki e-%1$d edlulileyo</item>
+        <item quantity="other">Kwiiveki ezi-%1$d ezidlulileyo</item>
+    </plurals>
+    <plurals name="lang_archive_delete_confirm">
+        <item quantity="one">Cima isiqwenga esi-%1$d esikuvimba ngokusisigxina? Oku akunakubuyiselwa. Ukucima kwilifu kuza kungqamaniswa xa kuqhagamshelwe.</item>
+        <item quantity="other">Cima iziqwenga ezi-%1$d ezikuvimba ngokusisigxina? Oku akunakubuyiselwa. Ukucima kwilifu kuza kungqamaniswa xa kuqhagamshelwe.</item>
+    </plurals>
+    <plurals name="lang_snippets_queued_delete">
+        <item quantity="one">Isiqwenga esi-%1$d sisiwe kuluhlu lokucima.</item>
+        <item quantity="other">Iziqwenga ezi-%1$d zisiwe kuluhlu lokucima.</item>
+    </plurals>
+    <plurals name="lang_archive_deleted">
+        <item quantity="one">Isiqwenga esi-%1$d sisusiwe kwesi sixhobo. Ukucima kwilifu kulindile.</item>
+        <item quantity="other">Iziqwenga ezi-%1$d zisusiwe kwesi sixhobo. Ukucima kwilifu kulindile.</item>
+    </plurals>
+</resources>

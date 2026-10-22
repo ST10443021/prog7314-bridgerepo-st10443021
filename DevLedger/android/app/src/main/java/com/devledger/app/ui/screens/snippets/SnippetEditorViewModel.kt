@@ -1,5 +1,9 @@
 package com.devledger.app.ui.screens.snippets
 
+import com.devledger.app.util.localization.UiText
+
+import com.devledger.app.R
+
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -25,7 +29,7 @@ data class SnippetEditorUiState(
     val tags: List<String> = emptyList(),
     val folderId: String? = null,
     val isSaving: Boolean = false,
-    val errorMessage: String? = null,
+    val errorMessage: UiText? = null,
     val saved: Boolean = false,
     val isLoading: Boolean = false,
 )
@@ -83,7 +87,7 @@ class SnippetEditorViewModel @Inject constructor(
                 } catch (error: Exception) {
                     Log.e(TAG, "Failed to load snippet $initialId", error)
                     loadFailed = true
-                    _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = error.message ?: "Could not load this snippet. Go back and retry.")
+                    _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = UiText.Resource(R.string.lang_could_not_load_this_snippet_go_back_and_retry))
                 }
             }
         }
@@ -103,7 +107,7 @@ class SnippetEditorViewModel @Inject constructor(
 
     fun addTag(tag: String) = edit {
         val trimmed = tag.trim()
-        if (trimmed.isEmpty() || it.tags.any { existing -> existing.equals(trimmed, ignoreCase = true) }) it 
+        if (trimmed.isEmpty() || it.tags.any { existing -> existing.equals(trimmed, ignoreCase = true) }) it
         else {
             // Asynchronously ensure the tag is saved to the global repository
             viewModelScope.launch {
@@ -119,9 +123,9 @@ class SnippetEditorViewModel @Inject constructor(
         if (state.isLoading || state.isSaving || state.saved || loadFailed) return
 
         val validationError = when {
-            state.title.isBlank() -> "Enter a snippet title."
-            state.content.isBlank() -> "Enter some code or configuration content."
-            state.language.isBlank() -> "Select a language."
+            state.title.isBlank() -> UiText.Resource(R.string.lang_enter_a_snippet_title)
+            state.content.isBlank() -> UiText.Resource(R.string.lang_enter_some_code_or_configuration_content)
+            state.language.isBlank() -> UiText.Resource(R.string.lang_select_a_language)
             else -> null
         }
         if (validationError != null) { _uiState.value = state.copy(errorMessage = validationError); return }
@@ -145,7 +149,7 @@ class SnippetEditorViewModel @Inject constructor(
                 throw cancelled
             } catch (error: Exception) {
                 Log.e(TAG, "Failed to save snippet", error)
-                _uiState.value = _uiState.value.copy(isSaving = false, errorMessage = error.message ?: "Could not save the snippet. Please retry.")
+                _uiState.value = _uiState.value.copy(isSaving = false, errorMessage = UiText.Resource(R.string.lang_could_not_save_the_snippet_please_retry))
             }
         }
     }

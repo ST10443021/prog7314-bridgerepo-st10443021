@@ -1,5 +1,9 @@
 package com.devledger.app.repository
 
+import com.devledger.app.util.localization.UiText
+
+import com.devledger.app.R
+
 import android.content.Context
 import com.devledger.app.data.local.dao.TransactionDao
 import com.devledger.app.data.local.dao.UserDao
@@ -104,7 +108,7 @@ class TransactionRepositoryTest {
         assertThat(tx.category).isEqualTo("Hosting")
         assertThat(tx.syncStatus).isEqualTo(SyncStatus.PENDING)
         coVerify(exactly = 1) { dao.upsert(tx) }
-        coVerify(exactly = 1) { notificationRepository.notify("Expense Added", any(), "TRANSACTION") }
+        coVerify(exactly = 1) { notificationRepository.notify(UiText.Resource(R.string.lang_expense_added), any(), "TRANSACTION") }
     }
 
     @Test

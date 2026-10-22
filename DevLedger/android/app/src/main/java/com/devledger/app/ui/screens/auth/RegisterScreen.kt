@@ -1,5 +1,10 @@
 package com.devledger.app.ui.screens.auth
 
+
+import com.devledger.app.util.localization.rememberAppStrings
+
+import com.devledger.app.R
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -38,6 +43,7 @@ fun RegisterScreen(
     onPrivacyPolicyClick: () -> Unit,
     viewModel: RegisterViewModel = hiltViewModel(),
 ) {
+    val strings = rememberAppStrings()
     val state by viewModel.uiState.collectAsState()
 
     LaunchedEffect(state.isRegistered) {
@@ -60,13 +66,13 @@ fun RegisterScreen(
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Back",
+                contentDescription = strings.get(R.string.lang_back),
                 tint = DevLedgerColors.TextSecondary,
                 modifier = Modifier.size(20.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "Back to sign in",
+                text = strings.get(R.string.lang_back_to_sign_in),
                 color = DevLedgerColors.TextSecondary,
                 fontSize = 14.sp
             )
@@ -101,19 +107,19 @@ fun RegisterScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "Create your account",
+            text = strings.get(R.string.lang_create_your_account),
             color = DevLedgerColors.TextPrimary,
             style = MaterialTheme.typography.headlineMedium
         )
         Text(
-            text = "Your personal developer utility and asset vault.",
+            text = strings.get(R.string.lang_your_personal_developer_utility_and_asset_vault),
             color = DevLedgerColors.TextMuted,
             fontSize = 14.sp,
             modifier = Modifier.padding(top = 8.dp, bottom = 32.dp)
         )
 
         // Form Fields
-        Text("FULL NAME", color = DevLedgerColors.TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Text(strings.get(R.string.lang_full_name), color = DevLedgerColors.TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         DevLedgerTextField(
             value = state.fullName,
             onValueChange = viewModel::onFullNameChange,
@@ -121,12 +127,12 @@ fun RegisterScreen(
             placeholder = "Alex Morgan",
             leadingIcon = Icons.Filled.Person,
             isValid = state.isFullNameValid,
-            isError = state.fullNameError != null,
-            supportingText = state.fullNameError,
+            isError = state.fullNameError?.resolve(strings) != null,
+            supportingText = state.fullNameError?.resolve(strings),
             modifier = Modifier.padding(top = 8.dp, bottom = 20.dp)
         )
 
-        Text("EMAIL ADDRESS", color = DevLedgerColors.TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Text(strings.get(R.string.lang_email_address), color = DevLedgerColors.TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         DevLedgerTextField(
             value = state.email,
             onValueChange = viewModel::onEmailChange,
@@ -134,22 +140,22 @@ fun RegisterScreen(
             placeholder = "alex@devledger.io",
             leadingIcon = Icons.Filled.Email,
             isValid = state.isEmailValid,
-            isError = state.emailError != null,
-            supportingText = state.emailError,
+            isError = state.emailError?.resolve(strings) != null,
+            supportingText = state.emailError?.resolve(strings),
             modifier = Modifier.padding(top = 8.dp, bottom = 20.dp)
         )
 
-        Text("PASSWORD", color = DevLedgerColors.TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Text(strings.get(R.string.lang_password_heading), color = DevLedgerColors.TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         DevLedgerTextField(
             value = state.password,
             onValueChange = viewModel::onPasswordChange,
             label = "",
-            placeholder = "Min. 8 characters",
+            placeholder = strings.get(R.string.lang_min_8_characters),
             isPassword = true,
             leadingIcon = Icons.Filled.Lock,
             isValid = state.isPasswordValid,
-            isError = state.passwordError != null,
-            supportingText = state.passwordError,
+            isError = state.passwordError?.resolve(strings) != null,
+            supportingText = state.passwordError?.resolve(strings),
             modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
         )
 
@@ -166,7 +172,7 @@ fun RegisterScreen(
                 modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp)
             ) {
                 Text(
-                    text = state.errorMessage!!,
+                    text = state.errorMessage!!.resolve(strings),
                     color = DevLedgerColors.ErrorRed,
                     fontSize = 13.sp,
                     modifier = Modifier.padding(12.dp)
@@ -175,7 +181,7 @@ fun RegisterScreen(
         }
 
         DevLedgerPrimaryButton(
-            text = "Create account",
+            text = strings.get(R.string.lang_create_account),
             onClick = viewModel::register,
             loading = state.isLoading,
             trailingIcon = Icons.AutoMirrored.Filled.ArrowForward
@@ -188,7 +194,7 @@ fun RegisterScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "By creating an account you agree to our",
+                text = strings.get(R.string.lang_by_creating_an_account_you_agree_to_our),
                 color = DevLedgerColors.TextMuted,
                 fontSize = 12.sp,
                 textAlign = TextAlign.Center
@@ -202,7 +208,7 @@ fun RegisterScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Terms of Service",
+                    text = strings.get(R.string.lang_terms_of_service),
                     color = DevLedgerColors.AccentBlue,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -212,13 +218,13 @@ fun RegisterScreen(
                 )
 
                 Text(
-                    text = " and ",
+                    text = strings.get(R.string.lang_and),
                     color = DevLedgerColors.TextMuted,
                     fontSize = 12.sp
                 )
 
                 Text(
-                    text = "Privacy Policy",
+                    text = strings.get(R.string.lang_privacy_policy),
                     color = DevLedgerColors.AccentBlue,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -231,9 +237,9 @@ fun RegisterScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             Row {
-                Text("Already have an account? ", color = DevLedgerColors.TextMuted, fontSize = 14.sp)
+                Text(strings.get(R.string.lang_already_have_an_account), color = DevLedgerColors.TextMuted, fontSize = 14.sp)
                 Text(
-                    text = "Sign in",
+                    text = strings.get(R.string.lang_sign_in),
                     color = DevLedgerColors.AccentBlue,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,

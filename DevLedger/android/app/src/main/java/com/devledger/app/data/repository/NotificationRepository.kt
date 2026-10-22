@@ -1,5 +1,11 @@
 package com.devledger.app.data.repository
 
+import kotlinx.coroutines.flow.first
+
+import com.devledger.app.util.localization.UiText
+
+import com.devledger.app.util.localization.AppStrings
+
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -26,6 +32,7 @@ import javax.inject.Singleton
 class NotificationRepository @Inject constructor(
     private val dao: NotificationDao,
     @ApplicationContext private val context: Context,
+    private val settingsRepository: SettingsRepository,
 ) {
     fun observeAll(): Flow<List<NotificationEntity>> = dao.observeAll()
     fun observeUnreadCount(): Flow<Int> = dao.observeUnreadCount()
@@ -33,24 +40,27 @@ class NotificationRepository @Inject constructor(
     suspend fun record(notification: NotificationEntity) = dao.upsert(notification)
 
     /** Creates a notification, stores it in Room, and triggers a system tray alert. */
-    suspend fun notify(title: String, message: String, type: String) {
+    suspend fun notify(title: UiText, message: UiText, type: String) {
+        val strings = AppStrings.forLocale(context, settingsRepository.language.first())
+        val localizedTitle = title.resolve(strings)
+        val localizedMessage = message.resolve(strings)
         val id = IdGenerator.newId()
         val entity = NotificationEntity(
             notificationId = id,
-            title = title,
-            message = message,
+            title = localizedTitle,
+            message = localizedMessage,
             type = type,
             createdAt = System.currentTimeMillis()
         )
         record(entity)
-        showSystemNotification(title, message)
+        showSystemNotification(localizedTitle, localizedMessage, strings)
     }
 
-    private fun showSystemNotification(title: String, body: String) {
+    private fun showSystemNotification(title: String, body: String, strings: AppStrings) {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (manager.getNotificationChannel(CHANNEL_ID) == null) {
             manager.createNotificationChannel(
-                NotificationChannel(CHANNEL_ID, "DevLedger Alerts", NotificationManager.IMPORTANCE_HIGH),
+                NotificationChannel(CHANNEL_ID, strings.get(R.string.lang_devledger_alerts), NotificationManager.IMPORTANCE_HIGH),
             )
         }
         val intent = Intent(context, MainActivity::class.java).apply {
