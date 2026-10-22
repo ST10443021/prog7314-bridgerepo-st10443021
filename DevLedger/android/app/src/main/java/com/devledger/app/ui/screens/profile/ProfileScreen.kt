@@ -1,5 +1,12 @@
 package com.devledger.app.ui.screens.profile
 
+import com.devledger.app.util.localization.AppStrings
+
+
+import com.devledger.app.util.localization.rememberAppStrings
+
+import com.devledger.app.R
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -98,6 +105,7 @@ fun ProfileScreenContent(
     onCancelEditing: () -> Unit,
     onSaveProfile: () -> Unit,
 ) {
+    val strings = rememberAppStrings()
     val user = state.user
 
     val currencyFormat = remember(user?.baseCurrency) {
@@ -116,7 +124,7 @@ fun ProfileScreenContent(
         EditProfileDialog(
             fullName = state.editableFullName,
             isSaving = state.isSaving,
-            error = state.error,
+            error = state.error?.resolve(strings),
             onNameChange = onNameChange,
             onDismiss = onCancelEditing,
             onSave = onSaveProfile,
@@ -159,14 +167,14 @@ fun ProfileScreenContent(
             }
 
             item {
-                ProfileSectionLabel("Account Information")
+                ProfileSectionLabel(strings.get(R.string.lang_account_information))
 
                 Spacer(modifier = Modifier.height(8.dp))
 
                 ProfileSectionCard {
                     ProfileInformationRow(
                         icon = Icons.Filled.AccountCircle,
-                        title = "Full Name",
+                        title = strings.get(R.string.lang_full_name_label),
                         value = user.fullName,
                         iconColor = DevLedgerColors.AccentBlue,
                         onClick = onStartEditing,
@@ -176,7 +184,7 @@ fun ProfileScreenContent(
 
                     ProfileInformationRow(
                         icon = Icons.Filled.Email,
-                        title = "Email Address",
+                        title = strings.get(R.string.lang_email_address_label),
                         value = user.email,
                         iconColor = DevLedgerColors.AccentBlue,
                     )
@@ -185,27 +193,27 @@ fun ProfileScreenContent(
 
                     ProfileInformationRow(
                         icon = Icons.Filled.Lock,
-                        title = "Sign-in Method",
-                        value = providerLabel(user.ssoProvider),
+                        title = strings.get(R.string.lang_sign_in_method),
+                        value = providerLabel(user.ssoProvider, strings),
                         iconColor = DevLedgerColors.SuccessGreen,
                     )
                 }
             }
 
             item {
-                ProfileSectionLabel("Preferences")
+                ProfileSectionLabel(strings.get(R.string.lang_preferences))
 
                 Spacer(modifier = Modifier.height(8.dp))
 
                 ProfileSectionCard {
                     ProfileInformationRow(
                         icon = Icons.Filled.Language,
-                        title = "Language",
+                        title = strings.get(R.string.lang_language),
                         value = languageLabel(
                             user.preferredLanguage
                         ),
                         iconColor = DevLedgerColors.AccentPurple,
-                        actionText = "Change",
+                        actionText = strings.get(R.string.lang_change),
                         onClick = onOpenSettings,
                     )
 
@@ -213,10 +221,10 @@ fun ProfileScreenContent(
 
                     ProfileInformationRow(
                         icon = Icons.Filled.AttachMoney,
-                        title = "Base Currency",
+                        title = strings.get(R.string.lang_base_currency),
                         value = user.baseCurrency,
                         iconColor = DevLedgerColors.SuccessGreen,
-                        actionText = "Change",
+                        actionText = strings.get(R.string.lang_change),
                         onClick = onOpenSettings,
                     )
 
@@ -224,28 +232,28 @@ fun ProfileScreenContent(
 
                     ProfileInformationRow(
                         icon = Icons.Filled.Settings,
-                        title = "Application Settings",
-                        value = "Sync, security and preferences",
+                        title = strings.get(R.string.lang_application_settings),
+                        value = strings.get(R.string.lang_sync_security_and_preferences),
                         iconColor = DevLedgerColors.AccentBlue,
-                        actionText = "Open",
+                        actionText = strings.get(R.string.lang_open),
                         onClick = onOpenSettings,
                     )
                 }
             }
 
             item {
-                ProfileSectionLabel("Security")
+                ProfileSectionLabel(strings.get(R.string.lang_security))
 
                 Spacer(modifier = Modifier.height(8.dp))
 
                 ProfileSectionCard {
                     ProfileInformationRow(
                         icon = Icons.Filled.Lock,
-                        title = "Biometric Login",
+                        title = strings.get(R.string.lang_biometric_login),
                         value = if (user.biometricEnabled) {
-                            "Enabled"
+                            strings.get(R.string.lang_enabled)
                         } else {
-                            "Disabled"
+                            strings.get(R.string.lang_disabled)
                         },
                         valueColor = if (user.biometricEnabled) {
                             DevLedgerColors.SuccessGreen
@@ -253,14 +261,14 @@ fun ProfileScreenContent(
                             DevLedgerColors.TextMuted
                         },
                         iconColor = DevLedgerColors.AccentPurple,
-                        actionText = "Manage",
+                        actionText = strings.get(R.string.lang_manage),
                         onClick = onOpenSettings,
                     )
                 }
             }
 
             item {
-                ProfileSectionLabel("Stats Overview")
+                ProfileSectionLabel(strings.get(R.string.lang_stats_overview))
 
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -283,9 +291,9 @@ fun ProfileScreenContent(
             state.error?.let { error ->
                 item {
                     ProfileStatusCard(
-                        message = error,
+                        message = error.resolve(strings),
                         color = DevLedgerColors.ErrorRed,
-                        actionText = "Retry",
+                        actionText = strings.get(R.string.lang_retry),
                         onAction = onRefresh,
                     )
                 }
@@ -295,7 +303,7 @@ fun ProfileScreenContent(
         state.message?.let { message ->
             item {
                 ProfileStatusCard(
-                    message = message,
+                    message = message.resolve(strings),
                     color = DevLedgerColors.SuccessGreen,
                 )
             }
@@ -307,6 +315,7 @@ fun ProfileScreenContent(
 private fun ProfileHeader(
     onBack: () -> Unit,
 ) {
+    val strings = rememberAppStrings()
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -322,7 +331,7 @@ private fun ProfileHeader(
         ) {
             Icon(
                 imageVector = Icons.Filled.ArrowBack,
-                contentDescription = "Back",
+                contentDescription = strings.get(R.string.lang_back),
                 tint = DevLedgerColors.TextSecondary,
             )
         }
@@ -331,14 +340,14 @@ private fun ProfileHeader(
 
         Column {
             Text(
-                text = "User Profile",
+                text = strings.get(R.string.lang_user_profile),
                 color = DevLedgerColors.TextPrimary,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
             )
 
             Text(
-                text = "Manage your account information and preferences.",
+                text = strings.get(R.string.lang_manage_your_account_information_and_preferences),
                 color = DevLedgerColors.TextMuted,
                 style = MaterialTheme.typography.bodySmall,
             )
@@ -351,6 +360,7 @@ private fun ProfileHeroCard(
     user: UserEntity,
     onEdit: () -> Unit,
 ) {
+    val strings = rememberAppStrings()
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -405,7 +415,7 @@ private fun ProfileHeroCard(
                 )
 
                 Text(
-                    text = "DevLedger Developer",
+                    text = strings.get(R.string.lang_devledger_developer),
                     color = DevLedgerColors.AccentBlue,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
@@ -433,7 +443,7 @@ private fun ProfileHeroCard(
             ) {
                 Icon(
                     imageVector = Icons.Filled.Edit,
-                    contentDescription = "Edit profile",
+                    contentDescription = strings.get(R.string.lang_edit_profile),
                     tint = DevLedgerColors.AccentBlue,
                     modifier = Modifier.size(19.dp),
                 )
@@ -556,6 +566,7 @@ private fun StatisticsCard(
     totalTags: Int,
     totalIncome: String,
 ) {
+    val strings = rememberAppStrings()
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
@@ -576,7 +587,7 @@ private fun StatisticsCard(
                 modifier = Modifier.weight(1f),
                 icon = Icons.Outlined.Code,
                 value = totalSnippets.toString(),
-                label = "Snippets",
+                label = strings.get(R.string.lang_snippets),
                 color = DevLedgerColors.AccentBlue,
             )
 
@@ -584,7 +595,7 @@ private fun StatisticsCard(
                 modifier = Modifier.weight(1f),
                 icon = Icons.Filled.Folder,
                 value = totalFolders.toString(),
-                label = "Folders",
+                label = strings.get(R.string.lang_folders_label),
                 color = DevLedgerColors.AccentPurple,
             )
 
@@ -592,7 +603,7 @@ private fun StatisticsCard(
                 modifier = Modifier.weight(1f),
                 icon = Icons.Outlined.Code,
                 value = totalTags.toString(),
-                label = "Tags",
+                label = strings.get(R.string.lang_tags_label),
                 color = DevLedgerColors.SuccessGreen,
             )
 
@@ -600,7 +611,7 @@ private fun StatisticsCard(
                 modifier = Modifier.weight(1f),
                 icon = Icons.Filled.AttachMoney,
                 value = totalIncome,
-                label = "Income",
+                label = strings.get(R.string.lang_income),
                 color = DevLedgerColors.ErrorRed,
             )
         }
@@ -655,6 +666,7 @@ private fun EditProfileDialog(
     onDismiss: () -> Unit,
     onSave: () -> Unit,
 ) {
+    val strings = rememberAppStrings()
     AlertDialog(
         onDismissRequest = {
             if (!isSaving) {
@@ -664,7 +676,7 @@ private fun EditProfileDialog(
         containerColor = DevLedgerColors.SurfaceCard,
         title = {
             Text(
-                text = "Edit Profile",
+                text = strings.get(R.string.lang_edit_profile_title),
                 color = DevLedgerColors.TextPrimary,
                 fontWeight = FontWeight.Bold,
             )
@@ -676,7 +688,7 @@ private fun EditProfileDialog(
                     onValueChange = onNameChange,
                     modifier = Modifier.fillMaxWidth(),
                     label = {
-                        Text("Full Name")
+                        Text(strings.get(R.string.lang_full_name_label))
                     },
                     singleLine = true,
                     enabled = !isSaving,
@@ -725,7 +737,7 @@ private fun EditProfileDialog(
                         strokeWidth = 2.dp,
                     )
                 } else {
-                    Text("Save")
+                    Text(strings.get(R.string.lang_save))
                 }
             }
         },
@@ -735,7 +747,7 @@ private fun EditProfileDialog(
                 enabled = !isSaving,
             ) {
                 Text(
-                    text = "Cancel",
+                    text = strings.get(R.string.lang_cancel),
                     color = DevLedgerColors.TextSecondary,
                 )
             }
@@ -747,6 +759,7 @@ private fun EditProfileDialog(
 private fun EmptyProfileCard(
     onRetry: () -> Unit,
 ) {
+    val strings = rememberAppStrings()
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
@@ -761,13 +774,13 @@ private fun EmptyProfileCard(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                text = "Profile information is unavailable.",
+                text = strings.get(R.string.lang_profile_information_is_unavailable),
                 color = DevLedgerColors.TextMuted,
             )
 
             TextButton(onClick = onRetry) {
                 Text(
-                    text = "Retry",
+                    text = strings.get(R.string.lang_retry),
                     color = DevLedgerColors.AccentBlue,
                 )
             }
@@ -834,11 +847,12 @@ private fun initials(
 
 private fun providerLabel(
     provider: String?,
+    strings: AppStrings,
 ): String {
     return when (provider?.uppercase()) {
         "GOOGLE" -> "Google"
         "GITHUB" -> "GitHub"
-        else -> "Email and password"
+        else -> strings.get(R.string.lang_email_and_password)
     }
 }
 

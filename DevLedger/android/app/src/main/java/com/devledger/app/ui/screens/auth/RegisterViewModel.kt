@@ -1,5 +1,9 @@
 package com.devledger.app.ui.screens.auth
 
+import com.devledger.app.util.localization.UiText
+
+import com.devledger.app.R
+
 import android.util.Patterns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -18,7 +22,7 @@ data class RegisterUiState(
     val password: String = "",
 
     val isLoading: Boolean = false,
-    val errorMessage: String? = null,
+    val errorMessage: UiText? = null,
     val isRegistered: Boolean = false,
 
     // Validation
@@ -28,9 +32,9 @@ data class RegisterUiState(
 
     val passwordStrength: Int = 0,
 
-    val fullNameError: String? = null,
-    val emailError: String? = null,
-    val passwordError: String? = null,
+    val fullNameError: UiText? = null,
+    val emailError: UiText? = null,
+    val passwordError: UiText? = null,
 )
 
 @HiltViewModel
@@ -49,7 +53,7 @@ class RegisterViewModel @Inject constructor(
             isFullNameValid = isValid,
             fullNameError = when {
                 value.isBlank() -> null
-                !isValid -> "Full name must contain at least 2 characters."
+                !isValid -> UiText.Resource(R.string.lang_full_name_must_contain_at_least_2_characters)
                 else -> null
             },
             errorMessage = null
@@ -64,7 +68,7 @@ class RegisterViewModel @Inject constructor(
             isEmailValid = isValid,
             emailError = when {
                 value.isBlank() -> null
-                !isValid -> "Enter a valid email address."
+                !isValid -> UiText.Resource(R.string.lang_enter_a_valid_email_address)
                 else -> null
             },
             errorMessage = null
@@ -81,7 +85,7 @@ class RegisterViewModel @Inject constructor(
             isPasswordValid = isValid,
             passwordError = when {
                 value.isEmpty() -> null
-                !isValid -> "Password must contain at least 8 characters."
+                !isValid -> UiText.Resource(R.string.lang_password_must_contain_at_least_8_characters)
                 else -> null
             },
             errorMessage = null
@@ -110,18 +114,18 @@ class RegisterViewModel @Inject constructor(
         val state = _uiState.value
 
         val fullNameError =
-            if (state.fullName.isBlank()) "Full name is required."
-            else if (!state.isFullNameValid) "Full name must contain at least 2 characters."
+            if (state.fullName.isBlank()) UiText.Resource(R.string.lang_full_name_is_required)
+            else if (!state.isFullNameValid) UiText.Resource(R.string.lang_full_name_must_contain_at_least_2_characters)
             else null
 
         val emailError =
-            if (state.email.isBlank()) "Email address is required."
-            else if (!state.isEmailValid) "Enter a valid email address."
+            if (state.email.isBlank()) UiText.Resource(R.string.lang_email_address_is_required)
+            else if (!state.isEmailValid) UiText.Resource(R.string.lang_enter_a_valid_email_address)
             else null
 
         val passwordError =
-            if (state.password.isBlank()) "Password is required."
-            else if (!state.isPasswordValid) "Password must contain at least 8 characters."
+            if (state.password.isBlank()) UiText.Resource(R.string.lang_password_is_required)
+            else if (!state.isPasswordValid) UiText.Resource(R.string.lang_password_must_contain_at_least_8_characters)
             else null
 
         val hasErrors =
@@ -134,7 +138,7 @@ class RegisterViewModel @Inject constructor(
                 fullNameError = fullNameError,
                 emailError = emailError,
                 passwordError = passwordError,
-                errorMessage = "Please correct the highlighted fields."
+                errorMessage = UiText.Resource(R.string.lang_please_correct_the_highlighted_fields)
             )
             return
         }
@@ -162,7 +166,7 @@ class RegisterViewModel @Inject constructor(
                 is DevLedgerResult.Error -> {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        errorMessage = result.message
+                        errorMessage = UiText.Resource(R.string.lang_registration_failed_check_your_details_and_try_again)
                     )
                 }
             }

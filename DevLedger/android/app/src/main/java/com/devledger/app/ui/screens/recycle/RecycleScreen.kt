@@ -1,5 +1,10 @@
 package com.devledger.app.ui.screens.recycle
 
+
+import com.devledger.app.util.localization.rememberAppStrings
+
+import com.devledger.app.R
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -71,6 +76,7 @@ fun RecycleScreenContent(
     onDelete: (List<String>) -> Unit,
     onRefresh: () -> Unit,
 ) {
+    val strings = rememberAppStrings()
     var languageMenu by remember { mutableStateOf(false) }
     var folderMenu by remember { mutableStateOf(false) }
     var deleteIds by remember { mutableStateOf<List<String>?>(null) }
@@ -85,14 +91,14 @@ fun RecycleScreenContent(
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = DevLedgerColors.TextSecondary)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, strings.get(R.string.lang_back), tint = DevLedgerColors.TextSecondary)
                 }
                 Icon(Icons.Default.DeleteOutline, null, tint = DevLedgerColors.ErrorRed, modifier = Modifier.size(30.dp))
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("Archived Snippets", color = DevLedgerColors.TextPrimary,
+                    Text(strings.get(R.string.lang_archived_snippets), color = DevLedgerColors.TextPrimary,
                         fontWeight = FontWeight.Bold, fontSize = 22.sp)
-                    Text("Restore or permanently delete snippets.", color = DevLedgerColors.TextSecondary,
+                    Text(strings.get(R.string.lang_restore_or_permanently_delete_snippets), color = DevLedgerColors.TextSecondary,
                         style = MaterialTheme.typography.bodySmall)
                 }
             }
@@ -101,15 +107,15 @@ fun RecycleScreenContent(
             ArchivePanel {
                 Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("Archived items are hidden from your active vault.", color = DevLedgerColors.TextPrimary)
+                        Text(strings.get(R.string.lang_archived_items_are_hidden_from_your_active_vault), color = DevLedgerColors.TextPrimary)
                         Spacer(Modifier.height(6.dp))
-                        Text("Restore them, or delete them permanently.", color = DevLedgerColors.TextSecondary,
+                        Text(strings.get(R.string.lang_restore_them_or_delete_them_permanently), color = DevLedgerColors.TextSecondary,
                             style = MaterialTheme.typography.bodySmall)
                     }
                     Spacer(Modifier.width(12.dp))
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(state.totalCount.toString(), color = DevLedgerColors.ErrorRed, fontSize = 28.sp)
-                        Text("Items", color = DevLedgerColors.TextSecondary)
+                        Text(strings.get(R.string.lang_items), color = DevLedgerColors.TextSecondary)
                     }
                 }
             }
@@ -118,7 +124,7 @@ fun RecycleScreenContent(
             OutlinedTextField(
                 value = state.filters.query, onValueChange = onQueryChange,
                 modifier = Modifier.fillMaxWidth(), singleLine = true,
-                placeholder = { Text("Search archived snippets") },
+                placeholder = { Text(strings.get(R.string.lang_search_archived_snippets)) },
                 leadingIcon = { Icon(Icons.Default.Search, null) },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = DevLedgerColors.TextPrimary,
@@ -132,10 +138,10 @@ fun RecycleScreenContent(
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box {
                     OutlinedButton(onClick = { languageMenu = true }) {
-                        Text(state.filters.language ?: "All languages")
+                        Text(state.filters.language ?: strings.get(R.string.lang_all_languages))
                     }
                     DropdownMenu(expanded = languageMenu, onDismissRequest = { languageMenu = false }) {
-                        DropdownMenuItem(text = { Text("All languages") }, onClick = {
+                        DropdownMenuItem(text = { Text(strings.get(R.string.lang_all_languages)) }, onClick = {
                             onLanguageChange(null); languageMenu = false
                         })
                         state.languages.forEach { language ->
@@ -147,10 +153,10 @@ fun RecycleScreenContent(
                 }
                 Box {
                     OutlinedButton(onClick = { folderMenu = true }) {
-                        Text(state.filters.folderId?.let { state.folders[it] ?: "Unknown folder" } ?: "All folders")
+                        Text(state.filters.folderId?.let { state.folders[it] ?: strings.get(R.string.lang_unknown_folder) } ?: strings.get(R.string.lang_all_folders))
                     }
                     DropdownMenu(expanded = folderMenu, onDismissRequest = { folderMenu = false }) {
-                        DropdownMenuItem(text = { Text("All folders") }, onClick = {
+                        DropdownMenuItem(text = { Text(strings.get(R.string.lang_all_folders)) }, onClick = {
                             onFolderChange(null); folderMenu = false
                         })
                         state.folders.entries.sortedBy { it.value.lowercase() }.forEach { folder ->
@@ -161,34 +167,34 @@ fun RecycleScreenContent(
                     }
                 }
                 OutlinedButton(onClick = onToggleSort) {
-                    Text(if (state.filters.newestFirst) "Updated: newest" else "Updated: oldest")
+                    Text(if (state.filters.newestFirst) strings.get(R.string.lang_updated_newest) else strings.get(R.string.lang_updated_oldest))
                 }
-                TextButton(onClick = onClearFilters) { Text("Reset") }
+                TextButton(onClick = onClearFilters) { Text(strings.get(R.string.lang_reset)) }
             }
         }
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = onRefresh, enabled = !busy) { Text("Refresh") }
+                TextButton(onClick = onRefresh, enabled = !busy) { Text(strings.get(R.string.lang_refresh)) }
                 OutlinedButton(
                     enabled = !busy && state.archivedIds.isNotEmpty(),
-                    onClick = { deleteIds = state.archivedIds.toList(); deleteTitle = "Empty recycle bin?" },
+                    onClick = { deleteIds = state.archivedIds.toList(); deleteTitle = strings.get(R.string.lang_empty_recycle_bin) },
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = DevLedgerColors.ErrorRed),
-                ) { Text("Empty Recycle Bin") }
+                ) { Text(strings.get(R.string.lang_empty_recycle_bin_action)) }
             }
-            Text("Empty Bin includes all saved archived items, even those hidden by filters. Refresh first to load cloud items.",
+            Text(strings.get(R.string.lang_empty_bin_includes_all_saved_archived_items_even_those_hidde),
                 color = DevLedgerColors.TextSecondary, style = MaterialTheme.typography.bodySmall)
         }
-        state.error?.let { message -> item { Text(message, color = DevLedgerColors.ErrorRed) } }
-        state.message?.let { message -> item { Text(message, color = DevLedgerColors.SuccessGreen) } }
+        state.error?.let { message -> item { Text(message.resolve(strings), color = DevLedgerColors.ErrorRed) } }
+        state.message?.let { message -> item { Text(message.resolve(strings), color = DevLedgerColors.SuccessGreen) } }
         if (state.isLoading || state.refreshing || state.deleting) {
             item { LinearProgressIndicator(modifier = Modifier.fillMaxWidth()) }
         } else if (state.snippets.isEmpty() && state.error == null) {
             item {
                 ArchivePanel {
                     Text(
-                        if (state.totalCount == 0) "Your archive is empty. Archived snippets will appear here."
-                        else "No snippets match these filters.",
+                        if (state.totalCount == 0) strings.get(R.string.lang_your_archive_is_empty_archived_snippets_will_appear_here)
+                        else strings.get(R.string.lang_no_snippets_match_these_filters),
                         modifier = Modifier.padding(24.dp), color = DevLedgerColors.TextSecondary,
                     )
                 }
@@ -197,11 +203,11 @@ fun RecycleScreenContent(
         items(state.snippets, key = { it.snippetId }) { snippet ->
             ArchivedSnippetCard(
                 snippet = snippet,
-                folder = if (snippet.folderId == null) "No folder" else state.folders[snippet.folderId] ?: "Folder unavailable",
+                folder = if (snippet.folderId == null) strings.get(R.string.lang_no_folder) else state.folders[snippet.folderId] ?: strings.get(R.string.lang_folder_unavailable),
                 isRestoring = state.restoringId == snippet.snippetId,
                 enabled = !busy,
                 onRestore = { onRestore(snippet.snippetId) },
-                onDelete = { deleteIds = listOf(snippet.snippetId); deleteTitle = "Delete ${snippet.title}?" },
+                onDelete = { deleteIds = listOf(snippet.snippetId); deleteTitle = strings.get(R.string.lang_delete_named, snippet.title) },
             )
         }
     }
@@ -209,13 +215,13 @@ fun RecycleScreenContent(
         AlertDialog(
             onDismissRequest = { deleteIds = null },
             title = { Text(deleteTitle) },
-            text = { Text("Permanently delete ${ids.size} archived snippet(s)? This cannot be undone. Cloud deletion will sync when connected.") },
+            text = { Text(strings.plural(R.plurals.lang_archive_delete_confirm, ids.size)) },
             confirmButton = {
                 TextButton(enabled = !busy, onClick = { deleteIds = null; onDelete(ids) }) {
-                    Text("Delete permanently", color = DevLedgerColors.ErrorRed)
+                    Text(strings.get(R.string.lang_delete_permanently), color = DevLedgerColors.ErrorRed)
                 }
             },
-            dismissButton = { TextButton(onClick = { deleteIds = null }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { deleteIds = null }) { Text(strings.get(R.string.lang_cancel)) } },
         )
     }
 }
@@ -236,8 +242,9 @@ private fun ArchivedSnippetCard(
     onRestore: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    val updated = remember(snippet.updatedAt, Locale.getDefault()) {
-        SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault()).format(Date(snippet.updatedAt))
+    val strings = rememberAppStrings()
+    val updated = remember(snippet.updatedAt, strings.locale) {
+        SimpleDateFormat("dd MMM yyyy, HH:mm", strings.locale).format(Date(snippet.updatedAt))
     }
     ArchivePanel {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -262,19 +269,19 @@ private fun ArchivedSnippetCard(
                 Text(folder, color = DevLedgerColors.TextSecondary)
             }
             // The supplied entity has no archivedAt field: do not mislabel updatedAt as an archive date.
-            Text("Last updated $updated", color = DevLedgerColors.TextSecondary, style = MaterialTheme.typography.bodySmall)
+            Text(strings.get(R.string.lang_updated_at, updated), color = DevLedgerColors.TextSecondary, style = MaterialTheme.typography.bodySmall)
             Row(Modifier.align(Alignment.End)) {
                 TextButton(onClick = onRestore, enabled = enabled) {
                     if (isRestoring) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                     else Icon(Icons.Default.Restore, null, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text(if (isRestoring) "Restoring…" else "Restore")
+                    Text(if (isRestoring) strings.get(R.string.lang_restoring) else strings.get(R.string.lang_restore))
                 }
                 TextButton(onClick = onDelete, enabled = enabled,
                     colors = ButtonDefaults.textButtonColors(contentColor = DevLedgerColors.ErrorRed)) {
                     Icon(Icons.Default.DeleteOutline, null, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Delete")
+                    Text(strings.get(R.string.lang_delete))
                 }
             }
         }

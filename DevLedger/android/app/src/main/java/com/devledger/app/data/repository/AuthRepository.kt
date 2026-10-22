@@ -57,7 +57,7 @@ class AuthRepository @Inject constructor(
                 pinStorage.syncFromBackend(body.email, body.pinHash, body.pinSalt, body.biometricEnabled ?: true)
             }
             userDao.replaceCurrentUser(user)
-            deviceRegistrar.registerCurrentToken()
+            deviceRegistrar.scheduleRegistration()
 
             // Safety: If the SSO response is missing security fields, try a full profile refresh
             // to avoid sending existing users to the "Setup PIN" screen.
@@ -108,7 +108,7 @@ class AuthRepository @Inject constructor(
                 pinStorage.syncFromBackend(body.email, body.pinHash, body.pinSalt, body.biometricEnabled ?: true)
             }
             userDao.replaceCurrentUser(user)
-            deviceRegistrar.registerCurrentToken()
+            deviceRegistrar.scheduleRegistration()
 
             // Safety: If the SSO response is missing security fields, try a full profile refresh
             // to avoid sending existing users to the "Setup PIN" screen.
@@ -156,7 +156,7 @@ class AuthRepository @Inject constructor(
                 pinStorage.syncFromBackend(body.email, body.pinHash, body.pinSalt, body.biometricEnabled ?: true)
             }
             userDao.replaceCurrentUser(user)
-            deviceRegistrar.registerCurrentToken()
+            deviceRegistrar.scheduleRegistration()
 
             // Safety: If the SSO response is missing security fields, try a full profile refresh
             // to avoid sending existing users to the "Setup PIN" screen.
@@ -298,6 +298,7 @@ class AuthRepository @Inject constructor(
 
     suspend fun signOut() {
         tokenManager.clear()
+        deviceRegistrar.cancelRegistration()
         userDao.clear()
     }
 }

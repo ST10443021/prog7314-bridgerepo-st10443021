@@ -1,5 +1,7 @@
 package com.devledger.app.ui.components
 
+import com.devledger.app.util.localization.rememberAppStrings
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -38,6 +40,7 @@ fun DevLedgerBottomNav(
     onFabClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val strings = rememberAppStrings()
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -65,7 +68,7 @@ fun DevLedgerBottomNav(
                     .background(DevLedgerColors.AccentBlue)
                     .border(3.dp, DevLedgerColors.SurfaceNav, CircleShape),
             ) {
-                Icon(Icons.Filled.Add, contentDescription = "Add", tint = Color.White)
+                Icon(Icons.Filled.Add, contentDescription = strings.get(R.string.lang_add), tint = Color.White)
             }
             NavItem(Icons.Filled.AttachMoney, stringRes(R.string.nav_finance), active == BottomNavTab.FINANCE) {
                 onNavigate(BottomNavTab.FINANCE)

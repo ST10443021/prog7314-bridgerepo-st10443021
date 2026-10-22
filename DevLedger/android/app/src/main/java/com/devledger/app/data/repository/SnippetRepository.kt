@@ -1,5 +1,9 @@
 package com.devledger.app.data.repository
 
+import com.devledger.app.util.localization.UiText
+
+import com.devledger.app.R
+
 import com.devledger.app.data.local.dao.SnippetDao
 import com.devledger.app.data.local.entity.SnippetEntity
 import com.devledger.app.data.local.entity.SyncStatus
@@ -162,8 +166,8 @@ class SnippetRepository @Inject constructor(
 
         if (existing == null) {
             notificationRepository.notify(
-                title = "Snippet Created",
-                message = "New snippet \"${snippet.title}\" has been saved.",
+                title = UiText.Resource(R.string.lang_snippet_created),
+                message = UiText.Resource(R.string.lang_snippet_created_body, listOf(snippet.title)),
                 type = "SNIPPET"
             )
         }
@@ -193,8 +197,8 @@ class SnippetRepository @Inject constructor(
         val count = dao.queueArchivedDeletes(user.userId, ids)
         if (count > 0) {
             notificationRepository.notify(
-                title = "Snippet Deleted",
-                message = "$count snippet(s) moved to the deletion queue.",
+                title = UiText.Resource(R.string.lang_snippet_deleted),
+                message = UiText.Quantity(R.plurals.lang_snippets_queued_delete, count),
                 type = "SNIPPET"
             )
             queueSync()

@@ -1,5 +1,10 @@
 package com.devledger.app.ui.screens.finance
 
+
+import com.devledger.app.util.localization.rememberAppStrings
+
+import com.devledger.app.R
+
 import android.graphics.BitmapFactory
 import android.provider.OpenableColumns
 import android.util.Base64
@@ -51,6 +56,7 @@ fun AddTransactionScreen(
     onBack: () -> Unit,
     viewModel: AddTransactionViewModel = hiltViewModel(),
 ) {
+    val strings = rememberAppStrings()
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     var showDatePicker by remember { mutableStateOf(false) }
@@ -75,31 +81,31 @@ fun AddTransactionScreen(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             IconButton(onClick = onBack) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                Icon(Icons.Default.ArrowBack, contentDescription = strings.get(R.string.lang_back), tint = Color.White)
             }
-            Text("Add Transaction", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text(strings.get(R.string.lang_add_transaction), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             IconButton(onClick = { /* History */ }) {
-                Icon(Icons.Default.History, contentDescription = "History", tint = DevLedgerColors.AccentBlue)
+                Icon(Icons.Default.History, contentDescription = strings.get(R.string.lang_history), tint = DevLedgerColors.AccentBlue)
             }
         }
 
         Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
-            state.errorMessage?.let { Text(it, color = DevLedgerColors.ErrorRed, fontSize = 12.sp, modifier = Modifier.padding(bottom = 12.dp)) }
+            state.errorMessage?.let { Text(it.resolve(strings), color = DevLedgerColors.ErrorRed, fontSize = 12.sp, modifier = Modifier.padding(bottom = 12.dp)) }
 
             Row(modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 TypeToggleCard(
-                    label = "Income", sublabel = "Money you receive", icon = Icons.Default.ArrowUpward,
+                    label = strings.get(R.string.lang_income), sublabel = strings.get(R.string.lang_money_you_receive), icon = Icons.Default.ArrowUpward,
                     color = DevLedgerColors.SuccessGreen, selected = state.type == "INCOME",
                     modifier = Modifier.weight(1f),
                 ) { viewModel.onTypeChange("INCOME") }
                 TypeToggleCard(
-                    label = "Expense", sublabel = "Money you spend", icon = Icons.Default.ArrowDownward,
+                    label = strings.get(R.string.lang_expense), sublabel = strings.get(R.string.lang_money_you_spend), icon = Icons.Default.ArrowDownward,
                     color = DevLedgerColors.ErrorRed, selected = state.type == "EXPENSE",
                     modifier = Modifier.weight(1f),
                 ) { viewModel.onTypeChange("EXPENSE") }
             }
 
-            FieldLabel("Amount *")
+            FieldLabel(strings.get(R.string.lang_amount))
             CurrencyAmountField(
                 amount = state.amount,
                 currency = state.currency,
@@ -111,26 +117,26 @@ fun AddTransactionScreen(
 
             Row(modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 Column(Modifier.weight(1f)) {
-                    FieldLabel("Category *")
+                    FieldLabel(strings.get(R.string.lang_category))
                     CategoryDropdown(
-                        options = state.categories, 
-                        selected = state.category, 
-                        icon = Icons.Default.Work, 
+                        options = state.categories,
+                        selected = state.category,
+                        icon = Icons.Default.Work,
                         onSelected = viewModel::onCategoryChange
                     )
                 }
                 Column(Modifier.weight(1f)) {
-                    FieldLabel("Date *")
+                    FieldLabel(strings.get(R.string.lang_date))
                     DateField(state.transactionDateMillis) { showDatePicker = true }
                 }
             }
 
-            FieldLabel("Description *")
+            FieldLabel(strings.get(R.string.lang_description))
             Box(modifier = Modifier.padding(bottom = 20.dp)) {
                 Column {
                     DevLedgerTextField(
                         value = state.description, onValueChange = viewModel::onDescriptionChange,
-                        label = "", placeholder = "Enter a short description...", singleLine = false, minLines = 3,
+                        label = "", placeholder = strings.get(R.string.lang_enter_a_short_description), singleLine = false, minLines = 3,
                     )
                     Text("${state.description.length}/200", color = DevLedgerColors.TextMuted, fontSize = 11.sp,
                         modifier = Modifier.fillMaxWidth().padding(top = 4.dp, end = 4.dp), textAlign = TextAlign.End)
@@ -139,17 +145,17 @@ fun AddTransactionScreen(
 
             Row(modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 Column(Modifier.weight(1f)) {
-                    FieldLabel("Client / From *")
+                    FieldLabel(strings.get(R.string.lang_client_from))
                     DevLedgerTextField(
-                        value = state.clientOrFrom, onValueChange = viewModel::onClientOrFromChange, 
-                        label = "", placeholder = "e.g. Acme Corp", leadingIcon = Icons.Default.Person
+                        value = state.clientOrFrom, onValueChange = viewModel::onClientOrFromChange,
+                        label = "", placeholder = strings.get(R.string.lang_e_g_acme_corp), leadingIcon = Icons.Default.Person
                     )
                 }
                 Column(Modifier.weight(1f)) {
-                    FieldLabel("Related Project")
+                    FieldLabel(strings.get(R.string.lang_related_project))
                     ProjectSelector(
-                        value = state.relatedProject, 
-                        suggestions = state.projectSuggestions, 
+                        value = state.relatedProject,
+                        suggestions = state.projectSuggestions,
                         onSelect = viewModel::onRelatedProjectChange,
                         onCreateNew = viewModel::createFolderAndSelect
                     )
@@ -158,19 +164,19 @@ fun AddTransactionScreen(
 
             Row(modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 Column(Modifier.weight(1f)) {
-                    FieldLabel("Payment Method")
+                    FieldLabel(strings.get(R.string.lang_payment_method))
                     CategoryDropdown(
-                        options = PaymentMethods, 
-                        selected = state.paymentMethod, 
-                        icon = Icons.Default.CreditCard, 
+                        options = PaymentMethods,
+                        selected = state.paymentMethod,
+                        icon = Icons.Default.CreditCard,
                         onSelected = viewModel::onPaymentMethodChange
                     )
                 }
                 Column(Modifier.weight(1f)) {
-                    FieldLabel("Reference / Invoice #")
+                    FieldLabel(strings.get(R.string.lang_reference_invoice))
                     DevLedgerTextField(
-                        value = state.referenceNumber, onValueChange = viewModel::onReferenceNumberChange, 
-                        label = "", placeholder = "e.g. INV-2025-045", leadingIcon = Icons.Default.Numbers
+                        value = state.referenceNumber, onValueChange = viewModel::onReferenceNumberChange,
+                        label = "", placeholder = strings.get(R.string.lang_e_g_inv_2025_045), leadingIcon = Icons.Default.Numbers
                     )
                 }
             }
@@ -178,7 +184,7 @@ fun AddTransactionScreen(
             RecurringSection(state, viewModel::onRecurringToggle, viewModel::onRecurringFrequencyChange, viewModel::onDateChange)
 
             Spacer(Modifier.height(20.dp))
-            
+
             AttachmentSection(
                 fileName = state.attachmentFileName,
                 base64 = state.attachmentBase64,
@@ -186,20 +192,20 @@ fun AddTransactionScreen(
                 onRemove = viewModel::onAttachmentRemoved
             )
             if (state.attachmentTooLarge) {
-                Text("File is larger than 2MB — pick a smaller file.", color = DevLedgerColors.ErrorRed, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
+                Text(strings.get(R.string.lang_file_is_larger_than_2mb_pick_a_smaller_file), color = DevLedgerColors.ErrorRed, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
             }
 
             Spacer(Modifier.height(32.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
                 OutlinedButton(
-                    onClick = onBack, 
+                    onClick = onBack,
                     modifier = Modifier.weight(1f).height(56.dp),
                     shape = RoundedCornerShape(12.dp),
                     border = BorderStroke(1.dp, DevLedgerColors.Border)
                 ) {
                     Icon(Icons.Default.Close, contentDescription = null, tint = Color.White)
                     Spacer(Modifier.width(8.dp))
-                    Text("Cancel", color = Color.White, fontWeight = FontWeight.SemiBold)
+                    Text(strings.get(R.string.lang_cancel), color = Color.White, fontWeight = FontWeight.SemiBold)
                 }
                 Button(
                     onClick = viewModel::save, enabled = !state.isSaving,
@@ -212,7 +218,7 @@ fun AddTransactionScreen(
                     } else {
                         Icon(Icons.Default.Save, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
-                        Text("Save Transaction", fontWeight = FontWeight.SemiBold)
+                        Text(strings.get(R.string.lang_save_transaction), fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -230,7 +236,7 @@ fun AddTransactionScreen(
                     showDatePicker = false
                 }) { Text("OK") }
             },
-            dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text(strings.get(R.string.lang_cancel)) } },
         ) { DatePicker(state = datePickerState) }
     }
 }
@@ -268,10 +274,11 @@ private fun TypeToggleCard(label: String, sublabel: String, icon: ImageVector, c
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CategoryDropdown(options: List<String>, selected: String, icon: ImageVector, onSelected: (String) -> Unit) {
+    val strings = rememberAppStrings()
     var expanded by remember { mutableStateOf(false) }
     ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
         OutlinedTextField(
-            value = selected, onValueChange = {}, readOnly = true, placeholder = { Text("Select", color = DevLedgerColors.TextMuted) },
+            value = strings.label(selected), onValueChange = {}, readOnly = true, placeholder = { Text(strings.get(R.string.lang_select), color = DevLedgerColors.TextMuted) },
             leadingIcon = { Icon(icon, contentDescription = null, tint = DevLedgerColors.TextMuted, modifier = Modifier.size(20.dp)) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier.menuAnchor().fillMaxWidth(),
@@ -286,16 +293,16 @@ private fun CategoryDropdown(options: List<String>, selected: String, icon: Imag
             )
         )
         ExposedDropdownMenu(
-            expanded = expanded, 
+            expanded = expanded,
             onDismissRequest = { expanded = false },
             modifier = Modifier.background(DevLedgerColors.SurfaceCard)
         ) {
-            options.forEach { option -> 
+            options.forEach { option ->
                 DropdownMenuItem(
-                    text = { Text(option, color = Color.White) }, 
+                    text = { Text(strings.label(option), color = Color.White) },
                     onClick = { onSelected(option); expanded = false },
                     modifier = Modifier.background(DevLedgerColors.SurfaceCard)
-                ) 
+                )
             }
         }
     }
@@ -312,7 +319,7 @@ private fun CurrencyAmountField(
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
-    
+
     OutlinedTextField(
         value = amount,
         onValueChange = onAmountChange,
@@ -345,7 +352,7 @@ private fun CurrencyAmountField(
                     Spacer(Modifier.width(8.dp))
                     Box(modifier = Modifier.width(1.dp).height(24.dp).background(DevLedgerColors.Border))
                 }
-                
+
                 DropdownMenu(
                     expanded = expanded,
                     onDismissRequest = { expanded = false },
@@ -382,6 +389,7 @@ private fun ProjectSelector(
     onSelect: (String) -> Unit,
     onCreateNew: (String) -> Unit
 ) {
+    val strings = rememberAppStrings()
     var expanded by remember { mutableStateOf(false) }
     var showNewFolderDialog by remember { mutableStateOf(false) }
     var newFolderName by remember { mutableStateOf("") }
@@ -390,7 +398,7 @@ private fun ProjectSelector(
         OutlinedTextField(
             value = value,
             onValueChange = { onSelect(it) },
-            placeholder = { Text("Select project", color = DevLedgerColors.TextMuted) },
+            placeholder = { Text(strings.get(R.string.lang_select_project), color = DevLedgerColors.TextMuted) },
             leadingIcon = { Icon(Icons.Default.FolderOpen, contentDescription = null, tint = DevLedgerColors.TextMuted, modifier = Modifier.size(20.dp)) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier.menuAnchor().fillMaxWidth(),
@@ -404,18 +412,18 @@ private fun ProjectSelector(
                 focusedContainerColor = DevLedgerColors.BgDeep
             )
         )
-        
+
         ExposedDropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
             modifier = Modifier.background(DevLedgerColors.SurfaceCard)
         ) {
             DropdownMenuItem(
-                text = { 
+                text = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Add, contentDescription = null, tint = DevLedgerColors.AccentBlue, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Create New Folder", color = DevLedgerColors.AccentBlue, fontWeight = FontWeight.Bold)
+                        Text(strings.get(R.string.lang_create_new_folder), color = DevLedgerColors.AccentBlue, fontWeight = FontWeight.Bold)
                     }
                 },
                 onClick = {
@@ -423,7 +431,7 @@ private fun ProjectSelector(
                     showNewFolderDialog = true
                 }
             )
-            
+
             if (suggestions.isNotEmpty()) {
                 HorizontalDivider(color = DevLedgerColors.Border, modifier = Modifier.padding(vertical = 4.dp))
                 suggestions.forEach { option ->
@@ -442,12 +450,12 @@ private fun ProjectSelector(
     if (showNewFolderDialog) {
         AlertDialog(
             onDismissRequest = { showNewFolderDialog = false },
-            title = { Text("New Folder", color = Color.White) },
+            title = { Text(strings.get(R.string.lang_new_folder), color = Color.White) },
             text = {
                 OutlinedTextField(
                     value = newFolderName,
                     onValueChange = { newFolderName = it },
-                    label = { Text("Folder Name") },
+                    label = { Text(strings.get(R.string.lang_folder_name)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -466,12 +474,12 @@ private fun ProjectSelector(
                         }
                     }
                 ) {
-                    Text("Create", color = DevLedgerColors.AccentBlue)
+                    Text(strings.get(R.string.lang_create), color = DevLedgerColors.AccentBlue)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showNewFolderDialog = false }) {
-                    Text("Cancel", color = DevLedgerColors.TextMuted)
+                    Text(strings.get(R.string.lang_cancel), color = DevLedgerColors.TextMuted)
                 }
             },
             containerColor = DevLedgerColors.SurfaceCard
@@ -481,7 +489,8 @@ private fun ProjectSelector(
 
 @Composable
 private fun DateField(millis: Long, onClick: () -> Unit) {
-    val formatted = remember(millis) { SimpleDateFormat("d MMM yyyy", Locale.getDefault()).format(Date(millis)) }
+    val strings = rememberAppStrings()
+    val formatted = remember(millis, strings.locale) { SimpleDateFormat("d MMM yyyy", strings.locale).format(Date(millis)) }
     OutlinedTextField(
         value = formatted, onValueChange = {}, readOnly = true,
         leadingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = null, tint = DevLedgerColors.TextMuted, modifier = Modifier.size(20.dp)) },
@@ -500,6 +509,7 @@ private fun DateField(millis: Long, onClick: () -> Unit) {
 
 @Composable
 private fun RecurringSection(state: AddTransactionUiState, onToggle: (Boolean) -> Unit, onFrequencyChange: (String) -> Unit, onDateChange: (Long) -> Unit) {
+    val strings = rememberAppStrings()
     Box(
         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(DevLedgerColors.SurfaceCard).border(1.dp, DevLedgerColors.Border, RoundedCornerShape(12.dp)).padding(16.dp),
     ) {
@@ -508,8 +518,8 @@ private fun RecurringSection(state: AddTransactionUiState, onToggle: (Boolean) -
                 Icon(Icons.Default.Autorenew, contentDescription = null, tint = DevLedgerColors.AccentBlue, modifier = Modifier.size(22.dp))
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("Recurring Transaction", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                    Text("Set this transaction to repeat automatically", color = DevLedgerColors.TextMuted, fontSize = 12.sp)
+                    Text(strings.get(R.string.lang_recurring_transaction), color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Text(strings.get(R.string.lang_set_this_transaction_to_repeat_automatically), color = DevLedgerColors.TextMuted, fontSize = 12.sp)
                 }
                 Switch(checked = state.isRecurring, onCheckedChange = onToggle,
                     colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = DevLedgerColors.AccentBlue, uncheckedTrackColor = DevLedgerColors.SurfaceCardAlt))
@@ -518,13 +528,11 @@ private fun RecurringSection(state: AddTransactionUiState, onToggle: (Boolean) -
                 Spacer(Modifier.height(16.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.weight(1f)) {
-                        Text("Frequency", color = DevLedgerColors.TextMuted, fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
-                        CategoryDropdown(RecurringFrequencies.map { it.second }, RecurringFrequencies.first { it.first == state.recurringFrequency }.second, Icons.Default.Repeat) { label ->
-                            onFrequencyChange(RecurringFrequencies.first { it.second == label }.first)
-                        }
+                        Text(strings.get(R.string.lang_frequency), color = DevLedgerColors.TextMuted, fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
+                        CategoryDropdown(RecurringFrequencies, state.recurringFrequency, Icons.Default.Repeat, onFrequencyChange)
                     }
                     Column(Modifier.weight(1f)) {
-                        Text("Next Occurrence", color = DevLedgerColors.TextMuted, fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
+                        Text(strings.get(R.string.lang_next_occurrence), color = DevLedgerColors.TextMuted, fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
                         val next = remember(state.transactionDateMillis, state.recurringFrequency) {
                             val cal = Calendar.getInstance().apply { timeInMillis = state.transactionDateMillis }
                             when (state.recurringFrequency) {
@@ -532,7 +540,7 @@ private fun RecurringSection(state: AddTransactionUiState, onToggle: (Boolean) -
                                 "YEARLY" -> cal.add(Calendar.YEAR, 1)
                                 else -> cal.add(Calendar.MONTH, 1)
                             }
-                            SimpleDateFormat("d MMM yyyy", Locale.getDefault()).format(cal.time)
+                            SimpleDateFormat("d MMM yyyy", strings.locale).format(cal.time)
                         }
                         Box(
                             modifier = Modifier.fillMaxWidth().height(56.dp).clip(RoundedCornerShape(12.dp)).background(DevLedgerColors.BgDeep).border(1.dp, DevLedgerColors.Border, RoundedCornerShape(12.dp)).padding(horizontal = 12.dp),
@@ -553,6 +561,7 @@ private fun RecurringSection(state: AddTransactionUiState, onToggle: (Boolean) -
 
 @Composable
 private fun AttachmentSection(fileName: String?, base64: String?, onUpload: () -> Unit, onRemove: () -> Unit) {
+    val strings = rememberAppStrings()
     Box(
         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(DevLedgerColors.SurfaceCard).border(1.dp, DevLedgerColors.Border, RoundedCornerShape(12.dp)).padding(16.dp),
     ) {
@@ -561,11 +570,11 @@ private fun AttachmentSection(fileName: String?, base64: String?, onUpload: () -
                 Icon(Icons.Default.AttachFile, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
                 Spacer(Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Attachment (Optional)", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                    Text(fileName ?: "Attach receipt or invoice", color = DevLedgerColors.TextMuted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(strings.get(R.string.lang_attachment_optional), color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Text(fileName ?: strings.get(R.string.lang_attach_receipt_or_invoice), color = DevLedgerColors.TextMuted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 if (fileName != null) {
-                    TextButton(onClick = onRemove) { Text("Remove", color = DevLedgerColors.ErrorRed, fontSize = 13.sp, fontWeight = FontWeight.SemiBold) }
+                    TextButton(onClick = onRemove) { Text(strings.get(R.string.lang_remove), color = DevLedgerColors.ErrorRed, fontSize = 13.sp, fontWeight = FontWeight.SemiBold) }
                 } else {
                     Button(
                         onClick = onUpload,
@@ -575,7 +584,7 @@ private fun AttachmentSection(fileName: String?, base64: String?, onUpload: () -
                     ) {
                         Icon(Icons.Default.FileUpload, contentDescription = null, tint = DevLedgerColors.AccentBlue, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Upload File", color = Color.White, fontSize = 13.sp)
+                        Text(strings.get(R.string.lang_upload_file), color = Color.White, fontSize = 13.sp)
                     }
                 }
             }
@@ -594,7 +603,7 @@ private fun AttachmentSection(fileName: String?, base64: String?, onUpload: () -
                     Spacer(Modifier.height(12.dp))
                     Image(
                         bitmap = bitmap.asImageBitmap(),
-                        contentDescription = "Attachment Preview",
+                        contentDescription = strings.get(R.string.lang_attachment_preview),
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(max = 200.dp)

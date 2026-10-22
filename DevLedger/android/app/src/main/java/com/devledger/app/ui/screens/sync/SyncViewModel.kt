@@ -1,5 +1,9 @@
 package com.devledger.app.ui.screens.sync
 
+import com.devledger.app.util.localization.UiText
+
+import com.devledger.app.R
+
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asFlow
@@ -118,7 +122,7 @@ class SyncViewModel @Inject constructor(
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (error: Exception) {
                 if (_uiState.value.accountId == before.accountId)
-                    _uiState.update { it.copy(actionError = error.message ?: "Recovery failed. Local draft retained.") }
+                    _uiState.update { it.copy(actionError = UiText.Resource(R.string.lang_recovery_failed_local_draft_retained)) }
             } finally {
                 if (_uiState.value.accountId == before.accountId) _uiState.update { it.copy(resolvingId = null) }
             }

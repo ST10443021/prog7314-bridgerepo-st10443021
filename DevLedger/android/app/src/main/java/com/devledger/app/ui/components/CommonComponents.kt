@@ -1,5 +1,9 @@
 package com.devledger.app.ui.components
 
+import com.devledger.app.util.localization.rememberAppStrings
+
+import com.devledger.app.R
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -125,6 +129,7 @@ fun DevLedgerTextField(
     placeholder: String? = null,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
 ) {
+    val strings = rememberAppStrings()
     var passwordVisible by remember { mutableStateOf(false) }
 
     Column(modifier = modifier) {
@@ -150,7 +155,7 @@ fun DevLedgerTextField(
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
                             Icon(
                                 imageVector = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
-                                contentDescription = if (passwordVisible) "Hide password" else "Show password",
+                                contentDescription = if (passwordVisible) strings.get(R.string.lang_hide_password) else strings.get(R.string.lang_show_password),
                                 tint = DevLedgerColors.TextMuted,
                             )
                         }
@@ -158,7 +163,7 @@ fun DevLedgerTextField(
                     if (isValid && !isError) {
                         Icon(
                             imageVector = Icons.Filled.CheckCircle,
-                            contentDescription = "Valid",
+                            contentDescription = strings.get(R.string.lang_valid),
                             tint = DevLedgerColors.SuccessGreen,
                             modifier = Modifier.size(20.dp),
                         )
@@ -202,6 +207,7 @@ fun DevLedgerTextField(
  */
 @Composable
 fun PasswordStrengthMeter(strength: Int, modifier: Modifier = Modifier) {
+    val strings = rememberAppStrings()
     val segments = 4
     val color = when (strength) {
         1 -> DevLedgerColors.ErrorRed
@@ -211,10 +217,10 @@ fun PasswordStrengthMeter(strength: Int, modifier: Modifier = Modifier) {
         else -> DevLedgerColors.Border
     }
     val label = when (strength) {
-        1 -> "Weak"
-        2 -> "Fair"
-        3 -> "Good"
-        4 -> "Strong"
+        1 -> strings.get(R.string.lang_weak)
+        2 -> strings.get(R.string.lang_fair)
+        3 -> strings.get(R.string.lang_good)
+        4 -> strings.get(R.string.lang_strong)
         else -> ""
     }
 

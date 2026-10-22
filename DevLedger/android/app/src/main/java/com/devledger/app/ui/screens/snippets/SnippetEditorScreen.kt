@@ -1,5 +1,8 @@
 package com.devledger.app.ui.screens.snippets
 
+
+import com.devledger.app.util.localization.rememberAppStrings
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -40,7 +43,7 @@ import com.devledger.app.ui.components.DevLedgerTextField
 import com.devledger.app.ui.theme.DevLedgerColors
 import com.devledger.app.util.SyntaxHighlightTransformation
 
-/** 
+/**
  * Snippet Editor: Creates or edits a snippet.
  * Key elements: Title, folder, language, tags, syntax-highlighted code with line numbers.
  * Matches Image 3 pixel-accurate design.
@@ -55,6 +58,7 @@ fun SnippetEditorScreen(
     onBack: () -> Unit,
     viewModel: SnippetEditorViewModel = hiltViewModel(),
 ) {
+    val strings = rememberAppStrings()
     val state by viewModel.uiState.collectAsState()
     val folders by viewModel.folders.collectAsState()
     val availableTags by viewModel.availableTags.collectAsState()
@@ -81,31 +85,31 @@ fun SnippetEditorScreen(
                 .padding(16.dp)
         ) {
             if (state.isLoading) LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp))
-            
+
             Text(
-                text = if (state.snippetId == null) "New Snippet" else "Edit Snippet",
+                text = if (state.snippetId == null) strings.get(R.string.lang_new_snippet) else strings.get(R.string.lang_edit_snippet),
                 color = Color.White,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = if (state.snippetId == null) "Create a new code snippet and save." else "Update your code snippet and save.",
+                text = if (state.snippetId == null) strings.get(R.string.lang_create_a_new_code_snippet_and_save) else strings.get(R.string.lang_update_your_code_snippet_and_save),
                 color = DevLedgerColors.TextMuted,
                 fontSize = 14.sp,
                 modifier = Modifier.padding(top = 4.dp, bottom = 24.dp)
             )
 
-            state.errorMessage?.let { 
-                Text(it, color = DevLedgerColors.ErrorRed, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(bottom = 12.dp)) 
+            state.errorMessage?.let {
+                Text(it.resolve(strings), color = DevLedgerColors.ErrorRed, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(bottom = 12.dp))
             }
 
-            Text("Title", color = DevLedgerColors.TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text(strings.get(R.string.lang_title), color = DevLedgerColors.TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             Box(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
                 DevLedgerTextField(
-                    value = state.title, 
+                    value = state.title,
                     onValueChange = viewModel::onTitleChange,
                     label = "",
-                    placeholder = "Snippet Title",
+                    placeholder = strings.get(R.string.lang_snippet_title),
                 )
                 Text(
                     text = "${state.title.length}/120",
@@ -120,11 +124,11 @@ fun SnippetEditorScreen(
                 LanguageSelector(state.language, viewModel::onLanguageChange, Modifier.weight(1f))
             }
 
-            Text("Tags", color = DevLedgerColors.TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
+            Text(strings.get(R.string.lang_tags_label), color = DevLedgerColors.TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
             TagInputArea(
-                tags = state.tags, 
-                suggestions = availableTags.map { it.name }, 
-                onAddTag = viewModel::addTag, 
+                tags = state.tags,
+                suggestions = availableTags.map { it.name },
+                onAddTag = viewModel::addTag,
                 onRemoveTag = viewModel::removeTag,
                 onCreateNew = { showCreateTagDialog = true },
                 modifier = Modifier.padding(bottom = 20.dp)
@@ -135,7 +139,7 @@ fun SnippetEditorScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Code", color = DevLedgerColors.TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text(strings.get(R.string.lang_code_label), color = DevLedgerColors.TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 Row {
                     Icon(Icons.Default.WbSunny, contentDescription = null, tint = DevLedgerColors.TextMuted, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(12.dp))
@@ -147,14 +151,14 @@ fun SnippetEditorScreen(
             Spacer(Modifier.height(8.dp))
             CodeEditor(state.content, viewModel::onContentChange, Modifier.padding(bottom = 20.dp))
 
-            Text("Snippet Description (Optional)", color = DevLedgerColors.TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
+            Text(strings.get(R.string.lang_snippet_description_optional), color = DevLedgerColors.TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
             Box(modifier = Modifier.fillMaxWidth()) {
                 DevLedgerTextField(
-                    value = state.description, 
+                    value = state.description,
                     onValueChange = viewModel::onDescriptionChange,
                     label = "",
-                    placeholder = "Describe what this snippet does...",
-                    singleLine = false, 
+                    placeholder = strings.get(R.string.lang_describe_what_this_snippet_does),
+                    singleLine = false,
                     minLines = 3,
                 )
                 Text(
@@ -166,7 +170,7 @@ fun SnippetEditorScreen(
             }
 
             Spacer(Modifier.height(24.dp))
-            
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -174,8 +178,8 @@ fun SnippetEditorScreen(
                 Icon(Icons.Default.CheckCircle, contentDescription = null, tint = DevLedgerColors.SuccessGreen, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
                 Column {
-                    Text("All changes saved", color = Color.White, fontSize = 12.sp)
-                    Text("Just now", color = DevLedgerColors.TextMuted, fontSize = 11.sp)
+                    Text(strings.get(R.string.lang_all_changes_saved), color = Color.White, fontSize = 12.sp)
+                    Text(strings.get(R.string.lang_just_now), color = DevLedgerColors.TextMuted, fontSize = 11.sp)
                 }
                 Spacer(Modifier.weight(1f))
                 OutlinedButton(
@@ -186,10 +190,10 @@ fun SnippetEditorScreen(
                 ) {
                     Icon(Icons.Default.Visibility, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Preview", fontSize = 12.sp)
+                    Text(strings.get(R.string.lang_preview), fontSize = 12.sp)
                 }
             }
-            
+
             Spacer(Modifier.height(32.dp))
         }
     }
@@ -216,9 +220,9 @@ fun SnippetEditorScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("Snippet Preview", color = Color.White, fontWeight = FontWeight.Bold)
+                        Text(strings.get(R.string.lang_snippet_preview), color = Color.White, fontWeight = FontWeight.Bold)
                         IconButton(onClick = { showPreview = false }) {
-                            Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
+                            Icon(Icons.Default.Close, contentDescription = strings.get(R.string.lang_close), tint = Color.White)
                         }
                     }
                     Text(state.title, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
@@ -232,12 +236,13 @@ fun SnippetEditorScreen(
 
 @Composable
 private fun EditorTopBar(onBack: () -> Unit, onSave: () -> Unit, isSaving: Boolean) {
+    val strings = rememberAppStrings()
     Row(
         modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 4.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = onBack) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.get(R.string.lang_back), tint = Color.White)
         }
         Image(
             painter = painterResource(id = R.drawable.ic_launcher_foreground),
@@ -246,9 +251,9 @@ private fun EditorTopBar(onBack: () -> Unit, onSave: () -> Unit, isSaving: Boole
         )
         Spacer(Modifier.width(8.dp))
         Text("DevLedger", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-        
+
         Spacer(Modifier.weight(1f))
-        
+
         Button(
             onClick = onSave,
             enabled = !isSaving,
@@ -261,7 +266,7 @@ private fun EditorTopBar(onBack: () -> Unit, onSave: () -> Unit, isSaving: Boole
             } else {
                 Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Save", fontSize = 12.sp)
+                Text(strings.get(R.string.lang_save), fontSize = 12.sp)
             }
         }
     }
@@ -270,11 +275,12 @@ private fun EditorTopBar(onBack: () -> Unit, onSave: () -> Unit, isSaving: Boole
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FolderSelector(folders: List<FolderEntity>, selectedFolderId: String?, onSelected: (String?) -> Unit, modifier: Modifier = Modifier) {
+    val strings = rememberAppStrings()
     var expanded by remember { mutableStateOf(false) }
-    val selectedName = folders.find { it.folderId == selectedFolderId }?.name ?: "No folder"
-    
+    val selectedName = folders.find { it.folderId == selectedFolderId }?.name ?: strings.get(R.string.lang_no_folder)
+
     Column(modifier = modifier) {
-        Text("Folder", color = DevLedgerColors.TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Text(strings.get(R.string.lang_folder), color = DevLedgerColors.TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(8.dp))
         ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
             OutlinedTextField(
@@ -293,9 +299,9 @@ private fun FolderSelector(folders: List<FolderEntity>, selectedFolderId: String
                 )
             )
             ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }, modifier = Modifier.background(DevLedgerColors.SurfaceCard)) {
-                DropdownMenuItem(text = { Text("No folder", color = Color.White) }, onClick = { onSelected(null); expanded = false })
-                folders.forEach { folder -> 
-                    DropdownMenuItem(text = { Text(folder.name, color = Color.White) }, onClick = { onSelected(folder.folderId); expanded = false }) 
+                DropdownMenuItem(text = { Text(strings.get(R.string.lang_no_folder), color = Color.White) }, onClick = { onSelected(null); expanded = false })
+                folders.forEach { folder ->
+                    DropdownMenuItem(text = { Text(folder.name, color = Color.White) }, onClick = { onSelected(folder.folderId); expanded = false })
                 }
             }
         }
@@ -305,14 +311,15 @@ private fun FolderSelector(folders: List<FolderEntity>, selectedFolderId: String
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun LanguageSelector(selectedLanguage: String, onSelected: (String) -> Unit, modifier: Modifier = Modifier) {
+    val strings = rememberAppStrings()
     var expanded by remember { mutableStateOf(false) }
-    
+
     Column(modifier = modifier) {
-        Text("Language", color = DevLedgerColors.TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Text(strings.get(R.string.lang_language), color = DevLedgerColors.TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(8.dp))
         ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
             OutlinedTextField(
-                value = selectedLanguage, onValueChange = {}, readOnly = true,
+                value = strings.label(selectedLanguage), onValueChange = {}, readOnly = true,
                 leadingIcon = { Icon(Icons.Default.Code, contentDescription = null, tint = DevLedgerColors.TextMuted, modifier = Modifier.size(18.dp)) },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                 modifier = Modifier.menuAnchor().fillMaxWidth(),
@@ -327,8 +334,8 @@ private fun LanguageSelector(selectedLanguage: String, onSelected: (String) -> U
                 )
             )
             ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }, modifier = Modifier.background(DevLedgerColors.SurfaceCard)) {
-                SnippetLanguages.forEach { lang -> 
-                    DropdownMenuItem(text = { Text(lang, color = Color.White) }, onClick = { onSelected(lang); expanded = false }) 
+                SnippetLanguages.forEach { lang ->
+                    DropdownMenuItem(text = { Text(strings.label(lang), color = Color.White) }, onClick = { onSelected(lang); expanded = false })
                 }
             }
         }
@@ -337,42 +344,44 @@ private fun LanguageSelector(selectedLanguage: String, onSelected: (String) -> U
 
 @Composable
 private fun TagCreationDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
+    val strings = rememberAppStrings()
     var name by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = DevLedgerColors.SurfaceCard,
-        title = { Text("Create New Tag", color = Color.White) },
-        text = { 
+        title = { Text(strings.get(R.string.lang_create_new_tag_title), color = Color.White) },
+        text = {
             OutlinedTextField(
-                value = name, 
-                onValueChange = { name = it }, 
-                singleLine = true, 
-                label = { Text("Tag name") },
+                value = name,
+                onValueChange = { name = it },
+                singleLine = true,
+                label = { Text(strings.get(R.string.lang_tag_name)) },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = Color.White,
                     unfocusedTextColor = Color.White
                 )
-            ) 
+            )
         },
-        confirmButton = { 
-            TextButton(onClick = { if (name.isNotBlank()) onConfirm(name.trim()) }) { 
-                Text("Add", color = DevLedgerColors.AccentBlue) 
-            } 
+        confirmButton = {
+            TextButton(onClick = { if (name.isNotBlank()) onConfirm(name.trim()) }) {
+                Text(strings.get(R.string.lang_add), color = DevLedgerColors.AccentBlue)
+            }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = Color.White) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(strings.get(R.string.lang_cancel), color = Color.White) } },
     )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TagInputArea(
-    tags: List<String>, 
-    suggestions: List<String>, 
-    onAddTag: (String) -> Unit, 
-    onRemoveTag: (String) -> Unit, 
+    tags: List<String>,
+    suggestions: List<String>,
+    onAddTag: (String) -> Unit,
+    onRemoveTag: (String) -> Unit,
     onCreateNew: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val strings = rememberAppStrings()
     var expanded by remember { mutableStateOf(false) }
 
     Row(
@@ -398,8 +407,8 @@ private fun TagInputArea(
                         Text(tag, color = Color.White, fontSize = 12.sp)
                         Spacer(Modifier.width(8.dp))
                         Icon(
-                            imageVector = Icons.Filled.Close, 
-                            contentDescription = "Remove", 
+                            imageVector = Icons.Filled.Close,
+                            contentDescription = strings.get(R.string.lang_remove),
                             tint = DevLedgerColors.TextMuted,
                             modifier = Modifier.size(14.dp).clickable { onRemoveTag(tag) }
                         )
@@ -421,7 +430,7 @@ private fun TagInputArea(
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("+ Tag", color = DevLedgerColors.AccentBlue, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text(strings.get(R.string.lang_tag), color = DevLedgerColors.AccentBlue, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     Icon(Icons.Default.ArrowDropDown, null, tint = DevLedgerColors.AccentBlue, modifier = Modifier.size(16.dp))
                 }
             }
@@ -434,26 +443,26 @@ private fun TagInputArea(
                     .widthIn(min = 180.dp)
             ) {
                 DropdownMenuItem(
-                    text = { 
+                    text = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Add, null, tint = DevLedgerColors.AccentBlue, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(12.dp))
-                            Text("Create New Tag...", color = DevLedgerColors.AccentBlue, fontWeight = FontWeight.Bold)
+                            Text(strings.get(R.string.lang_create_new_tag), color = DevLedgerColors.AccentBlue, fontWeight = FontWeight.Bold)
                         }
                     },
-                    onClick = { 
+                    onClick = {
                         onCreateNew()
                         expanded = false
                     }
                 )
-                
+
                 val selectableSuggestions = suggestions.filter { it !in tags }
                 if (selectableSuggestions.isNotEmpty()) {
                     HorizontalDivider(color = DevLedgerColors.Border, modifier = Modifier.padding(vertical = 4.dp))
                     selectableSuggestions.forEach { suggestion ->
                         DropdownMenuItem(
                             text = { Text(suggestion, color = Color.White) },
-                            onClick = { 
+                            onClick = {
                                 onAddTag(suggestion)
                                 expanded = false
                             }
@@ -491,15 +500,15 @@ private fun CodeEditor(code: String, onCodeChange: (String) -> Unit, modifier: M
         }
         Box(modifier = Modifier.fillMaxWidth()) {
             BasicTextField(
-                value = code, 
+                value = code,
                 onValueChange = onCodeChange,
                 textStyle = TextStyle(
-                    color = DevLedgerColors.TextPrimary, 
-                    fontFamily = FontFamily.Monospace, 
-                    fontSize = 12.sp, 
+                    color = DevLedgerColors.TextPrimary,
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 12.sp,
                     lineHeight = 20.sp
                 ),
-                cursorBrush = SolidColor(DevLedgerColors.AccentBlue), 
+                cursorBrush = SolidColor(DevLedgerColors.AccentBlue),
                 visualTransformation = SyntaxHighlightTransformation(),
                 modifier = Modifier.fillMaxWidth(),
             )

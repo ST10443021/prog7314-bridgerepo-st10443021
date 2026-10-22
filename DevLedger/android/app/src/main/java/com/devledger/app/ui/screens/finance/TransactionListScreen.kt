@@ -1,5 +1,9 @@
 package com.devledger.app.ui.screens.finance
 
+import com.devledger.app.util.localization.rememberAppStrings
+
+import com.devledger.app.R
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -81,10 +85,11 @@ class TransactionListViewModel @Inject constructor(
  * (Google Developers, n.d.a; Google Developers, n.d.f). See REFERENCES-CODE.md for full entries.
  */
 fun TransactionListScreen(onBack: () -> Unit, onOpenTransaction: (String) -> Unit, viewModel: TransactionListViewModel = hiltViewModel()) {
+    val strings = rememberAppStrings()
     val state by viewModel.uiState.collectAsState()
     val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale.forLanguageTag("en-ZA")) }
-    val dateFormat = remember { SimpleDateFormat("d MMM yyyy", Locale.getDefault()) }
-    val title = if (viewModel.type == "INCOME") "Past Income" else "Past Expenses"
+    val dateFormat = remember(strings.locale) { SimpleDateFormat("d MMM yyyy", strings.locale) }
+    val title = if (viewModel.type == "INCOME") strings.get(R.string.lang_past_income) else strings.get(R.string.lang_past_expenses)
     val accent = if (viewModel.type == "INCOME") DevLedgerColors.SuccessGreen else DevLedgerColors.ErrorRed
 
     Column(modifier = Modifier.fillMaxSize().background(DevLedgerColors.BgDeep)) {
@@ -92,11 +97,11 @@ fun TransactionListScreen(onBack: () -> Unit, onOpenTransaction: (String) -> Uni
         Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
             DevLedgerTextField(
                 value = state.query, onValueChange = viewModel::onQueryChange,
-                label = "Search by name...", modifier = Modifier.padding(bottom = 16.dp),
+                label = strings.get(R.string.lang_search_by_name), modifier = Modifier.padding(bottom = 16.dp),
             )
             if (state.transactions.isEmpty()) {
                 Box(Modifier.fillMaxWidth().padding(top = 48.dp), contentAlignment = Alignment.Center) {
-                    Text("No matching transactions.", color = DevLedgerColors.TextMuted, fontSize = 13.sp)
+                    Text(strings.get(R.string.lang_no_matching_transactions), color = DevLedgerColors.TextMuted, fontSize = 13.sp)
                 }
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -104,7 +109,7 @@ fun TransactionListScreen(onBack: () -> Unit, onOpenTransaction: (String) -> Uni
                         DevLedgerCard(modifier = Modifier.clickable { onOpenTransaction(tx.transactionId) }) {
                             Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                 Column {
-                                    Text(tx.category, color = DevLedgerColors.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                                    Text(strings.label(tx.category), color = DevLedgerColors.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
                                     Text(tx.clientOrFrom, color = DevLedgerColors.TextMuted, fontSize = 11.sp)
                                     Text(dateFormat.format(Date(tx.transactionDate)), color = DevLedgerColors.TextMuted, fontSize = 10.sp)
                                 }

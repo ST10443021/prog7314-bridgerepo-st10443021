@@ -1,5 +1,10 @@
 package com.devledger.app.ui.screens.biometric
 
+
+import com.devledger.app.util.localization.rememberAppStrings
+
+import com.devledger.app.R
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -27,6 +32,7 @@ fun PinVerificationScreen(
     onVerified: () -> Unit,
     viewModel: PinVerificationViewModel = hiltViewModel(),
 ) {
+    val strings = rememberAppStrings()
     val state by viewModel.uiState.collectAsState()
 
     // Automatically trigger verification when 4 digits are complete
@@ -58,7 +64,7 @@ fun PinVerificationScreen(
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Back",
+                contentDescription = strings.get(R.string.lang_back),
                 tint = Color.White,
                 modifier = Modifier
                     .size(24.dp)
@@ -66,7 +72,7 @@ fun PinVerificationScreen(
             )
             Spacer(modifier = Modifier.width(24.dp))
             Text(
-                text = "PIN / Password",
+                text = strings.get(R.string.lang_pin_password),
                 color = Color.White,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold
@@ -76,7 +82,7 @@ fun PinVerificationScreen(
         Spacer(modifier = Modifier.height(20.dp))
 
         Text(
-            text = "Enter your PIN or password",
+            text = strings.get(R.string.lang_enter_your_pin_or_password),
             color = DevLedgerColors.TextSecondary,
             fontSize = 15.sp,
             textAlign = TextAlign.Center
@@ -106,7 +112,7 @@ fun PinVerificationScreen(
 
         if (state.errorMessage != null) {
             Text(
-                text = state.errorMessage!!,
+                text = state.errorMessage!!.resolve(strings),
                 color = DevLedgerColors.ErrorRed,
                 fontSize = 14.sp,
                 textAlign = TextAlign.Center,

@@ -1,5 +1,9 @@
 package com.devledger.app.ui.screens.legal
 
+import com.devledger.app.util.localization.rememberAppStrings
+
+import com.devledger.app.R
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -36,6 +40,7 @@ import com.devledger.app.ui.theme.DevLedgerColors
 fun PrivacyPolicyScreen(
     onBack: () -> Unit,
 ) {
+    val strings = rememberAppStrings()
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -51,12 +56,12 @@ fun PrivacyPolicyScreen(
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Back",
+                contentDescription = strings.get(R.string.lang_back),
                 tint = DevLedgerColors.TextPrimary
             )
 
             Text(
-                text = "Privacy Policy",
+                text = strings.get(R.string.lang_privacy_policy),
                 color = DevLedgerColors.TextPrimary,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
@@ -76,7 +81,7 @@ fun PrivacyPolicyScreen(
         ) {
 
             Text(
-                text = "DevLedger Privacy Policy",
+                text = strings.get(R.string.lang_devledger_privacy_policy),
                 color = DevLedgerColors.TextPrimary,
                 fontSize = 26.sp,
                 fontWeight = FontWeight.Bold
@@ -85,7 +90,7 @@ fun PrivacyPolicyScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Last updated: 11 September 2026",
+                text = strings.get(R.string.lang_last_updated_11_september_2026),
                 color = DevLedgerColors.TextMuted,
                 fontSize = 13.sp
             )
@@ -97,7 +102,7 @@ fun PrivacyPolicyScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = "This Privacy Policy explains how DevLedger collects, uses, stores and protects information when you use the application.",
+                    text = strings.get(R.string.lang_this_privacy_policy_explains_how_devledger_collects_uses_sto),
                     color = DevLedgerColors.TextSecondary,
                     fontSize = 14.sp,
                     lineHeight = 21.sp,
@@ -109,126 +114,80 @@ fun PrivacyPolicyScreen(
 
             PrivacySection(
                 number = "1",
-                title = "Information We Collect",
-                body = """
-                    DevLedger may collect information that you provide when creating and using an account, including your name, email address, profile information and application preferences.
-
-                    The application may also store information that you create through its features, including code snippets, folders, tags and financial tracking records.
-                """.trimIndent()
+                title = strings.get(R.string.lang_information_we_collect),
+                body = strings.get(R.string.lang_privacy_1_body)
             )
 
             PrivacySection(
                 number = "2",
-                title = "Authentication Information",
-                body = """
-                    DevLedger may use email authentication and third-party Single Sign-On providers such as Google and GitHub.
-
-                    Authentication providers may supply DevLedger with limited account information required to identify and authenticate you. DevLedger does not require access to your third-party account password.
-                """.trimIndent()
+                title = strings.get(R.string.lang_authentication_information),
+                body = strings.get(R.string.lang_privacy_2_body)
             )
 
             PrivacySection(
                 number = "3",
-                title = "Biometric and PIN Security",
-                body = """
-                    DevLedger may use biometric authentication or a PIN to protect access to sensitive application features.
-
-                    Biometric verification is performed through supported Android device security mechanisms. DevLedger should not directly store raw fingerprint or facial biometric data.
-                """.trimIndent()
+                title = strings.get(R.string.lang_biometric_and_pin_security),
+                body = strings.get(R.string.lang_privacy_3_body)
             )
 
             PrivacySection(
                 number = "4",
-                title = "How We Use Your Information",
-                body = """
-                    Information is used to provide application functionality, authenticate users, manage user preferences, store developer assets, display financial records, synchronise data and improve the reliability of the application.
-                """.trimIndent()
+                title = strings.get(R.string.lang_how_we_use_your_information),
+                body = strings.get(R.string.lang_privacy_4_body)
             )
 
             PrivacySection(
                 number = "5",
-                title = "Local Storage",
-                body = """
-                    DevLedger follows an offline-first design. Certain information may be stored locally on your device so that core functionality remains available without a network connection.
-
-                    Local information may later be synchronised with DevLedger's cloud services when connectivity becomes available.
-                """.trimIndent()
+                title = strings.get(R.string.lang_local_storage),
+                body = strings.get(R.string.lang_privacy_5_body)
             )
 
             PrivacySection(
                 number = "6",
-                title = "Cloud Storage and Synchronisation",
-                body = """
-                    Account and application data may be transmitted to DevLedger's REST API and stored in its linked database for synchronisation and account access purposes.
-
-                    Appropriate safeguards should be used to protect data during transmission and storage.
-                """.trimIndent()
+                title = strings.get(R.string.lang_cloud_storage_and_synchronisation),
+                body = strings.get(R.string.lang_privacy_6_body)
             )
 
             PrivacySection(
                 number = "7",
-                title = "Third-Party Services",
-                body = """
-                    DevLedger may integrate with services including Google, GitHub and Firebase.
-
-                    These providers may process limited information required to provide authentication, notifications or other connected functionality. Their own privacy policies apply to information processed by those services.
-                """.trimIndent()
+                title = strings.get(R.string.lang_third_party_services),
+                body = strings.get(R.string.lang_privacy_7_body)
             )
 
             PrivacySection(
                 number = "8",
-                title = "Notifications",
-                body = """
-                    If notifications are enabled, DevLedger may use Firebase Cloud Messaging to deliver application alerts and reminders.
-
-                    Notification preferences may be changed through the application's Settings screen.
-                """.trimIndent()
+                title = strings.get(R.string.lang_notifications),
+                body = strings.get(R.string.lang_privacy_8_body)
             )
 
             PrivacySection(
                 number = "9",
-                title = "Financial Data",
-                body = """
-                    Financial records entered into DevLedger are used to support the application's personal income and expense tracking functionality.
-
-                    Users should avoid entering unnecessary sensitive banking or payment credentials into free-text fields.
-                """.trimIndent()
+                title = strings.get(R.string.lang_financial_data),
+                body = strings.get(R.string.lang_privacy_9_body)
             )
 
             PrivacySection(
                 number = "10",
-                title = "Data Security",
-                body = """
-                    DevLedger uses application security measures including authentication, device-level security and protected communication with connected services.
-
-                    No software system can guarantee absolute security, and users remain responsible for protecting access to their devices and accounts.
-                """.trimIndent()
+                title = strings.get(R.string.lang_data_security),
+                body = strings.get(R.string.lang_privacy_10_body)
             )
 
             PrivacySection(
                 number = "11",
-                title = "Your Choices",
-                body = """
-                    You may manage supported preferences through the Settings screen, including language, notification and security settings.
-
-                    Where supported by the application, account and profile information may also be updated or removed.
-                """.trimIndent()
+                title = strings.get(R.string.lang_your_choices),
+                body = strings.get(R.string.lang_privacy_11_body)
             )
 
             PrivacySection(
                 number = "12",
-                title = "Changes to This Policy",
-                body = """
-                    This Privacy Policy may be updated as DevLedger develops or as its services change. The latest version will be made available through the application.
-                """.trimIndent()
+                title = strings.get(R.string.lang_changes_to_this_policy),
+                body = strings.get(R.string.lang_privacy_12_body)
             )
 
             PrivacySection(
                 number = "13",
-                title = "Contact",
-                body = """
-                    Questions regarding this Privacy Policy can be directed to the DevLedger development team.
-                """.trimIndent()
+                title = strings.get(R.string.lang_contact),
+                body = strings.get(R.string.lang_privacy_13_body)
             )
 
             Spacer(modifier = Modifier.height(32.dp))

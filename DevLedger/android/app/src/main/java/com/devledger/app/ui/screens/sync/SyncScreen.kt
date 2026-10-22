@@ -1,5 +1,8 @@
 package com.devledger.app.ui.screens.sync
 
+
+import com.devledger.app.util.localization.rememberAppStrings
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -25,6 +28,7 @@ import java.util.Date
 
 @Composable
 fun SyncScreen(onBack: () -> Unit, viewModel: SyncViewModel = hiltViewModel()) {
+    val strings = rememberAppStrings()
     val state by viewModel.uiState.collectAsState()
     var confirmId by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(state.accountId) { confirmId = null }
@@ -71,8 +75,8 @@ fun SyncScreen(onBack: () -> Unit, viewModel: SyncViewModel = hiltViewModel()) {
                     Button(onClick = viewModel::syncNow, enabled = state.accountId != null && !state.isSyncing && state.resolvingId == null) {
                         Text(stringResource(R.string.sync_now_action))
                     }
-                    state.error?.let { Text(it, color = DevLedgerColors.WarningAmber) }
-                    state.actionError?.let { Text(it, color = DevLedgerColors.ErrorRed) }
+                    state.error?.let { Text(strings.get(R.string.lang_sync_diagnostic), color = DevLedgerColors.WarningAmber) }
+                    state.actionError?.let { Text(it.resolve(strings), color = DevLedgerColors.ErrorRed) }
                 }
             }
             item {
@@ -104,7 +108,7 @@ fun SyncScreen(onBack: () -> Unit, viewModel: SyncViewModel = hiltViewModel()) {
                         "tag" -> R.string.sync_entity_tag
                         else -> R.string.sync_entity_transaction
                     })
-                    Text("$entity: ${queued.label}", color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text("$entity: ${if (queued.entityType == "transaction") strings.label(queued.label) else queued.label}", color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     Text(stringResource(if (queued.direction == "DELETE") R.string.sync_delete_pending else R.string.sync_upload_pending),
                         color = DevLedgerColors.TextMuted)
                 }
@@ -137,7 +141,7 @@ fun SyncScreen(onBack: () -> Unit, viewModel: SyncViewModel = hiltViewModel()) {
                     }), color = if (entry.status == "COMPLETED") DevLedgerColors.SuccessGreen else DevLedgerColors.WarningAmber)
                     Text(dateFormat.format(Date(entry.timestamp)), color = DevLedgerColors.TextMuted)
                     Text(stringResource(R.string.sync_uploaded_count, entry.itemsSynced), color = DevLedgerColors.TextMuted)
-                    entry.errorMessage?.let { Text(it, color = DevLedgerColors.TextMuted) }
+                    entry.errorMessage?.let { Text(strings.get(R.string.lang_sync_diagnostic), color = DevLedgerColors.TextMuted) }
                 }
             }
             item { Spacer(Modifier.height(48.dp)) }

@@ -1,5 +1,7 @@
 package com.devledger.app.ui.screens.dashboard
 
+import com.devledger.app.util.localization.rememberAppStrings
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -126,6 +128,7 @@ fun DashboardScreenContent(
     onAddTransaction: () -> Unit = onOpenFinance,
     onOpenProfile: () -> Unit,
 ) {
+    val strings = rememberAppStrings()
     val currencyFormat = remember(state.baseCurrency) {
         NumberFormat.getCurrencyInstance(
             Locale.forLanguageTag("en-ZA")
@@ -160,7 +163,7 @@ fun DashboardScreenContent(
 
         item {
             WelcomeSection(
-                userName = state.user?.fullName ?: "Developer",
+                userName = state.user?.fullName ?: strings.get(R.string.lang_developer),
             )
         }
 
@@ -212,6 +215,7 @@ private fun DashboardHeader(
     onOpenNotifications: () -> Unit,
     onOpenProfile: () -> Unit,
 ) {
+    val strings = rememberAppStrings()
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -287,7 +291,7 @@ private fun DashboardHeader(
         ) {
             Icon(
                 imageVector = Icons.Filled.AccountCircle,
-                contentDescription = "Open profile",
+                contentDescription = strings.get(R.string.lang_open_profile),
                 tint = DevLedgerColors.AccentBlue,
                 modifier = Modifier.size(42.dp),
             )
@@ -444,6 +448,7 @@ private fun FinancialOverviewCard(
     baseCurrency: String,
     currencyFormat: NumberFormat,
 ) {
+    val strings = rememberAppStrings()
     val chartPoints = remember(transactions, baseCurrency) {
         createChartPoints(
             transactions = transactions,
@@ -480,7 +485,7 @@ private fun FinancialOverviewCard(
                 Spacer(modifier = Modifier.weight(1f))
 
                 Text(
-                    text = "This Month",
+                    text = strings.get(R.string.lang_this_month),
                     color = DevLedgerColors.TextSecondary,
                     style = MaterialTheme.typography.labelMedium,
                 )
@@ -723,6 +728,7 @@ private fun QuickActionsSection(
     onOpenSync: () -> Unit,
     onOpenRecycle: () -> Unit,
 ){
+    val strings = rememberAppStrings()
     Column {
         SectionHeading(
             title = stringResource(R.string.dashboard_quick_actions),
@@ -737,7 +743,7 @@ private fun QuickActionsSection(
             QuickActionTile(
                 modifier = Modifier.weight(1f),
                 icon = Icons.Filled.Add,
-                label = "Add Transaction",
+                label = strings.get(R.string.lang_add_transaction),
                 iconColor = DevLedgerColors.SuccessGreen,
                 onClick = onAddTransaction,
             )
@@ -745,7 +751,7 @@ private fun QuickActionsSection(
             QuickActionTile(
                 modifier = Modifier.weight(1f),
                 icon = Icons.Outlined.Code,
-                label = "New Snippet",
+                label = strings.get(R.string.lang_new_snippet),
                 iconColor = DevLedgerColors.AccentBlue,
                 onClick = onCreateSnippet,
             )
@@ -784,7 +790,7 @@ private fun QuickActionsSection(
             QuickActionTile(
                 modifier = Modifier.weight(1f),
                 icon = Icons.Filled.Sync,
-                label = "Sync",
+                label = strings.get(R.string.lang_sync),
                 iconColor = DevLedgerColors.SuccessGreen,
                 onClick = onOpenSync,
             )
@@ -799,7 +805,7 @@ private fun QuickActionsSection(
             QuickActionTile(
                 modifier = Modifier.weight(1f),
                 icon = Icons.Filled.RestoreFromTrash,
-                label = "Recycle Bin",
+                label = strings.get(R.string.lang_recycle_bin),
                 iconColor = DevLedgerColors.ErrorRed,
                 onClick = onOpenRecycle,
             )
@@ -807,12 +813,12 @@ private fun QuickActionsSection(
             QuickActionTile(
                 modifier = Modifier.weight(1f),
                 icon = Icons.Filled.Archive,
-                label = "Archive",
+                label = strings.get(R.string.lang_archive),
                 iconColor = DevLedgerColors.AccentPurple,
                 onClick = onOpenRecycle, // Both point to the same screen for now as RecycleScreen handles archived items
             )
 
-            Spacer(modifier = Modifier.weight(1f)) 
+            Spacer(modifier = Modifier.weight(1f))
         }
     }
 }
@@ -977,6 +983,7 @@ private fun TransactionActivityRow(
     currencyFormat: NumberFormat,
     onClick: () -> Unit,
 ) {
+    val strings = rememberAppStrings()
     val isIncome = transaction.type.equals(
         "INCOME",
         ignoreCase = true,
@@ -989,7 +996,7 @@ private fun TransactionActivityRow(
     }
 
     val dateFormat = remember {
-        SimpleDateFormat("d MMM yyyy", Locale.getDefault())
+        SimpleDateFormat("d MMM yyyy", strings.locale)
     }
 
     Row(
@@ -1031,7 +1038,7 @@ private fun TransactionActivityRow(
             )
 
             Text(
-                text = transaction.category,
+                text = strings.label(transaction.category),
                 color = DevLedgerColors.TextMuted,
                 style = MaterialTheme.typography.bodySmall,
                 maxLines = 1,
@@ -1152,6 +1159,7 @@ private fun SectionHeading(
 )
 @Composable
 private fun DashboardScreenPreview() {
+    val strings = rememberAppStrings()
     val now = System.currentTimeMillis()
 
     DevLedgerTheme {
@@ -1194,7 +1202,7 @@ private fun DashboardScreenPreview() {
                         description = "Hosting expense",
                         clientOrFrom = "AWS",
                         relatedProject = "Production",
-                        paymentMethod = "Credit Card",
+                        paymentMethod = strings.get(R.string.lang_credit_card),
                         referenceNumber = "INV-99",
                         transactionDate = now - 86_400_000L,
                         createdAt = now - 86_400_000L,
@@ -1226,7 +1234,7 @@ private fun DashboardScreenPreview() {
                         description = "Hosting expense",
                         clientOrFrom = "AWS",
                         relatedProject = "Production",
-                        paymentMethod = "Credit Card",
+                        paymentMethod = strings.get(R.string.lang_credit_card),
                         referenceNumber = "INV-99",
                         transactionDate = now - 86_400_000L,
                         createdAt = now - 86_400_000L,

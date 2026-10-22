@@ -1,5 +1,8 @@
 package com.devledger.app.ui.screens.auth
 
+
+import com.devledger.app.util.localization.rememberAppStrings
+
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -50,6 +53,7 @@ fun AuthScreen(
     onNavigateToRegister: () -> Unit,
     viewModel: AuthViewModel = hiltViewModel(),
 ) {
+    val strings = rememberAppStrings()
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     var showEmailForm by remember { mutableStateOf(false) }
@@ -74,11 +78,11 @@ fun AuthScreen(
                 viewModel.signInWithGoogle(idToken)
             } else {
                 Log.w(TAG, "Google Sign-In returned no ID token")
-                viewModel.onGoogleSignInFailure("No ID token returned from Google.")
+                viewModel.onGoogleSignInFailure(strings.get(R.string.lang_google_sign_in_failed_please_try_again))
             }
         } catch (e: ApiException) {
             Log.e(TAG, "Google Sign-In failed with status code ${e.statusCode}", e)
-            viewModel.onGoogleSignInFailure(if (e.statusCode == 12501) "Sign-in cancelled." else "Google Sign-In failed (${e.statusCode}).")
+            viewModel.onGoogleSignInFailure(if (e.statusCode == 12501) strings.get(R.string.lang_sign_in_cancelled) else strings.get(R.string.lang_google_sign_in_failed_please_try_again))
         }
     }
 
@@ -142,14 +146,14 @@ fun AuthScreen(
         )
 
         Text(
-            text = "Welcome back!",
+            text = strings.get(R.string.lang_welcome_back),
             color = Color.White,
             fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
         )
         Text(
-            text = "Sign in to continue to your workspace.",
+            text = strings.get(R.string.lang_sign_in_to_continue_to_your_workspace),
             color = DevLedgerColors.TextMuted,
             fontSize = 14.sp,
             modifier = Modifier.padding(bottom = 16.dp, top = 4.dp),
@@ -183,7 +187,7 @@ fun AuthScreen(
                 ) {
                     Text("</>", color = DevLedgerColors.AccentBlue, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 }
-                
+
                 Column(horizontalAlignment = Alignment.End) {
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         Box(modifier = Modifier.size(8.dp, 20.dp).background(Color(0xFF1D6FE8).copy(alpha = 0.2f)))
@@ -205,7 +209,7 @@ fun AuthScreen(
 
         // Custom Styled Google Sign in Button with Loading state
         Button(
-            onClick = { 
+            onClick = {
                 viewModel.onGoogleSignInClicked()
                 // Only sign out if an account is already signed in to allow account switcher
                 val lastAccount = GoogleSignIn.getLastSignedInAccount(context)
@@ -233,7 +237,7 @@ fun AuthScreen(
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(16.dp))
-                    Text("Sign in with Google", color = Color.Black, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                    Text(strings.get(R.string.lang_sign_in_with_google), color = Color.Black, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
                 }
             }
         }
@@ -266,7 +270,7 @@ fun AuthScreen(
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(16.dp))
-                    Text("Sign in with GitHub", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                    Text(strings.get(R.string.lang_sign_in_with_github), color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
                 }
             }
         }
@@ -276,7 +280,7 @@ fun AuthScreen(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(modifier = Modifier.weight(1f).height(1.dp).background(DevLedgerColors.Border))
-            Text("   OR   ", color = DevLedgerColors.TextMuted, fontSize = 12.sp)
+            Text(strings.get(R.string.lang_or), color = DevLedgerColors.TextMuted, fontSize = 12.sp)
             Box(modifier = Modifier.weight(1f).height(1.dp).background(DevLedgerColors.Border))
         }
 
@@ -289,16 +293,16 @@ fun AuthScreen(
             ) {
                 Icon(imageVector = Icons.Filled.Email, contentDescription = null, tint = DevLedgerColors.AccentBlue, modifier = Modifier.size(20.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Sign in with email", color = DevLedgerColors.AccentBlue, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                Text(strings.get(R.string.lang_sign_in_with_email), color = DevLedgerColors.AccentBlue, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
             }
         } else {
             DevLedgerTextField(
                 value = state.email,
                 onValueChange = viewModel::onEmailChange,
                 label = "",
-                placeholder = "Email",
-                isError = state.emailError != null,
-                supportingText = state.emailError,
+                placeholder = strings.get(R.string.lang_email),
+                isError = state.emailError?.resolve(strings) != null,
+                supportingText = state.emailError?.resolve(strings),
                 modifier = Modifier.padding(bottom = 16.dp),
             )
 
@@ -306,16 +310,16 @@ fun AuthScreen(
                 value = state.password,
                 onValueChange = viewModel::onPasswordChange,
                 label = "",
-                placeholder = "Password",
+                placeholder = strings.get(R.string.lang_password),
                 isPassword = true,
-                isError = state.passwordError != null,
-                supportingText = state.passwordError,
+                isError = state.passwordError?.resolve(strings) != null,
+                supportingText = state.passwordError?.resolve(strings),
                 modifier = Modifier.padding(bottom = 16.dp),
             )
 
             if (state.errorMessage != null) {
                 Text(
-                    text = state.errorMessage!!,
+                    text = state.errorMessage!!.resolve(strings),
                     color = DevLedgerColors.ErrorRed,
                     fontSize = 13.sp,
                     modifier = Modifier.padding(bottom = 16.dp),
@@ -323,7 +327,7 @@ fun AuthScreen(
             }
 
             DevLedgerPrimaryButton(
-                text = "Sign in with email",
+                text = strings.get(R.string.lang_sign_in_with_email),
                 onClick = viewModel::signInWithEmail,
                 loading = state.isLoading,
             )
@@ -331,9 +335,9 @@ fun AuthScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
         Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
-            Text("Don't have an account? ", color = DevLedgerColors.TextMuted, fontSize = 14.sp)
+            Text(strings.get(R.string.lang_don_t_have_an_account), color = DevLedgerColors.TextMuted, fontSize = 14.sp)
             Text(
-                text = "Create one",
+                text = strings.get(R.string.lang_create_one),
                 color = DevLedgerColors.AccentBlue,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,

@@ -1,5 +1,9 @@
 package com.devledger.app.ui.screens.finance
 
+import com.devledger.app.util.localization.rememberAppStrings
+
+import com.devledger.app.R
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -64,10 +68,11 @@ fun FinancialTrackerScreen(
     onOpenTransaction: (String) -> Unit,
     viewModel: FinanceViewModel = hiltViewModel(),
 ) {
+    val strings = rememberAppStrings()
     val state by viewModel.uiState.collectAsState()
 
     val prevMonthLabel = remember(
-        state.selectedYear,
+        strings.locale, state.selectedYear,
         state.selectedMonth
     ) {
         val cal = Calendar.getInstance().apply {
@@ -77,7 +82,7 @@ fun FinancialTrackerScreen(
 
         SimpleDateFormat(
             "MMM yyyy",
-            Locale.getDefault()
+            strings.locale
         ).format(cal.time)
     }
 
@@ -104,7 +109,7 @@ fun FinancialTrackerScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = "Financial Tracker",
+                    text = strings.get(R.string.lang_financial_tracker),
                     color = Color.White,
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold
@@ -115,7 +120,7 @@ fun FinancialTrackerScreen(
                 )
 
                 Text(
-                    text = "Track your income, expenses and overall financial health.",
+                    text = strings.get(R.string.lang_track_your_income_expenses_and_overall_financial_health),
                     color = DevLedgerColors.TextMuted,
                     fontSize = 13.sp
                 )
@@ -152,7 +157,7 @@ fun FinancialTrackerScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.CalendarMonth,
-                            contentDescription = "Select month",
+                            contentDescription = strings.get(R.string.lang_select_month),
                             tint = DevLedgerColors.TextMuted,
                             modifier = Modifier.size(16.dp)
                         )
@@ -162,7 +167,7 @@ fun FinancialTrackerScreen(
                         )
 
                         Text(
-                            text = state.monthLabel,
+                            text = SimpleDateFormat("MMMM yyyy", strings.locale).format(Calendar.getInstance().apply { set(state.selectedYear, state.selectedMonth, 1) }.time),
                             color = Color.White,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium
@@ -174,7 +179,7 @@ fun FinancialTrackerScreen(
 
                         Icon(
                             imageVector = Icons.Default.KeyboardArrowDown,
-                            contentDescription = "Open month selector",
+                            contentDescription = strings.get(R.string.lang_open_month_selector),
                             tint = DevLedgerColors.TextMuted,
                             modifier = Modifier.size(16.dp)
                         )
@@ -189,7 +194,8 @@ fun FinancialTrackerScreen(
                 horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 SummaryCard(
-                    title = "Total Income",
+                    isIncome = true,
+                    title = strings.get(R.string.lang_total_income),
                     amount = state.incomeStat.total,
                     percentChange = state.incomeStat.percentChangeVsPrevMonth,
                     prevMonthName = prevMonthLabel,
@@ -197,13 +203,14 @@ fun FinancialTrackerScreen(
                     icon = Icons.Default.AccountBalanceWallet,
                     topCategories = state.incomeStat.topCategories,
                     currencyFormat = currencyFormat,
-                    viewAllLabel = "View all income",
+                    viewAllLabel = strings.get(R.string.lang_view_all_income),
                     onViewAll = onViewIncome,
                     modifier = Modifier.weight(1f),
                 )
 
                 SummaryCard(
-                    title = "Total Expenses",
+                    isIncome = false,
+                    title = strings.get(R.string.lang_total_expenses),
                     amount = state.expenseStat.total,
                     percentChange = state.expenseStat.percentChangeVsPrevMonth,
                     prevMonthName = prevMonthLabel,
@@ -211,7 +218,7 @@ fun FinancialTrackerScreen(
                     icon = Icons.Default.Wallet,
                     topCategories = state.expenseStat.topCategories,
                     currencyFormat = currencyFormat,
-                    viewAllLabel = "View all expenses",
+                    viewAllLabel = strings.get(R.string.lang_view_all_expenses),
                     onViewAll = onViewExpenses,
                     modifier = Modifier.weight(1f),
                 )
@@ -244,14 +251,14 @@ fun FinancialTrackerScreen(
                 verticalAlignment = Alignment.Bottom
             ) {
                 Text(
-                    text = "Recent Transactions",
+                    text = strings.get(R.string.lang_recent_transactions),
                     color = Color.White,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
                 )
 
                 Text(
-                    text = "View All",
+                    text = strings.get(R.string.lang_view_all),
                     color = DevLedgerColors.AccentBlue,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -284,6 +291,7 @@ fun FinancialTrackerScreen(
 
 @Composable
 private fun SummaryCard(
+    isIncome: Boolean,
     title: String,
     amount: Double,
     percentChange: Double?,
@@ -296,6 +304,7 @@ private fun SummaryCard(
     onViewAll: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val strings = rememberAppStrings()
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
@@ -327,7 +336,7 @@ private fun SummaryCard(
                         )
 
                         Icon(
-                            imageVector = if (title.contains("Income")) {
+                            imageVector = if (title.contains(strings.get(R.string.lang_income))) {
                                 Icons.Default.TrendingUp
                             } else {
                                 Icons.Default.TrendingDown
@@ -351,9 +360,9 @@ private fun SummaryCard(
 
                     percentChange?.let {
                         Text(
-                            text = "${if (it >= 0) "+" else ""}${"%.1f".format(it)}% vs $prevMonthName",
+                            text = strings.get(R.string.lang_change_vs_month, (if (it >= 0) "+" else "") + String.format(strings.locale, "%.1f", it), prevMonthName),
                             color = if (
-                                it >= 0 && title.contains("Income")
+                                it >= 0 && title.contains(strings.get(R.string.lang_income))
                             ) {
                                 DevLedgerColors.SuccessGreen
                             } else {
@@ -395,7 +404,7 @@ private fun SummaryCard(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = category,
+                            text = strings.label(category),
                             color = DevLedgerColors.TextMuted,
                             fontSize = 12.sp,
                             maxLines = 1
@@ -449,6 +458,7 @@ private fun NetBalanceCard(
     prevMonthName: String,
     currencyFormat: NumberFormat
 ) {
+    val strings = rememberAppStrings()
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -468,7 +478,7 @@ private fun NetBalanceCard(
         ) {
             Column {
                 Text(
-                    text = "Net Balance",
+                    text = strings.get(R.string.lang_net_balance),
                     color = DevLedgerColors.TextSecondary,
                     fontSize = 13.sp
                 )
@@ -490,7 +500,7 @@ private fun NetBalanceCard(
             ) {
                 percentChange?.let {
                     Text(
-                        text = "${if (it >= 0) "+" else ""}${"%.1f".format(it)}% vs $prevMonthName",
+                        text = strings.get(R.string.lang_change_vs_month, (if (it >= 0) "+" else "") + String.format(strings.locale, "%.1f", it), prevMonthName),
                         color = if (
                             it >= 0
                         ) {
@@ -536,7 +546,14 @@ private fun MonthlySummarySection(
     currentRange: SummaryRange,
     onRangeChange: (SummaryRange) -> Unit
 ) {
+    val strings = rememberAppStrings()
     var showRangeMenu by remember { mutableStateOf(false) }
+    fun pointLabel(index: Int): String = when (currentRange) {
+        SummaryRange.WEEK -> strings.get(R.string.lang_chart_day, index + 1)
+        SummaryRange.YEAR -> java.text.DateFormatSymbols(strings.locale).shortMonths[index]
+        SummaryRange.MONTH -> points[index].label
+    }
+
 
     Box(
         modifier = Modifier
@@ -557,7 +574,7 @@ private fun MonthlySummarySection(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Financial Summary",
+                    text = strings.get(R.string.lang_financial_summary),
                     color = Color.White,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
@@ -573,9 +590,9 @@ private fun MonthlySummarySection(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             val rangeLabel = when(currentRange) {
-                                SummaryRange.WEEK -> "This Week"
-                                SummaryRange.MONTH -> "This Month"
-                                SummaryRange.YEAR -> "This Year"
+                                SummaryRange.WEEK -> strings.get(R.string.lang_this_week)
+                                SummaryRange.MONTH -> strings.get(R.string.lang_this_month)
+                                SummaryRange.YEAR -> strings.get(R.string.lang_this_year)
                             }
                             Text(
                                 text = rangeLabel,
@@ -599,9 +616,9 @@ private fun MonthlySummarySection(
                     ) {
                         SummaryRange.values().forEach { range ->
                             val label = when(range) {
-                                SummaryRange.WEEK -> "This Week"
-                                SummaryRange.MONTH -> "This Month"
-                                SummaryRange.YEAR -> "This Year"
+                                SummaryRange.WEEK -> strings.get(R.string.lang_this_week)
+                                SummaryRange.MONTH -> strings.get(R.string.lang_this_month)
+                                SummaryRange.YEAR -> strings.get(R.string.lang_this_year)
                             }
                             DropdownMenuItem(
                                 text = { Text(label, color = Color.White) },
@@ -618,9 +635,9 @@ private fun MonthlySummarySection(
             Spacer(modifier = Modifier.height(16.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                LegendItem(label = "Income", color = DevLedgerColors.SuccessGreen)
-                LegendItem(label = "Expenses", color = DevLedgerColors.ErrorRed)
-                LegendItem(label = "Net Balance", color = DevLedgerColors.AccentBlue)
+                LegendItem(label = strings.get(R.string.lang_income), color = DevLedgerColors.SuccessGreen)
+                LegendItem(label = strings.get(R.string.lang_expenses), color = DevLedgerColors.ErrorRed)
+                LegendItem(label = strings.get(R.string.lang_net_balance), color = DevLedgerColors.AccentBlue)
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -641,7 +658,7 @@ private fun MonthlySummarySection(
                     val indices = listOf(0, points.size / 4, points.size / 2, 3 * points.size / 4, points.size - 1)
                     indices.forEach { idx ->
                         Text(
-                            text = points[idx].label,
+                            text = pointLabel(idx),
                             color = DevLedgerColors.TextMuted,
                             fontSize = 10.sp
                         )
@@ -649,7 +666,7 @@ private fun MonthlySummarySection(
                 } else {
                     points.forEach { point ->
                         Text(
-                            text = point.label,
+                            text = pointLabel(points.indexOf(point)),
                             color = DevLedgerColors.TextMuted,
                             fontSize = 10.sp
                         )
@@ -865,6 +882,7 @@ private fun TransactionListItem(
     currencyFormat: NumberFormat,
     onClick: () -> Unit
 ) {
+    val strings = rememberAppStrings()
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -919,7 +937,7 @@ private fun TransactionListItem(
             modifier = Modifier.weight(1f)
         ) {
             Text(
-                text = tx.category,
+                text = strings.label(tx.category),
                 color = Color.White,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold
@@ -928,9 +946,9 @@ private fun TransactionListItem(
             Text(
                 text = tx.description
                     ?.ifBlank {
-                        "No description"
+                        strings.get(R.string.lang_no_description)
                     }
-                    ?: "No description",
+                    ?: strings.get(R.string.lang_no_description),
                 color = DevLedgerColors.TextMuted,
                 fontSize = 13.sp,
                 maxLines = 1
@@ -938,7 +956,7 @@ private fun TransactionListItem(
         }
 
         val dateLabel = remember(
-            tx.transactionDate
+            strings.locale, tx.transactionDate
         ) {
             val now = System.currentTimeMillis()
             val diff = now - tx.transactionDate
@@ -946,11 +964,11 @@ private fun TransactionListItem(
             if (
                 diff < 24 * 60 * 60 * 1000
             ) {
-                "Today"
+                strings.get(R.string.lang_today)
             } else {
                 SimpleDateFormat(
                     "d MMM",
-                    Locale.getDefault()
+                    strings.locale
                 ).format(
                     Date(tx.transactionDate)
                 )

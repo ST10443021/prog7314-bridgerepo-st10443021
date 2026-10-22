@@ -1,5 +1,8 @@
 package com.devledger.app.ui.screens.snippets
 
+
+import com.devledger.app.util.localization.rememberAppStrings
+
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -61,6 +64,7 @@ fun SnippetVaultScreen(
     onOpenSync: () -> Unit,
     viewModel: SnippetVaultViewModel = hiltViewModel(),
 ) {
+    val strings = rememberAppStrings()
     val state by viewModel.uiState.collectAsState()
     var sortMenuExpanded by remember { mutableStateOf(false) }
 
@@ -76,7 +80,7 @@ fun SnippetVaultScreen(
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.padding(bottom = 16.dp, end = 8.dp)
             ) {
-                Icon(Icons.Filled.Add, contentDescription = "New Snippet")
+                Icon(Icons.Filled.Add, contentDescription = strings.get(R.string.lang_new_snippet))
             }
         },
         containerColor = DevLedgerColors.BgDeep
@@ -92,13 +96,13 @@ fun SnippetVaultScreen(
             ) {
                 item {
                     Text(
-                        text = "Snippet Vault",
+                        text = strings.get(R.string.lang_snippet_vault),
                         color = Color.White,
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Store, organize and reuse your code snippets.",
+                        text = strings.get(R.string.lang_store_organize_and_reuse_your_code_snippets),
                         color = DevLedgerColors.TextMuted,
                         fontSize = 14.sp,
                         modifier = Modifier.padding(top = 4.dp, bottom = 20.dp)
@@ -121,9 +125,9 @@ fun SnippetVaultScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("FOLDERS", color = DevLedgerColors.TextMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text(strings.get(R.string.lang_folders), color = DevLedgerColors.TextMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         Text(
-                            "+ New Folder",
+                            strings.get(R.string.lang_new_folder_action),
                             color = DevLedgerColors.AccentBlue,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium,
@@ -134,7 +138,7 @@ fun SnippetVaultScreen(
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         item {
                             FolderCard(
-                                name = "All Snippets",
+                                name = strings.get(R.string.lang_all_snippets),
                                 count = state.allSnippets.size,
                                 color = DevLedgerColors.AccentBlue,
                                 selected = state.selectedFolderId == null,
@@ -161,9 +165,9 @@ fun SnippetVaultScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("TAGS", color = DevLedgerColors.TextMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text(strings.get(R.string.lang_tags), color = DevLedgerColors.TextMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         Text(
-                            "View All",
+                            strings.get(R.string.lang_view_all),
                             color = DevLedgerColors.AccentBlue,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium,
@@ -174,7 +178,7 @@ fun SnippetVaultScreen(
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         item {
                             TagChip(
-                                label = "All",
+                                label = strings.get(R.string.lang_all),
                                 count = null,
                                 selected = state.selectedTag == null,
                                 onClick = { viewModel.onTagSelected(null) }
@@ -200,7 +204,7 @@ fun SnippetVaultScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "SNIPPETS (${state.visibleSnippets.size})",
+                            strings.get(R.string.lang_snippets_heading, state.visibleSnippets.size),
                             color = DevLedgerColors.TextMuted,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
@@ -215,7 +219,7 @@ fun SnippetVaultScreen(
                                         .padding(horizontal = 8.dp, vertical = 4.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(state.sortOption.label, color = DevLedgerColors.TextPrimary, fontSize = 12.sp)
+                                    Text(strings.get(state.sortOption.labelRes), color = DevLedgerColors.TextPrimary, fontSize = 12.sp)
                                     Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = DevLedgerColors.TextMuted, modifier = Modifier.size(16.dp))
                                 }
                                 DropdownMenu(
@@ -225,7 +229,7 @@ fun SnippetVaultScreen(
                                 ) {
                                     SnippetSortOption.entries.forEach { option ->
                                         DropdownMenuItem(
-                                            text = { Text(option.label, color = Color.White) },
+                                            text = { Text(strings.get(option.labelRes), color = Color.White) },
                                             onClick = {
                                                 viewModel.onSortOptionChange(option)
                                                 sortMenuExpanded = false
@@ -243,7 +247,7 @@ fun SnippetVaultScreen(
                 state.errorMessage?.let { message ->
                     item {
                         Text(
-                            text = message,
+                            text = message.resolve(strings),
                             color = DevLedgerColors.ErrorRed,
                             fontSize = 12.sp,
                             modifier = Modifier.padding(bottom = 16.dp)
@@ -280,6 +284,7 @@ fun SnippetVaultScreen(
 
 @Composable
 private fun VaultTopBar(onOpenDrawer: () -> Unit, onOpenNotifications: () -> Unit) {
+    val strings = rememberAppStrings()
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -288,28 +293,28 @@ private fun VaultTopBar(onOpenDrawer: () -> Unit, onOpenNotifications: () -> Uni
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = onOpenDrawer) {
-            Icon(Icons.Filled.Menu, contentDescription = "Menu", tint = Color.White)
+            Icon(Icons.Filled.Menu, contentDescription = strings.get(R.string.lang_menu), tint = Color.White)
         }
-        
+
         Spacer(Modifier.width(8.dp))
-        
+
         Image(
             painter = painterResource(id = R.drawable.ic_launcher_foreground),
             contentDescription = null,
             modifier = Modifier.size(32.dp).clip(CircleShape)
         )
-        
+
         Spacer(Modifier.width(8.dp))
-        
+
         Text(
             text = "DevLedger",
             color = Color.White,
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold
         )
-        
+
         Spacer(Modifier.weight(1f))
-        
+
         IconButton(onClick = onOpenNotifications) {
             Box {
                 Icon(Icons.Filled.Notifications, contentDescription = "Notifications", tint = Color.White)
@@ -329,6 +334,7 @@ private fun VaultTopBar(onOpenDrawer: () -> Unit, onOpenNotifications: () -> Uni
 
 @Composable
 private fun SearchBar(query: String, onQueryChange: (String) -> Unit, onOpenFilter: () -> Unit) {
+    val strings = rememberAppStrings()
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -341,7 +347,7 @@ private fun SearchBar(query: String, onQueryChange: (String) -> Unit, onOpenFilt
         TextField(
             value = query,
             onValueChange = onQueryChange,
-            placeholder = { Text("Search snippets...", color = DevLedgerColors.TextMuted, fontSize = 14.sp) },
+            placeholder = { Text(strings.get(R.string.lang_search_snippets), color = DevLedgerColors.TextMuted, fontSize = 14.sp) },
             modifier = Modifier.weight(1f),
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = Color.Transparent,
@@ -355,7 +361,7 @@ private fun SearchBar(query: String, onQueryChange: (String) -> Unit, onOpenFilt
             singleLine = true
         )
         IconButton(onClick = onOpenFilter) {
-            Icon(Icons.Filled.FilterList, contentDescription = "Filter", tint = DevLedgerColors.TextMuted, modifier = Modifier.size(20.dp))
+            Icon(Icons.Filled.FilterList, contentDescription = strings.get(R.string.lang_filter), tint = DevLedgerColors.TextMuted, modifier = Modifier.size(20.dp))
         }
     }
 }
@@ -380,6 +386,7 @@ private fun FolderCard(name: String, count: Int, color: Color, selected: Boolean
 
 @Composable
 private fun TagChip(label: String, count: Int?, selected: Boolean, onClick: () -> Unit) {
+    val strings = rememberAppStrings()
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
@@ -389,7 +396,7 @@ private fun TagChip(label: String, count: Int?, selected: Boolean, onClick: () -
             .padding(horizontal = 12.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (label != "All") {
+        if (count != null) {
             Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(DevLedgerColors.AccentPurple))
             Spacer(Modifier.width(8.dp))
         }
@@ -408,17 +415,18 @@ private fun SnippetPreviewCard(
     onToggleFavourite: () -> Unit,
     onArchive: () -> Unit
 ) {
-    val tags = remember(snippet.tagsCsv) { 
-        snippet.tagsCsv.split(",").map(String::trim).filter(String::isNotEmpty) 
+    val strings = rememberAppStrings()
+    val tags = remember(snippet.tagsCsv) {
+        snippet.tagsCsv.split(",").map(String::trim).filter(String::isNotEmpty)
     }
 
     DevLedgerCard(modifier = Modifier.clickable(onClick = onClick)) {
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    snippet.title, 
-                    color = Color.White, 
-                    fontSize = 15.sp, 
+                    snippet.title,
+                    color = Color.White,
+                    fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f)
                 )
@@ -430,7 +438,7 @@ private fun SnippetPreviewCard(
                 IconButton(onClick = onToggleFavourite, modifier = Modifier.size(32.dp)) {
                     Icon(
                         imageVector = if (snippet.isFavourite) Icons.Filled.Star else Icons.Outlined.Star,
-                        contentDescription = "Favourite",
+                        contentDescription = strings.get(R.string.lang_favourite),
                         tint = if (snippet.isFavourite) DevLedgerColors.AccentBlue else DevLedgerColors.TextMuted,
                         modifier = Modifier.size(20.dp)
                     )
@@ -439,18 +447,18 @@ private fun SnippetPreviewCard(
                     Icon(Icons.Filled.MoreVert, contentDescription = null, tint = DevLedgerColors.TextMuted, modifier = Modifier.size(20.dp))
                 }
             }
-            
+
             if (!snippet.description.isNullOrBlank()) {
                 Text(
-                    snippet.description, 
-                    color = DevLedgerColors.TextMuted, 
+                    snippet.description,
+                    color = DevLedgerColors.TextMuted,
                     fontSize = 12.sp,
                     modifier = Modifier.padding(top = 4.dp)
                 )
             }
-            
+
             Spacer(Modifier.height(12.dp))
-            
+
             // Code block with syntax highlighting look
             Box(
                 modifier = Modifier
@@ -468,17 +476,17 @@ private fun SnippetPreviewCard(
                     overflow = TextOverflow.Ellipsis
                 )
             }
-            
+
             Spacer(Modifier.height(12.dp))
-            
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(TimeAgo.format(snippet.updatedAt), color = DevLedgerColors.TextMuted, fontSize = 11.sp)
+                Text(TimeAgo.format(snippet.updatedAt, strings), color = DevLedgerColors.TextMuted, fontSize = 11.sp)
                 IconButton(onClick = onArchive, modifier = Modifier.size(24.dp)) {
-                    Icon(Icons.Filled.Archive, contentDescription = "Archive", tint = DevLedgerColors.TextMuted, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Filled.Archive, contentDescription = strings.get(R.string.lang_archive), tint = DevLedgerColors.TextMuted, modifier = Modifier.size(16.dp))
                 }
             }
         }

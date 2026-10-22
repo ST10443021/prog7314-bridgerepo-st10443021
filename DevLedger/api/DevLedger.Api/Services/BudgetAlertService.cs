@@ -1,4 +1,3 @@
-using System.Globalization;
 using DevLedger.Api.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,7 +6,7 @@ namespace DevLedger.Api.Services;
 /// <summary>A frozen budget period lets both write paths compare the same monthly
 /// account/base-currency total before and after an atomic transaction batch.</summary>
 public sealed record BudgetSnapshot(Guid UserId, DateTime MonthStart, DateTime MonthEnd,
-    string Currency, decimal Budget, decimal Expenses);
+    string Currency, decimal Budget, decimal Expenses, string Language = "en");
 public sealed record BudgetAlert(Guid UserId, string Title, string Body);
 
 /// <summary>
@@ -42,7 +41,7 @@ public class BudgetAlertService
         }
         var now = _clock.GetUtcNow().UtcDateTime;
         var start = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-        var snapshot = new BudgetSnapshot(userId, start, start.AddMonths(1), currency, user.MonthlyBudget.Value, 0m);
+        var snapshot = new BudgetSnapshot(userId, start, start.AddMonths(1), currency, user.MonthlyBudget.Value, 0m, user.PreferredLanguage);
         var expenses = await ExpensesAsync(snapshot, cancellationToken);
         return expenses.HasValue ? snapshot with { Expenses = expenses.Value } : null;
     }
@@ -57,9 +56,8 @@ public class BudgetAlertService
         var newBand = Band(expenses, before.Budget);
         if (newBand <= oldBand) return null;
         var percentage = Math.Round((double)expenses / (double)before.Budget * 100d, 0, MidpointRounding.AwayFromZero);
-        var body = string.Format(CultureInfo.InvariantCulture,
-            "You've used {0:0}% of your {1} {2:N2} monthly budget.", percentage, before.Currency, before.Budget);
-        return new BudgetAlert(before.UserId, newBand == 100 ? "Budget limit reached" : "Budget alert", body);
+        return BudgetAlertText.Create(before.UserId, newBand, percentage,
+            before.Currency, before.Budget, before.Language);
     }
 
     /// <summary>Push is a post-commit side effect. Failures never undo a successful

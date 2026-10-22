@@ -1,5 +1,9 @@
 package com.devledger.app.security
 
+import com.devledger.app.util.localization.UiText
+
+import com.devledger.app.R
+
 import com.devledger.app.data.local.PinStorage
 import com.devledger.app.data.local.entity.UserEntity
 import com.devledger.app.data.remote.dto.UserSettingsDto
@@ -59,7 +63,7 @@ class SettingsBiometricViewModelTest {
         vm.saveSettings()
         advanceUntilIdle()
         coVerify(exactly = 1) { repository.saveToApi("en", true, false, "ZAR", true) }
-        assertEquals("Settings saved.", vm.uiState.value.message)
+        assertEquals(UiText.Resource(R.string.lang_settings_saved), vm.uiState.value.message)
     }
 
     @Test fun `failed scan permits retry without enabling or saving`() = runTest(dispatcher) {

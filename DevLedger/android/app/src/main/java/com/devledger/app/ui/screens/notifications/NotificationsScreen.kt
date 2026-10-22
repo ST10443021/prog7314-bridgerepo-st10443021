@@ -1,5 +1,9 @@
 package com.devledger.app.ui.screens.notifications
 
+import com.devledger.app.util.localization.AppStrings
+
+import com.devledger.app.util.localization.rememberAppStrings
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -90,6 +94,7 @@ private fun NotificationsContent(
     onMarkRead: (String) -> Unit,
     onMarkAllRead: () -> Unit,
 ) {
+    val strings = rememberAppStrings()
     var selectedFilter by rememberSaveable {
         androidx.compose.runtime.mutableStateOf(
             NotificationFilter.ALL
@@ -112,10 +117,10 @@ private fun NotificationsContent(
         }
     }
 
-    val groupedNotifications = remember(filteredNotifications) {
+    val groupedNotifications = remember(filteredNotifications, strings) {
         filteredNotifications
             .sortedByDescending { it.createdAt }
-            .groupBy { dateGroup(it.createdAt) }
+            .groupBy { dateGroup(strings, it.createdAt) }
     }
 
     LazyColumn(
@@ -157,7 +162,7 @@ private fun NotificationsContent(
                 )
             }
         } else {
-            listOf("Today", "Yesterday", "Earlier")
+            listOf(strings.get(R.string.lang_today), strings.get(R.string.lang_yesterday), strings.get(R.string.lang_earlier))
                 .forEach { groupName ->
                     val groupedItems =
                         groupedNotifications[groupName].orEmpty()
@@ -274,6 +279,7 @@ private fun NotificationFilters(
     unreadCount: Int,
     onFilterSelected: (NotificationFilter) -> Unit,
 ) {
+    val strings = rememberAppStrings()
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -281,7 +287,7 @@ private fun NotificationFilters(
         NotificationFilterChip(
             modifier = Modifier.weight(1f),
             selected = selectedFilter == NotificationFilter.ALL,
-            label = "All",
+            label = strings.get(R.string.lang_all),
             count = totalCount,
             onClick = {
                 onFilterSelected(NotificationFilter.ALL)
@@ -292,7 +298,7 @@ private fun NotificationFilters(
             modifier = Modifier.weight(1f),
             selected =
                 selectedFilter == NotificationFilter.UNREAD,
-            label = "Unread",
+            label = strings.get(R.string.lang_unread),
             count = unreadCount,
             onClick = {
                 onFilterSelected(NotificationFilter.UNREAD)
@@ -396,7 +402,8 @@ private fun NotificationCard(
     notification: NotificationEntity,
     onClick: () -> Unit,
 ) {
-    val visual = notificationVisual(notification.type)
+    val strings = rememberAppStrings()
+    val visual = notificationVisual(strings, notification.type)
 
     Card(
         modifier = Modifier
@@ -466,7 +473,7 @@ private fun NotificationCard(
 
                     Text(
                         text = relativeTime(
-                            notification.createdAt
+                            strings,                            notification.createdAt
                         ),
                         color = DevLedgerColors.TextMuted,
                         fontSize = 10.sp,
@@ -532,6 +539,7 @@ private fun NotificationCard(
 private fun EmptyNotificationsCard(
     showingUnreadOnly: Boolean,
 ) {
+    val strings = rememberAppStrings()
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -582,7 +590,7 @@ private fun EmptyNotificationsCard(
 
             Text(
                 text = if (showingUnreadOnly) {
-                    "You're all caught up"
+                    strings.get(R.string.lang_you_re_all_caught_up)
                 } else {
                     stringResource(R.string.notifications_empty)
                 },
@@ -595,9 +603,9 @@ private fun EmptyNotificationsCard(
 
             Text(
                 text = if (showingUnreadOnly) {
-                    "There are no unread notifications."
+                    strings.get(R.string.lang_there_are_no_unread_notifications)
                 } else {
-                    "New alerts will appear here when they arrive."
+                    strings.get(R.string.lang_new_alerts_will_appear_here_when_they_arrive)
                 },
                 color = DevLedgerColors.TextMuted,
                 style = MaterialTheme.typography.bodySmall,
@@ -613,9 +621,11 @@ private data class NotificationVisual(
 )
 
 private fun notificationVisual(
+    strings: AppStrings,
     type: String,
 ): NotificationVisual {
     return when (type.uppercase()) {
+        "BUDGET_ALERT",
         "BUDGET",
         "EXPENSE",
         "FINANCE",
@@ -624,36 +634,37 @@ private fun notificationVisual(
             -> NotificationVisual(
             icon = Icons.Filled.AttachMoney,
             color = Color(0xFFFF5252),
-            label = "Finance",
+            label = strings.get(R.string.lang_finance),
         )
 
         "SYNC" -> NotificationVisual(
             icon = Icons.Filled.Sync,
             color = DevLedgerColors.SuccessGreen,
-            label = "Sync",
+            label = strings.get(R.string.lang_sync),
         )
 
         "SECURITY" -> NotificationVisual(
             icon = Icons.Filled.Lock,
             color = Color(0xFFFFA726),
-            label = "Security",
+            label = strings.get(R.string.lang_security),
         )
 
         "SNIPPET" -> NotificationVisual(
             icon = Icons.Outlined.Code,
             color = DevLedgerColors.AccentBlue,
-            label = "Snippet",
+            label = strings.get(R.string.lang_snippet),
         )
 
         else -> NotificationVisual(
             icon = Icons.Filled.Notifications,
             color = DevLedgerColors.AccentPurple,
-            label = "System",
+            label = strings.get(R.string.lang_system),
         )
     }
 }
 
 private fun dateGroup(
+    strings: AppStrings,
     timestamp: Long,
 ): String {
     val notificationDate = Calendar.getInstance().apply {
@@ -668,7 +679,7 @@ private fun dateGroup(
         notificationDate.get(Calendar.DAY_OF_YEAR) ==
         today.get(Calendar.DAY_OF_YEAR)
     ) {
-        return "Today"
+        return strings.get(R.string.lang_today)
     }
 
     today.add(Calendar.DAY_OF_YEAR, -1)
@@ -679,13 +690,14 @@ private fun dateGroup(
         notificationDate.get(Calendar.DAY_OF_YEAR) ==
         today.get(Calendar.DAY_OF_YEAR)
     ) {
-        return "Yesterday"
+        return strings.get(R.string.lang_yesterday)
     }
 
-    return "Earlier"
+    return strings.get(R.string.lang_earlier)
 }
 
 private fun relativeTime(
+    strings: AppStrings,
     timestamp: Long,
 ): String {
     val elapsed = (
@@ -702,13 +714,13 @@ private fun relativeTime(
         .toDays(elapsed)
 
     return when {
-        minutes < 1 -> "Just now"
-        minutes < 60 -> "${minutes}m ago"
-        hours < 24 -> "${hours}h ago"
-        days < 7 -> "${days}d ago"
+        minutes < 1 -> strings.get(R.string.lang_just_now)
+        minutes < 60 -> strings.plural(R.plurals.lang_minutes_ago, minutes.toInt())
+        hours < 24 -> strings.plural(R.plurals.lang_hours_ago, hours.toInt())
+        days < 7 -> strings.plural(R.plurals.lang_days_ago, days.toInt())
         else -> SimpleDateFormat(
             "d MMM",
-            Locale.getDefault(),
+            strings.locale,
         ).format(Date(timestamp))
     }
 }

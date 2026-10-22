@@ -1,5 +1,7 @@
 package com.devledger.app.ui.screens.snippets
 
+import com.devledger.app.util.localization.rememberAppStrings
+
 import android.content.Intent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -94,7 +96,7 @@ class SnippetDetailViewModel @Inject constructor(
         viewModelScope.launch {
             // Ensure tag exists globally
             userTagRepository.create(tagName)
-            
+
             val newTags = currentTags + tagName
             snippetRepository.createOrUpdate(
                 userId = snippet.userId,
@@ -140,11 +142,11 @@ class SnippetDetailViewModel @Inject constructor(
         viewModelScope.launch { snippetRepository.archive(snippet.snippetId, true) }
     }
 
-    fun duplicate(onDuplicated: (String) -> Unit) {
+    fun duplicate(copyTitle: String, onDuplicated: (String) -> Unit) {
         val snippet = _uiState.value.snippet ?: return
         viewModelScope.launch {
             val copy = snippetRepository.createOrUpdate(
-                userId = snippet.userId, id = null, title = "${snippet.title} (Copy)", content = snippet.content,
+                userId = snippet.userId, id = null, title = copyTitle, content = snippet.content,
                 language = snippet.language, description = snippet.description,
                 tags = snippet.tagsCsv.split(",").map(String::trim).filter(String::isNotEmpty), folderId = snippet.folderId,
             )
@@ -153,7 +155,7 @@ class SnippetDetailViewModel @Inject constructor(
     }
 }
 
-/** Snippet Detail view: complete content and metadata. 
+/** Snippet Detail view: complete content and metadata.
  *  Key elements: Title, language, tags, syntax-highlighted code, description and management actions.
  *  Matches Image 2 pixel-accurate design. */
 @Composable
@@ -167,6 +169,7 @@ fun SnippetDetailScreen(
     onDuplicated: (String) -> Unit,
     viewModel: SnippetDetailViewModel = hiltViewModel(),
 ) {
+    val strings = rememberAppStrings()
     val state by viewModel.uiState.collectAsState()
     val availableTags by viewModel.availableTags.collectAsState()
     val clipboard = LocalClipboardManager.current
@@ -195,7 +198,7 @@ fun SnippetDetailScreen(
             val snippet = state.snippet
             if (snippet == null) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("This snippet could not be found.", color = DevLedgerColors.TextMuted)
+                    Text(strings.get(R.string.lang_this_snippet_could_not_be_found), color = DevLedgerColors.TextMuted)
                 }
             } else {
                 Column(
@@ -206,7 +209,7 @@ fun SnippetDetailScreen(
                         .padding(16.dp)
                 ) {
                     Badge(snippet.language, DevLedgerColors.AccentPurple)
-                    
+
                     Text(
                         text = snippet.title,
                         color = Color.White,
@@ -214,7 +217,7 @@ fun SnippetDetailScreen(
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(top = 8.dp)
                     )
-                    
+
                     if (!snippet.description.isNullOrBlank()) {
                         Text(
                             text = snippet.description,
@@ -233,15 +236,15 @@ fun SnippetDetailScreen(
                             .padding(12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        MetaItem(Icons.Default.Folder, "Folder", state.folderName ?: "None")
-                        MetaItem(Icons.Default.CalendarToday, "Created", formatDate(snippet.createdAt))
-                        MetaItem(Icons.Default.Update, "Updated", formatDate(snippet.updatedAt))
-                        MetaItem(Icons.Default.Person, "Creator", "You")
+                        MetaItem(Icons.Default.Folder, strings.get(R.string.lang_folder), state.folderName ?: strings.get(R.string.lang_none))
+                        MetaItem(Icons.Default.CalendarToday, strings.get(R.string.lang_created), formatDate(snippet.createdAt, strings.locale))
+                        MetaItem(Icons.Default.Update, strings.get(R.string.lang_updated), formatDate(snippet.updatedAt, strings.locale))
+                        MetaItem(Icons.Default.Person, strings.get(R.string.lang_creator), strings.get(R.string.lang_you))
                     }
 
                     Spacer(Modifier.height(24.dp))
 
-                    Text("TAGS", color = DevLedgerColors.TextMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(strings.get(R.string.lang_tags), color = DevLedgerColors.TextMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(8.dp))
                     Row(
                         modifier = Modifier.horizontalScroll(rememberScrollState()),
@@ -252,36 +255,36 @@ fun SnippetDetailScreen(
                             TagBadge(tag) { viewModel.removeTag(tag) }
                             Spacer(Modifier.width(8.dp))
                         }
-                        
+
                         Box {
                             AddTagButton { showTagDropdown = true }
-                            
+
                             DropdownMenu(
                                 expanded = showTagDropdown,
                                 onDismissRequest = { showTagDropdown = false },
                                 modifier = Modifier.background(DevLedgerColors.SurfaceCard).widthIn(min = 180.dp)
                             ) {
                                 DropdownMenuItem(
-                                    text = { 
+                                    text = {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Icon(Icons.Default.Add, null, tint = DevLedgerColors.AccentBlue, modifier = Modifier.size(20.dp))
                                             Spacer(Modifier.width(12.dp))
-                                            Text("Create New Tag...", color = DevLedgerColors.AccentBlue, fontWeight = FontWeight.Bold)
+                                            Text(strings.get(R.string.lang_create_new_tag), color = DevLedgerColors.AccentBlue, fontWeight = FontWeight.Bold)
                                         }
                                     },
-                                    onClick = { 
+                                    onClick = {
                                         showCreateTagDialog = true
                                         showTagDropdown = false
                                     }
                                 )
-                                
+
                                 val selectableSuggestions = availableTags.map { it.name }.filter { it !in currentTags }
                                 if (selectableSuggestions.isNotEmpty()) {
                                     HorizontalDivider(color = DevLedgerColors.Border, modifier = Modifier.padding(vertical = 4.dp))
                                     selectableSuggestions.forEach { suggestion ->
                                         DropdownMenuItem(
                                             text = { Text(suggestion, color = Color.White) },
-                                            onClick = { 
+                                            onClick = {
                                                 viewModel.addTag(suggestion)
                                                 showTagDropdown = false
                                             }
@@ -299,68 +302,68 @@ fun SnippetDetailScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("CODE", color = DevLedgerColors.TextMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text(strings.get(R.string.lang_code), color = DevLedgerColors.TextMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             IconButton(onClick = { clipboard.setText(AnnotatedString(snippet.content)) }, modifier = Modifier.size(32.dp)) {
-                                Icon(Icons.Default.ContentCopy, contentDescription = "Copy", tint = DevLedgerColors.AccentBlue, modifier = Modifier.size(18.dp))
+                                Icon(Icons.Default.ContentCopy, contentDescription = strings.get(R.string.lang_copy), tint = DevLedgerColors.AccentBlue, modifier = Modifier.size(18.dp))
                             }
-                            Text("Copy", color = DevLedgerColors.AccentBlue, fontSize = 12.sp)
+                            Text(strings.get(R.string.lang_copy), color = DevLedgerColors.AccentBlue, fontSize = 12.sp)
                             Spacer(Modifier.width(16.dp))
                             IconButton(onClick = { showFullscreen = true }, modifier = Modifier.size(32.dp)) {
-                                Icon(Icons.Default.Fullscreen, contentDescription = "Fullscreen", tint = DevLedgerColors.TextMuted, modifier = Modifier.size(18.dp))
+                                Icon(Icons.Default.Fullscreen, contentDescription = strings.get(R.string.lang_fullscreen), tint = DevLedgerColors.TextMuted, modifier = Modifier.size(18.dp))
                             }
                         }
                     }
-                    
+
                     Spacer(Modifier.height(8.dp))
-                    
+
                     CodeViewer(snippet.content)
 
                     Spacer(Modifier.height(24.dp))
 
-                    Text("DESCRIPTION", color = DevLedgerColors.TextMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(strings.get(R.string.lang_description_heading), color = DevLedgerColors.TextMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        snippet.description ?: "No description provided.",
+                        snippet.description ?: strings.get(R.string.lang_no_description_provided),
                         color = DevLedgerColors.TextSecondary,
                         fontSize = 14.sp
                     )
 
                     Spacer(Modifier.height(24.dp))
 
-                    Text("STATS", color = DevLedgerColors.TextMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(strings.get(R.string.lang_stats), color = DevLedgerColors.TextMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(12.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        StatCard(Icons.Default.FormatAlignLeft, "Lines", snippet.content.lineSequence().count().toString(), Modifier.weight(1f))
-                        StatCard(Icons.Default.TextFormat, "Characters", snippet.content.length.toString(), Modifier.weight(1f))
-                        StatCard(Icons.Default.Star, "Is Favorite", if (snippet.isFavourite) "Yes" else "No", Modifier.weight(1f))
-                        StatCard(Icons.Default.History, "Age", TimeAgo.format(snippet.createdAt), Modifier.weight(1f))
+                        StatCard(Icons.Default.FormatAlignLeft, strings.get(R.string.lang_lines), snippet.content.lineSequence().count().toString(), Modifier.weight(1f))
+                        StatCard(Icons.Default.TextFormat, strings.get(R.string.lang_characters), snippet.content.length.toString(), Modifier.weight(1f))
+                        StatCard(Icons.Default.Star, strings.get(R.string.lang_is_favorite), if (snippet.isFavourite) strings.get(R.string.lang_yes) else strings.get(R.string.lang_no), Modifier.weight(1f))
+                        StatCard(Icons.Default.History, strings.get(R.string.lang_age), TimeAgo.format(snippet.createdAt, strings), Modifier.weight(1f))
                     }
 
                     Spacer(Modifier.height(24.dp))
 
-                    Text("ACTION", color = DevLedgerColors.TextMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(strings.get(R.string.lang_action), color = DevLedgerColors.TextMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(12.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        ActionBtn(Icons.Default.Share, "Share", Modifier.weight(1f)) {
+                        ActionBtn(Icons.Default.Share, strings.get(R.string.lang_share), Modifier.weight(1f)) {
                             val intent = Intent(Intent.ACTION_SEND).apply {
                                 type = "text/plain"
                                 putExtra(Intent.EXTRA_TEXT, "${snippet.title}\n\n${snippet.content}")
                             }
-                            context.startActivity(Intent.createChooser(intent, "Share snippet"))
+                            context.startActivity(Intent.createChooser(intent, strings.get(R.string.lang_share_snippet)))
                         }
-                        ActionBtn(Icons.Default.ContentCopy, "Duplicate", Modifier.weight(1f)) { viewModel.duplicate(onDuplicated) }
-                        ActionBtn(Icons.Default.FileDownload, "Export", Modifier.weight(1f)) {
+                        ActionBtn(Icons.Default.ContentCopy, strings.get(R.string.lang_duplicate), Modifier.weight(1f)) { viewModel.duplicate(strings.get(R.string.lang_copy_title, snippet.title), onDuplicated) }
+                        ActionBtn(Icons.Default.FileDownload, strings.get(R.string.lang_export), Modifier.weight(1f)) {
                             val intent = Intent(Intent.ACTION_SEND).apply {
                                 type = "text/plain"
                                 putExtra(Intent.EXTRA_TITLE, "${snippet.title}.${snippet.language.lowercase()}")
                                 putExtra(Intent.EXTRA_TEXT, snippet.content)
                             }
-                            context.startActivity(Intent.createChooser(intent, "Export snippet"))
+                            context.startActivity(Intent.createChooser(intent, strings.get(R.string.lang_export_snippet)))
                         }
-                        ActionBtn(Icons.Default.Delete, "Delete", Modifier.weight(1f), isDestructive = true) { showDeleteConfirm = true }
+                        ActionBtn(Icons.Default.Delete, strings.get(R.string.lang_delete), Modifier.weight(1f), isDestructive = true) { showDeleteConfirm = true }
                     }
-                    
+
                     Spacer(Modifier.height(48.dp))
                 }
             }
@@ -380,16 +383,16 @@ fun SnippetDetailScreen(
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            title = { Text("Delete Snippet?", color = Color.White) },
-            text = { Text("Are you sure you want to move this snippet to the recycle bin?", color = DevLedgerColors.TextSecondary) },
+            title = { Text(strings.get(R.string.lang_delete_snippet), color = Color.White) },
+            text = { Text(strings.get(R.string.lang_are_you_sure_you_want_to_move_this_snippet_to_the_recycle_bi), color = DevLedgerColors.TextSecondary) },
             confirmButton = {
                 TextButton(onClick = { viewModel.archive(); onBack() }) {
-                    Text("Delete", color = DevLedgerColors.ErrorRed)
+                    Text(strings.get(R.string.lang_delete), color = DevLedgerColors.ErrorRed)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirm = false }) {
-                    Text("Cancel", color = Color.White)
+                    Text(strings.get(R.string.lang_cancel), color = Color.White)
                 }
             },
             containerColor = DevLedgerColors.SurfaceCard
@@ -408,9 +411,9 @@ fun SnippetDetailScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(state.snippet?.title ?: "Code View", color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 8.dp))
+                        Text(state.snippet?.title ?: strings.get(R.string.lang_code_view), color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 8.dp))
                         IconButton(onClick = { showFullscreen = false }) {
-                            Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
+                            Icon(Icons.Default.Close, contentDescription = strings.get(R.string.lang_close), tint = Color.White)
                         }
                     }
                     CodeViewer(state.snippet?.content ?: "")
@@ -422,12 +425,13 @@ fun SnippetDetailScreen(
 
 @Composable
 private fun DetailTopBar(onBack: () -> Unit, onEdit: () -> Unit, isFavourite: Boolean, onToggleFavourite: () -> Unit) {
+    val strings = rememberAppStrings()
     Row(
         modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 4.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = onBack) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.get(R.string.lang_back), tint = Color.White)
         }
         Image(
             painter = painterResource(id = R.drawable.ic_launcher_foreground),
@@ -436,18 +440,18 @@ private fun DetailTopBar(onBack: () -> Unit, onEdit: () -> Unit, isFavourite: Bo
         )
         Spacer(Modifier.width(8.dp))
         Text("DevLedger", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-        
+
         Spacer(Modifier.weight(1f))
-        
+
         IconButton(onClick = onToggleFavourite) {
             Icon(
                 if (isFavourite) Icons.Filled.Star else Icons.Outlined.Star,
-                contentDescription = "Favourite",
+                contentDescription = strings.get(R.string.lang_favourite),
                 tint = if (isFavourite) DevLedgerColors.AccentBlue else Color.White
             )
         }
         IconButton(onClick = onEdit) {
-            Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Color.White)
+            Icon(Icons.Default.Edit, contentDescription = strings.get(R.string.lang_edit), tint = Color.White)
         }
     }
 }
@@ -466,6 +470,7 @@ private fun MetaItem(icon: ImageVector, label: String, value: String) {
 
 @Composable
 private fun TagBadge(text: String, onRemove: () -> Unit) {
+    val strings = rememberAppStrings()
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
@@ -480,7 +485,7 @@ private fun TagBadge(text: String, onRemove: () -> Unit) {
             Spacer(Modifier.width(8.dp))
             Icon(
                 imageVector = Icons.Filled.Close,
-                contentDescription = "Remove",
+                contentDescription = strings.get(R.string.lang_remove),
                 tint = DevLedgerColors.TextMuted,
                 modifier = Modifier.size(14.dp).clickable { onRemove() }
             )
@@ -490,34 +495,36 @@ private fun TagBadge(text: String, onRemove: () -> Unit) {
 
 @Composable
 private fun TagCreationDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
+    val strings = rememberAppStrings()
     var name by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = DevLedgerColors.SurfaceCard,
-        title = { Text("Create New Tag", color = Color.White) },
-        text = { 
+        title = { Text(strings.get(R.string.lang_create_new_tag_title), color = Color.White) },
+        text = {
             OutlinedTextField(
-                value = name, 
-                onValueChange = { name = it }, 
-                singleLine = true, 
-                label = { Text("Tag name") },
+                value = name,
+                onValueChange = { name = it },
+                singleLine = true,
+                label = { Text(strings.get(R.string.lang_tag_name)) },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = Color.White,
                     unfocusedTextColor = Color.White
                 )
-            ) 
+            )
         },
-        confirmButton = { 
-            TextButton(onClick = { if (name.isNotBlank()) onConfirm(name.trim()) }) { 
-                Text("Add", color = DevLedgerColors.AccentBlue) 
-            } 
+        confirmButton = {
+            TextButton(onClick = { if (name.isNotBlank()) onConfirm(name.trim()) }) {
+                Text(strings.get(R.string.lang_add), color = DevLedgerColors.AccentBlue)
+            }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = Color.White) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(strings.get(R.string.lang_cancel), color = Color.White) } },
     )
 }
 
 @Composable
 private fun AddTagButton(onClick: () -> Unit) {
+    val strings = rememberAppStrings()
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
@@ -525,7 +532,7 @@ private fun AddTagButton(onClick: () -> Unit) {
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 6.dp)
     ) {
-        Text("+ Add Tag", color = DevLedgerColors.AccentBlue, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Text(strings.get(R.string.lang_add_tag), color = DevLedgerColors.AccentBlue, fontSize = 12.sp, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -533,7 +540,7 @@ private fun AddTagButton(onClick: () -> Unit) {
 private fun CodeViewer(content: String) {
     val highlighted = remember(content) { SyntaxHighlighter.highlight(content) }
     val lines = content.lineSequence().toList()
-    
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -611,7 +618,7 @@ private fun Badge(text: String, color: Color) {
     )
 }
 
-private fun formatDate(timestamp: Long): String {
-    val sdf = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+private fun formatDate(timestamp: Long, locale: Locale): String {
+    val sdf = SimpleDateFormat("dd MMM yyyy", locale)
     return sdf.format(Date(timestamp))
 }

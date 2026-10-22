@@ -1,5 +1,9 @@
 package com.devledger.app.ui.screens.finance
 
+import com.devledger.app.util.localization.UiText
+
+import com.devledger.app.R
+
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -22,7 +26,7 @@ import javax.inject.Inject
 val IncomeCategories = listOf("Project Payment", "Freelance Work", "Consulting", "Salary", "Other Income")
 val ExpenseCategories = listOf("Tools & Subscriptions", "Hosting & Domains", "Marketing", "Equipment", "Other Expenses")
 val PaymentMethods = listOf("Bank Transfer", "Cash", "Credit Card", "PayPal", "Other")
-val RecurringFrequencies = listOf("WEEKLY" to "Weekly", "MONTHLY" to "Monthly", "YEARLY" to "Yearly")
+val RecurringFrequencies = listOf("WEEKLY", "MONTHLY", "YEARLY")
 private const val MaxAttachmentBytes = 2 * 1024 * 1024
 
 data class AddTransactionUiState(
@@ -44,7 +48,7 @@ data class AddTransactionUiState(
     val projectSuggestions: List<String> = emptyList(),
     val availableCurrencies: List<String> = CurrencyConverter.supportedCurrencies(),
     val isSaving: Boolean = false,
-    val errorMessage: String? = null,
+    val errorMessage: UiText? = null,
     val saved: Boolean = false,
 ) {
     val categories: List<String> get() = if (type == "INCOME") IncomeCategories else ExpenseCategories
@@ -70,12 +74,12 @@ class AddTransactionViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             val user = authRepository.currentUser.first { it != null } ?: return@launch
-            
+
             // Combine project suggestions from existing transactions AND folders
             folderRepository.observeFolders().collectLatest { folders ->
                 val folderNames = folders.map { it.name }
                 val transactionProjects = transactionRepository.getDistinctProjects(user.userId)
-                
+
                 _uiState.value = _uiState.value.copy(
                     projectSuggestions = (folderNames + transactionProjects).distinct().sorted()
                 )
@@ -134,12 +138,12 @@ class AddTransactionViewModel @Inject constructor(
         val currency = state.currency.trim().uppercase(Locale.ROOT)
 
         val error = when {
-            amount == null || !amount.isFinite() || amount <= 0.0 -> "Enter an amount greater than zero."
-            state.category.isBlank() -> "Choose a category."
-            state.description.isBlank() -> "Enter a description."
-            state.clientOrFrom.isBlank() -> "Enter a client or source name."
-            state.isRecurring && state.recurringFrequency.isBlank() -> "Choose a recurring frequency."
-            state.attachmentTooLarge -> "The attachment is larger than 2MB — choose a smaller file."
+            amount == null || !amount.isFinite() || amount <= 0.0 -> UiText.Resource(R.string.lang_enter_an_amount_greater_than_zero)
+            state.category.isBlank() -> UiText.Resource(R.string.lang_choose_a_category)
+            state.description.isBlank() -> UiText.Resource(R.string.lang_enter_a_description)
+            state.clientOrFrom.isBlank() -> UiText.Resource(R.string.lang_enter_a_client_or_source_name)
+            state.isRecurring && state.recurringFrequency.isBlank() -> UiText.Resource(R.string.lang_choose_a_recurring_frequency)
+            state.attachmentTooLarge -> UiText.Resource(R.string.lang_the_attachment_is_larger_than_2mb_choose_a_smaller_file)
             else -> null
         }
         if (error != null) { _uiState.value = state.copy(errorMessage = error); return }
@@ -152,7 +156,7 @@ class AddTransactionViewModel @Inject constructor(
                 val user = authRepository.currentUser.first()
                 if (user == null) {
                     Log.w(TAG, "save() called with no signed-in user cached")
-                    _uiState.value = _uiState.value.copy(errorMessage = "Please sign in before saving a transaction.")
+                    _uiState.value = _uiState.value.copy(errorMessage = UiText.Resource(R.string.lang_please_sign_in_before_saving_a_transaction))
                     return@launch
                 }
 
@@ -174,7 +178,7 @@ class AddTransactionViewModel @Inject constructor(
                 throw e
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to save transaction", e)
-                _uiState.value = _uiState.value.copy(errorMessage = "Could not save the transaction. Please try again.")
+                _uiState.value = _uiState.value.copy(errorMessage = UiText.Resource(R.string.lang_could_not_save_the_transaction_please_try_again))
             } finally {
                 _uiState.value = _uiState.value.copy(isSaving = false)
             }

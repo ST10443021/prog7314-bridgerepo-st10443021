@@ -1,5 +1,9 @@
 package com.devledger.app.ui.screens.biometric
 
+import com.devledger.app.util.localization.UiText
+
+import com.devledger.app.R
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.devledger.app.data.local.PinStorage
@@ -16,7 +20,7 @@ import javax.inject.Inject
 
 data class PinVerificationUiState(
     val pin: String = "",
-    val errorMessage: String? = null,
+    val errorMessage: UiText? = null,
     val isVerifying: Boolean = false,
     val isVerified: Boolean = false,
 )
@@ -46,7 +50,7 @@ class PinVerificationViewModel @Inject constructor(
 
         if (state.pin.length != 4) {
             _uiState.value = state.copy(
-                errorMessage = "Enter your 4-digit PIN."
+                errorMessage = UiText.Resource(R.string.lang_enter_your_4_digit_pin)
             )
             return
         }
@@ -62,7 +66,7 @@ class PinVerificationViewModel @Inject constructor(
             if (!pinStorage.hasPin(email)) {
                 _uiState.value = _uiState.value.copy(
                     isVerifying = false,
-                    errorMessage = "No PIN has been configured for this account."
+                    errorMessage = UiText.Resource(R.string.lang_no_pin_has_been_configured_for_this_account)
                 )
                 return@launch
             }
@@ -81,7 +85,7 @@ class PinVerificationViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(
                     pin = "",
                     isVerifying = false,
-                    errorMessage = "Incorrect PIN. Please try again."
+                    errorMessage = UiText.Resource(R.string.lang_incorrect_pin_please_try_again)
                 )
             }
         }

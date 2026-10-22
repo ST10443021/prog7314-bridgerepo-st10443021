@@ -1,5 +1,9 @@
 package com.devledger.app.ui.screens.auth
 
+import com.devledger.app.util.localization.UiText
+
+import com.devledger.app.R
+
 import android.util.Patterns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -18,10 +22,10 @@ data class AuthUiState(
     val isLoading: Boolean = false,
     val isGoogleLoading: Boolean = false,
     val isGitHubLoading: Boolean = false,
-    val errorMessage: String? = null,
+    val errorMessage: UiText? = null,
     val isAuthenticated: Boolean = false,
-    val emailError: String? = null,
-    val passwordError: String? = null,
+    val emailError: UiText? = null,
+    val passwordError: UiText? = null,
 )
 
 /**
@@ -58,7 +62,7 @@ class AuthViewModel @Inject constructor(
             errorMessage = null,
         )
     }
-    
+
     fun onGoogleSignInClicked() {
         _uiState.value = _uiState.value.copy(isGoogleLoading = true, isLoading = true, errorMessage = null)
     }
@@ -71,7 +75,7 @@ class AuthViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(
             isGoogleLoading = false,
             isLoading = false,
-            errorMessage = reason
+            errorMessage = UiText.Resource(R.string.lang_google_sign_in_failed_please_try_again)
         )
     }
 
@@ -80,9 +84,9 @@ class AuthViewModel @Inject constructor(
 
     fun onGitHubOAuthFailure(reason: String) {
         _uiState.value = _uiState.value.copy(
-            isGitHubLoading = false, 
+            isGitHubLoading = false,
             isLoading = false,
-            errorMessage = "GitHub sign-in failed: $reason"
+            errorMessage = UiText.Resource(R.string.lang_github_sign_in_failed_please_try_again)
         )
     }
 
@@ -108,7 +112,7 @@ class AuthViewModel @Inject constructor(
                         isGoogleLoading = false,
                         isGitHubLoading = false,
                         isLoading = false,
-                        errorMessage = result.message
+                        errorMessage = UiText.Resource(if (result.isOffline) R.string.lang_could_not_reach_the_api_please_check_your_internet_connectio else R.string.auth_error_generic)
                     )
                 }
             }
@@ -122,14 +126,14 @@ class AuthViewModel @Inject constructor(
         val email = state.email.trim()
 
         val emailError = when {
-            email.isBlank() -> "Enter your email address."
+            email.isBlank() -> UiText.Resource(R.string.lang_enter_your_email_address)
             !Patterns.EMAIL_ADDRESS.matcher(email).matches() ->
-                "Enter a valid email address."
+                UiText.Resource(R.string.lang_enter_a_valid_email_address)
             else -> null
         }
 
         val passwordError = if (state.password.isEmpty()) {
-            "Enter your password."
+            UiText.Resource(R.string.lang_enter_your_password)
         } else {
             null
         }
@@ -170,7 +174,7 @@ class AuthViewModel @Inject constructor(
                 is DevLedgerResult.Error -> {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        errorMessage = result.message,
+                        errorMessage = UiText.Resource(if (result.isOffline) R.string.lang_could_not_reach_the_api_please_check_your_internet_connectio else R.string.auth_error_generic),
                     )
                 }
             }
