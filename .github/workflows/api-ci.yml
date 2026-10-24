@@ -1,0 +1,55 @@
+name: API CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  DOTNET_NOLOGO: 'true'
+
+jobs:
+  build-and-test:
+    name: API build and unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+        working-directory: DevLedger/api
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up .NET 10 SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore DevLedger.Api.Tests/DevLedger.Api.Tests.csproj
+
+      - name: Build API and test project
+        run: dotnet build DevLedger.Api.Tests/DevLedger.Api.Tests.csproj --no-restore --configuration Release
+
+      - name: Run API unit tests
+        run: dotnet test DevLedger.Api.Tests/DevLedger.Api.Tests.csproj --no-build --no-restore --configuration Release --logger "trx;LogFileName=api-tests.trx" --results-directory TestResults
+
+      - name: Verify test report
+        run: test -s TestResults/api-tests.trx
+
+      - name: Upload API test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: api-test-results
+          path: DevLedger/api/TestResults/
+          if-no-files-found: error
+          retention-days: 30
