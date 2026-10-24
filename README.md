@@ -9,7 +9,7 @@ DevLedger is a native Android application that brings a developer's reusable cod
 **Repository:** [Institutional GitHub repository](https://github.com/EMGPPT/prog7314-2026-poe-st10443021)  
 **Changes since Part 2:** [Release notes](RELEASE_NOTES.md)
 
-**Current status, 22 October 2026:** Part 3 feature and artwork changes have been implemented, and the latest supplied local Android and API checks passed. Physical-device acceptance testing is assigned to Hamza. Institutional CI verification, the signed release and final demonstration evidence remain pending.
+**Current status, 24 October 2026:** Part 3 feature and artwork changes are implemented. Institutional Android and API CI passed for commit `055bf26` on `blake`; downloaded reports confirm 151 Android and 68 API tests passing, zero Android lint errors and a matching debug-APK checksum. Blake has also confirmed successful verification after merging into `main`; the exact main commit and run links remain to be recorded below. Hamza's physical-device acceptance, the signed production release and final demonstration evidence remain pending.
 
 ## Team members
 
@@ -75,6 +75,8 @@ Paths below are relative to the **Git repository root**, which contains the oute
 |---|---|
 | `README.md` | Project overview, setup and submission evidence. |
 | `RELEASE_NOTES.md` | Part 3 functional changes and release status. |
+| `.github/workflows/android-ci.yml` | Android debug build, unit tests, lint and artifact uploads. |
+| `.github/workflows/api-ci.yml` | API restore, Release build, unit tests and test-report upload. |
 | `DevLedger/android/` | Android Gradle project and wrapper. |
 | `DevLedger/android/app/src/main/` | Kotlin sources, resources and Android manifest. |
 | `DevLedger/android/app/src/test/` | Android local unit tests. |
@@ -82,7 +84,7 @@ Paths below are relative to the **Git repository root**, which contains the oute
 | `DevLedger/api/DevLedger.Api.Tests/` | API automated tests. |
 | `Dockerfile` | API container build definition. |
 
-GitHub discovers Actions workflows in `.github/workflows/` at the repository root (GitHub, n.d.b). The supplied baseline places workflow definitions under `DevLedger/.github/workflows/`; their final location and configuration must be checked in the institutional checkout during the CI work described in Section 6.
+GitHub Actions workflows now live in `.github/workflows/` at the repository root, where GitHub discovers them (GitHub, n.d.b). Their commands use the nested Android/API project paths described above.
 
 ## 4. Technology and prerequisites
 
@@ -168,33 +170,55 @@ The API applies pending EF Core migrations on startup; point it at the intended 
 
 Development history has been transferred to the institution's repository. Continue meaningful commits and reviews there; the most recently supplied development branch was `blake`. The final submission must identify the exact tested commit and retain the contributors' genuine history.
 
-**CI verification is pending.** Android and API workflow definitions exist in the supplied source, but no successful run from the institutional repository has yet been recorded here. The next CI task is to:
+### Automated checks
 
-1. Confirm root-level workflow placement and correct `DevLedger/...` working directories.
-2. Provision the configured Java/.NET versions and required Android/Firebase build inputs in a clean runner.
-3. Ensure builds and meaningful automated tests run on every remote push required by the brief; review the baseline branch/path filters.
-4. Retain passing runs, test reports and artifacts for the revision used for the final release.
+Both root-level workflows run on every remote push, on pull requests and by manual dispatch, without the previous branch/path filters.
 
-**Actions page:** [Institutional repository Actions](https://github.com/EMGPPT/prog7314-2026-poe-st10443021/actions).  
-**Passing Android run:** Pending — add the verified run URL.  
-**Passing API run:** Pending — add the verified run URL.
+| Workflow | Runner configuration and checks | Uploaded artifacts |
+|---|---|---|
+| Android CI | Ubuntu runner; Temurin JDK 21; Android SDK 34; checked-in Gradle 8.9 wrapper; tracked Firebase client configuration checked for `com.devledger.app`; debug assembly, local unit tests and lint. Java/Kotlin bytecode targets remain 17. | `android-unit-test-results`, `android-lint-report`, `devledger-debug-apk` (APK plus SHA-256 sidecar). |
+| API CI | Ubuntu runner; .NET 10 SDK; explicit test-project restore, Release build and unit-test execution. | `api-test-results` containing `api-tests.trx`. |
+
+The official POSIX Gradle launcher replaced the script that failed on Linux. Git tracks its executable permission and enforces LF line endings. Android lint now uses `abortOnError = true`, so detected errors fail the lint task. `checkReleaseBuilds = true` also restores fatal lint checks during release builds; the debug CI run does not verify release packaging or installation (Android Developers, n.d.f). Warnings remain visible and are not promoted to errors.
+
+### Recorded CI evidence — 24 October 2026
+
+| Evidence | Revision / result | Link or follow-up |
+|---|---|---|
+| Android CI #3 | `055bf26`, branch `blake`: passed; 151 tests passed, 0 failed, 0 skipped; lint reported 0 errors and 211 warnings. | [Successful Android run](https://github.com/EMGPPT/prog7314-2026-poe-st10443021/actions/runs/40089993728) |
+| API CI #3 | `055bf26`, branch `blake`: passed; 68 tests passed, 0 failed, 0 skipped. | [Successful API run](https://github.com/EMGPPT/prog7314-2026-poe-st10443021/actions/runs/40089993753) |
+| Main branch verification | Merge and verification confirmed successful by Blake on 24 October 2026. | Exact main commit: **Pending**; Android run URL: **Pending**; API run URL: **Pending**. These are distinct from the branch runs linked above. |
+
+The downloaded JUnit XML, TRX and lint XML were inspected; both test reports contain the stated individual passing results. All four artifact archives passed ZIP integrity checks. The debug APK also passed archive integrity checking, and its calculated SHA-256 matched the uploaded sidecar:
+
+```text
+ac0f56a80caf40ff980b10142f08b03a66852b807a7fabaa5d259eafdea3b370
+```
+
+This checksum identifies the debug artifact from the recorded `055bf26` run; it is not a signed production APK or the checksum of a later main/release build.
+
+**Artifact retention:** the institutional repository currently limits artifacts to **one day**, overriding the workflows' requested 30 days. Download all four artifacts promptly from the run summary before expiry (GitHub, n.d.c). Keep the downloaded evidence outside the source repository and record the associated commit/run URLs. Blake cannot change the repository retention settings with his current access; the limit does not prevent builds or downloads.
+
+**Actions page:** [Institutional repository Actions](https://github.com/EMGPPT/prog7314-2026-poe-st10443021/actions).
 
 Tag the final tested deployment commit only after release verification. Record the actual tag below; a valid identifier such as `final-poe` can carry a “Final POE” annotation. No final tag or release is claimed by this README.
 
 ## 7. Verification
 
-The following results come from the development outputs supplied before this documentation update. They must be tied to the final release revision when the final evidence is captured.
+The table distinguishes inspected automated reports from checks still requiring device/release evidence. Section 6 records the source revision and run URLs; final release results must be captured for the final tested revision.
 
 | Check | Latest supplied result | Remaining evidence |
 |---|---|---|
-| Android debug assembly, unit tests and lint | `BUILD SUCCESSFUL` for `:app:assembleDebug :app:testDebugUnitTest :app:lintDebug`. | Final revision and retained reports; the supplied summary did not include a unit-test count. |
-| API automated tests | 68 passed, 0 failed, 0 skipped on .NET 10. | Final revision and retained test report. |
-| Whitespace check | `git diff --check` reported no whitespace errors; Windows LF/CRLF conversion warnings were observed. | Repeat for the final documentation/source changes. |
+| Android debug assembly and unit tests | Institutional CI passed for `055bf26`; inspected XML confirms 151 passed, 0 failed, 0 skipped across 26 suites. The local command also completed successfully after enabling lint failures. | Record the main commit/run URLs and final-release results. |
+| Android lint | Inspected CI XML: 0 errors, 211 warnings. Errors now fail the lint task. | Review warnings and run the relevant release checks; this is not a warning-free result. |
+| API automated tests | Institutional CI passed for `055bf26`; inspected TRX confirms 68 passed, 0 failed, 0 skipped on .NET 10. | Record the main commit/run URLs and final-release results. |
+| Uploaded CI artifacts | Android test and lint reports, debug APK/checksum and API TRX downloaded and inspected; archive integrity and APK checksum passed. | Preserve main/final-release evidence before the one-day expiry. |
+| Whitespace check | Earlier `git diff --check` outputs reported no whitespace errors; Windows LF/CRLF conversion warnings were observed. | Repeat for these documentation changes and the final source. |
 | Language resource parity | Static audit: 610 named strings and 8 plural resources in each of English, Afrikaans and isiXhosa. | Fluent-speaker review, layout and persistence checks on the phone. |
 | Physical-device acceptance | Assigned to Hamza; results pending. | Phone model, Android version, build/commit, dates and outcomes. |
-| Institutional CI and signed release | Pending. | Passing run URLs, release installation and matching commit/tag. |
+| Signed production release | Pending. | Version/signing details, release build, installation/regression results and matching commit/tag. |
 
-A successful lint task does not establish zero lint findings: the reviewed Gradle configuration has `abortOnError = false`. Review the HTML report. The supplied API build also reported three warnings: deprecated Google credential loading, deprecated Firebase message-token use and a nullable folder-dictionary key.
+Most lint warnings concern unused resources, dependency updates, version-catalog use and typography. Targeted review items also include date formatting without an explicit locale, App Bundle language splitting, device identifiers and backup rules. Earlier local API build warnings concerned deprecated Google credential loading, deprecated Firebase message-token use and a nullable folder-dictionary key; passing tests do not establish a warning-free build.
 
 Physical-device acceptance must cover:
 
@@ -213,7 +237,7 @@ Physical-device acceptance must cover:
 - **Currency conversion:** the reviewed Android converter uses a manually maintained approximate rate table. Live exchange-rate refresh has not been established.
 - **Push delivery:** configured Firebase credentials, a registered device, connectivity and notification permission are required. A local notification record or successful database write alone does not demonstrate delivery.
 - **Translation boundaries:** user-entered content is preserved. Provider-controlled/system dialogs follow their own localisation, and previously delivered notification text is not rewritten when the language changes.
-- **Release readiness:** device acceptance, current store requirements, final versioning/signing, institutional CI evidence and final deployment verification remain open.
+- **Release readiness:** automated CI has passed and its branch artifacts have been inspected. Record the confirmed main verification links; device acceptance, current store requirements, final versioning/signing and final deployment verification remain open.
 
 ## 9. Screenshots and demonstration
 
@@ -256,17 +280,19 @@ Before submission, align the README, release notes, passing checks, APK and fina
 
 ## References
 
-Author-date references retain the original README's Harvard-style approach. Technical documentation was consulted on 22 October 2026; these sources describe platform behaviour and do not certify DevLedger's deployment or test outcomes.
+Author-date references retain the original README's Harvard-style approach. Original sources were consulted on 22 October 2026, with lint and artifact-download references added on 24 October 2026. These sources describe platform behaviour and do not certify DevLedger's deployment or test outcomes.
 
 - Android Developers, n.d.a. *Guide to app architecture*. [Online] Available at: [developer.android.com/topic/architecture](https://developer.android.com/topic/architecture) [Accessed 22 October 2026].
 - Android Developers, n.d.b. *Save data in a local database using Room*. [Online] Available at: [developer.android.com/training/data-storage/room](https://developer.android.com/training/data-storage/room) [Accessed 22 October 2026].
 - Android Developers, n.d.c. *Task scheduling*. [Online] Available at: [developer.android.com/develop/background-work/background-tasks/persistent](https://developer.android.com/develop/background-work/background-tasks/persistent) [Accessed 22 October 2026].
 - Android Developers, n.d.d. *Show a biometric authentication dialog*. [Online] Available at: [developer.android.com/identity/sign-in/biometric-auth](https://developer.android.com/identity/sign-in/biometric-auth) [Accessed 22 October 2026].
 - Android Developers, n.d.e. *Localize your app*. [Online] Available at: [developer.android.com/guide/topics/resources/localization](https://developer.android.com/guide/topics/resources/localization) [Accessed 22 October 2026].
+- Android Developers, n.d.f. *Lint: Android Gradle Plugin 8.6 DSL reference*. [Online] Available at: [developer.android.com/reference/tools/gradle-api/8.6/com/android/build/api/dsl/Lint](https://developer.android.com/reference/tools/gradle-api/8.6/com/android/build/api/dsl/Lint) [Accessed 24 October 2026].
 - Firebase, n.d.a. *Get started with Firebase Cloud Messaging in Android apps*. [Online] Available at: [firebase.google.com/docs/cloud-messaging/android/get-started](https://firebase.google.com/docs/cloud-messaging/android/get-started) [Accessed 22 October 2026].
 - Firebase, n.d.b. *Add the Firebase Admin SDK to your server*. [Online] Available at: [firebase.google.com/docs/admin/setup](https://firebase.google.com/docs/admin/setup) [Accessed 22 October 2026].
 - GitHub, n.d.a. *Authorizing OAuth apps*. [Online] Available at: [docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps) [Accessed 22 October 2026].
 - GitHub, n.d.b. *Workflows*. [Online] Available at: [docs.github.com/en/actions/concepts/workflows-and-actions/workflows](https://docs.github.com/en/actions/concepts/workflows-and-actions/workflows) [Accessed 22 October 2026].
+- GitHub, n.d.c. *Downloading workflow artifacts*. [Online] Available at: [docs.github.com/en/actions/how-tos/manage-workflow-runs/download-workflow-artifacts](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/download-workflow-artifacts) [Accessed 24 October 2026].
 - Google, n.d. *Authenticate with a backend server*. [Online] Available at: [developers.google.com/identity/sign-in/android/backend-auth](https://developers.google.com/identity/sign-in/android/backend-auth) [Accessed 22 October 2026].
 - Microsoft, n.d. *ASP.NET documentation*. [Online] Available at: [learn.microsoft.com/en-us/aspnet/core/?view=aspnetcore-10.0](https://learn.microsoft.com/en-us/aspnet/core/?view=aspnetcore-10.0) [Accessed 22 October 2026].
 - Render, n.d. *Web Services*. [Online] Available at: [render.com/docs/web-services](https://render.com/docs/web-services) [Accessed 22 October 2026].
