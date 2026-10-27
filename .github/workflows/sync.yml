@@ -1,0 +1,23 @@
+name: Sync to Bridge Repo
+
+on:
+  push:
+    branches: [ main ] # Change to 'master' if your default branch is master
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout private org repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Push to public bridge repo
+        env:
+          PAT: ${{ secrets.GH_PAT }}
+        run: |
+          git config --global user.name "GitHub Action-Bot"
+          git config --global user.email "action@github.com"
+          git remote add public https://ST10443021:$PAT@github.com/ST10443021/prog7314-bridgerepo-st10443021.git
+          git push public main --force
