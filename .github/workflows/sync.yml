@@ -2,7 +2,7 @@ name: Sync to Bridge Repo
 
 on:
   push:
-    branches: [ main ] # Change to 'master' if your default branch is master
+    branches: [ main ]
 
 jobs:
   sync:
@@ -19,5 +19,5 @@ jobs:
         run: |
           git config --global user.name "GitHub Action-Bot"
           git config --global user.email "action@github.com"
-          git remote add public https://ST10443021:$PAT@github.com/ST10443021/prog7314-bridgerepo-st10443021.git
+          git remote add public https://x-access-token:$PAT@github.com/ST10443021/prog7314-bridgerepo-st10443021.git
           git push public main --force
