@@ -1,4 +1,4 @@
-# DevLedger
+# DevLedger PoE Final
 
 <img src="DevLedger/android/app/src/main/ic_launcher-playstore.png" alt="DevLedger app icon" width="144">
 
