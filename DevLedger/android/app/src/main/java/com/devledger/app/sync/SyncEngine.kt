@@ -21,6 +21,8 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import retrofit2.HttpException
 
+// Reference scope: Background work with WorkManager. (Google Developers, n.d.c). See REFERENCES-CODE.md for full entries.
+
 data class SyncProgress(val userId: String, val processed: Int, val total: Int, val phase: String)
 data class SyncOutcome(val status: String, val userId: String?, val uploaded: Int, val message: String? = null,
     val finishedAt: Long = System.currentTimeMillis())

@@ -7,6 +7,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
+// Reference scope: Token storage and OkHttp authenticators. (Google Developers, n.d.e; Square, n.d.). See REFERENCES-CODE.md for full entries.
+
 /**
  * Stores the JWT access/refresh token pair in an EncryptedSharedPreferences file backed
  * by the Android Keystore, per the Part 1 design's requirement that tokens never sit in

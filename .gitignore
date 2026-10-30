@@ -12,6 +12,15 @@
 *.env.*
 *.pem
 *.pfx
+keystore.properties
+keystore/
+
+# The PoE forbids compressed archives in the repository
+*.zip
+*.7z
+*.rar
+*.tar
+*.gz
 
 # ==========================================
 # Android & Mobile Client (Keystores & Firebase)
@@ -44,6 +53,9 @@ DocumentLayout.backup.json
 # ==========================================
 .idea/
 .gradle/
+.kotlin/
+.artifacts/
+TestResults/
 **/build/
 **/captures/
 .externalNativeBuild/

@@ -16,6 +16,8 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 
+// Reference scope: JVM unit testing for Android with JUnit, MockK and Truth. (Google Developers, n.d.s). See REFERENCES-CODE.md for full entries.
+
 @OptIn(ExperimentalCoroutinesApi::class)
 class BiometricSecuritySetupTest {
     private val dispatcher = StandardTestDispatcher()
@@ -41,12 +43,12 @@ class BiometricSecuritySetupTest {
         vm.isFingerprintEnabled = true
         vm.saveSetup()?.join()
         advanceUntilIdle()
-        coVerify(exactly = 0) { auth.saveSecurityProfile(any(), any(), any()) }
+        coVerify(exactly = 0) { auth.saveSecurityProfile(any()) }
         assertFalse(vm.isSaved)
     }
 
     @Test fun `server failure leaves no new local PIN or biometric approval`() = runTest(dispatcher) {
-        coEvery { auth.saveSecurityProfile(any(), any(), any()) } returns DevLedgerResult.Error("Offline")
+        coEvery { auth.saveSecurityProfile(any()) } returns DevLedgerResult.Error("Offline")
         val vm = setup()
         vm.saveSetup()?.join()
         advanceUntilIdle()
@@ -57,13 +59,13 @@ class BiometricSecuritySetupTest {
     }
 
     @Test fun `verified setup saves through existing API before local activation`() = runTest(dispatcher) {
-        coEvery { auth.saveSecurityProfile(any(), any(), any()) } returns DevLedgerResult.Success(user)
+        coEvery { auth.saveSecurityProfile(any()) } returns DevLedgerResult.Success(user)
         val vm = setup()
         vm.isFingerprintEnabled = true
         vm.isFingerprintVerified = true
         vm.saveSetup()?.join()
         advanceUntilIdle()
-        coVerify { auth.saveSecurityProfile(credentials.hash, credentials.salt, true) }
+        coVerify { auth.saveSecurityProfile(true) }
         verify { pins.savePinCredentials(credentials, user.email) }
         verify { pins.setFingerprintRegistered(true, user.email) }
         assertTrue(vm.isSaved)

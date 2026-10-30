@@ -25,6 +25,8 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
+// Reference scope: Background work with WorkManager. (Google Developers, n.d.c). See REFERENCES-CODE.md for full entries.
+
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class SyncViewModel @Inject constructor(
@@ -135,21 +137,13 @@ class SyncViewModel @Inject constructor(
         SyncScheduler.syncNow(context, state.wifiOnlySync, state.chargingOnlySync)
     }
     fun retryFailed() = syncNow()
-    fun onAutoSyncToggle(enabled: Boolean) { viewModelScope.launch {
-        settingsRepository.setAutoSyncEnabled(enabled)
-        if (enabled) reschedule() else SyncScheduler.cancelPeriodicSync(context)
-    } }
+    // These only persist the preference. DevLedgerApplication observes the saved values and
+    // (re)schedules or cancels the periodic job, so every screen shares one code path.
+    fun onAutoSyncToggle(enabled: Boolean) { viewModelScope.launch { settingsRepository.setAutoSyncEnabled(enabled) } }
     fun onWifiOnlyToggle(enabled: Boolean) { viewModelScope.launch {
-        settingsRepository.setWifiOnlySync(enabled); if (_uiState.value.autoSyncEnabled) reschedule()
+        settingsRepository.setWifiOnlySync(enabled)
+        settingsRepository.pushWifiOnlyToApi(enabled)
     } }
-    fun onChargingOnlyToggle(enabled: Boolean) { viewModelScope.launch {
-        settingsRepository.setChargingOnlySync(enabled); if (_uiState.value.autoSyncEnabled) reschedule()
-    } }
-    fun onFrequencyChange(minutes: Int) { viewModelScope.launch {
-        settingsRepository.setSyncFrequencyMinutes(minutes); if (_uiState.value.autoSyncEnabled) reschedule()
-    } }
-    private suspend fun reschedule() {
-        SyncScheduler.schedulePeriodicSync(context, settingsRepository.wifiOnlySync.first(),
-            settingsRepository.syncFrequencyMinutes.first(), settingsRepository.chargingOnlySync.first())
-    }
+    fun onChargingOnlyToggle(enabled: Boolean) { viewModelScope.launch { settingsRepository.setChargingOnlySync(enabled) } }
+    fun onFrequencyChange(minutes: Int) { viewModelScope.launch { settingsRepository.setSyncFrequencyMinutes(minutes) } }
 }

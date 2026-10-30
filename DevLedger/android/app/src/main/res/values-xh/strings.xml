@@ -98,7 +98,7 @@
     <string name="settings_notifications">Izaziso</string>
     <string name="settings_push_notifications">Izaziso Ezityhalelwayo</string>
     <string name="settings_sync">Useto longqamaniso</string>
-    <string name="settings_auto_sync">Ungqamaniso oluzenzekelayo</string>
+    <string name="settings_auto_sync">Ungqamaniso lwangasemva oluzenzekelayo</string>
     <string name="settings_wifi_only">Ngqamanisa nge-Wi-Fi kuphela</string>
     <string name="settings_sync_now">Ngqamanisa ngoku</string>
     <string name="settings_currency">Imali esisiseko</string>

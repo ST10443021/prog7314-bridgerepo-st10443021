@@ -1,7 +1,11 @@
 package com.devledger.app.data.local
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.util.Base64
+import android.util.Log
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.Locale
 import java.security.MessageDigest
@@ -14,6 +18,10 @@ import javax.inject.Singleton
 /**
  * Securely stores and verifies the user's fallback PIN and Biometric state.
  * Supports multi-user separation by using email prefixes to avoid cross-account bleeding.
+ *
+ * The PIN is stored only on this device as a salted PBKDF2 hash inside EncryptedSharedPreferences,
+ * whose keys are held in the Android Keystore (Google Developers, n.d.e). It is never uploaded to
+ * the API. Wrong entries are throttled by [PinLockoutPolicy]. See REFERENCES-CODE.md.
  */
 data class PinCredentials(val hash: String, val salt: String)
 
@@ -22,10 +30,77 @@ class PinStorage @Inject constructor(
     @ApplicationContext context: Context,
 ) {
 
-    private val preferences = context.getSharedPreferences(
-        PREFS_NAME,
-        Context.MODE_PRIVATE
-    )
+    private val preferences: SharedPreferences = openPreferences(context)
+
+    /**
+     * Opens the encrypted store and moves any values from the old plain-text file into it once.
+     * If the Keystore cannot be used (some emulators and unit tests) the legacy private file is
+     * used so the app still works; the failure is logged.
+     */
+    private fun openPreferences(context: Context): SharedPreferences {
+        val legacy = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val secure = try {
+            val masterKey = MasterKey.Builder(context)
+                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                .build()
+            EncryptedSharedPreferences.create(
+                context,
+                SECURE_PREFS_NAME,
+                masterKey,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+            )
+        } catch (error: Exception) {
+            Log.e(TAG, "Encrypted PIN storage unavailable; using private app storage", error)
+            return legacy
+        }
+        migrateLegacy(legacy, secure)
+        return secure
+    }
+
+    private fun migrateLegacy(legacy: SharedPreferences, secure: SharedPreferences) {
+        val old = legacy.all
+        if (old.isEmpty()) return
+        val editor = secure.edit()
+        for ((key, value) in old) {
+            when (value) {
+                is String -> editor.putString(key, value)
+                is Boolean -> editor.putBoolean(key, value)
+                is Int -> editor.putInt(key, value)
+                is Long -> editor.putLong(key, value)
+            }
+        }
+        if (editor.commit()) {
+            legacy.edit().clear().apply()
+            Log.i(TAG, "Moved PIN settings into encrypted storage")
+        }
+    }
+
+    /** Wrong PIN entries since the last success for this account. */
+    fun failedAttempts(email: String? = null): Int =
+        preferences.getInt(KEY_FAILURES + suffix(email), 0)
+
+    /** Milliseconds until the PIN pad unlocks again; 0 when it is not locked. */
+    fun lockoutRemainingMillis(email: String? = null, now: Long = System.currentTimeMillis()): Long =
+        (preferences.getLong(KEY_LOCKED_UNTIL + suffix(email), 0L) - now).coerceAtLeast(0L)
+
+    /** Records a wrong entry and returns the lock-out (ms) it triggers, 0 if none yet. */
+    fun recordFailedPin(email: String? = null, now: Long = System.currentTimeMillis()): Long {
+        val suffix = suffix(email)
+        val failures = preferences.getInt(KEY_FAILURES + suffix, 0) + 1
+        val lockMillis = PinLockoutPolicy.lockoutMillisFor(failures)
+        preferences.edit()
+            .putInt(KEY_FAILURES + suffix, failures)
+            .putLong(KEY_LOCKED_UNTIL + suffix, if (lockMillis > 0) now + lockMillis else 0L)
+            .apply()
+        return lockMillis
+    }
+
+    /** Clears the failure counter after a correct PIN. */
+    fun resetPinAttempts(email: String? = null) {
+        val suffix = suffix(email)
+        preferences.edit().remove(KEY_FAILURES + suffix).remove(KEY_LOCKED_UNTIL + suffix).apply()
+    }
 
     fun savePin(pin: String, email: String? = null) {
         savePinCredentials(createPinCredentials(pin), email)
@@ -100,6 +175,8 @@ class PinStorage @Inject constructor(
             .remove(KEY_PIN_HASH + suffix)
             .remove("fingerprint_registered" + suffix)
             .remove(KEY_DEVICE_VERIFIED + suffix)
+            .remove(KEY_FAILURES + suffix)
+            .remove(KEY_LOCKED_UNTIL + suffix)
             .apply()
     }
 
@@ -151,7 +228,11 @@ class PinStorage @Inject constructor(
     }
 
     companion object {
+        private const val TAG = "PinStorage"
         private const val PREFS_NAME = "devledger_security"
+        private const val SECURE_PREFS_NAME = "devledger_security_encrypted"
+        private const val KEY_FAILURES = "pin_failures"
+        private const val KEY_LOCKED_UNTIL = "pin_locked_until"
 
         // Old fingerprint_registered keys may have been written from a server flag,
         // so require one fresh native verification after this patch is installed.

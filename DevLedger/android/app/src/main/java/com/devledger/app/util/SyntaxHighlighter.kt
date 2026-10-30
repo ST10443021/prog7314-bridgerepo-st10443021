@@ -6,6 +6,8 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import com.devledger.app.ui.theme.DevLedgerColors
 
+// Reference scope: Utility helpers kept free of UI code. (Google Developers, n.d.f). See REFERENCES-CODE.md for full entries.
+
 /**
  * Very basic syntax highlighter using regex for the code editor and viewer.
  * Highlighting colors match the DevLedger pixel-accurate Figma export.

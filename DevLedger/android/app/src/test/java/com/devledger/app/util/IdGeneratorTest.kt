@@ -3,6 +3,8 @@ package com.devledger.app.util
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 
+// Reference scope: JVM unit testing for Android with JUnit, MockK and Truth. (Google Developers, n.d.s). See REFERENCES-CODE.md for full entries.
+
 class IdGeneratorTest {
 
     @Test

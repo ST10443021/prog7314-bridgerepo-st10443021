@@ -54,6 +54,7 @@ import java.util.*
 fun AddTransactionScreen(
     onSaved: () -> Unit,
     onBack: () -> Unit,
+    onOpenHistory: (String) -> Unit = {},
     viewModel: AddTransactionViewModel = hiltViewModel(),
 ) {
     val strings = rememberAppStrings()
@@ -84,7 +85,7 @@ fun AddTransactionScreen(
                 Icon(Icons.Default.ArrowBack, contentDescription = strings.get(R.string.lang_back), tint = Color.White)
             }
             Text(strings.get(R.string.lang_add_transaction), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-            IconButton(onClick = { /* History */ }) {
+            IconButton(onClick = { onOpenHistory(state.type) }) {
                 Icon(Icons.Default.History, contentDescription = strings.get(R.string.lang_history), tint = DevLedgerColors.AccentBlue)
             }
         }
@@ -323,7 +324,7 @@ private fun CurrencyAmountField(
     OutlinedTextField(
         value = amount,
         onValueChange = onAmountChange,
-        placeholder = { Text("0.00", color = DevLedgerColors.TextMuted) },
+        placeholder = { Text(rememberAppStrings().get(R.string.placeholder_amount), color = DevLedgerColors.TextMuted) },
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         keyboardOptions = KeyboardOptions(

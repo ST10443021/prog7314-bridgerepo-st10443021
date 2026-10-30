@@ -30,8 +30,15 @@ object NetworkModule {
         tokenManager: TokenManager,
         authenticator: TokenAuthenticator
     ): OkHttpClient {
+        // Log only the request line and status (BASIC). Bodies are never logged because login and
+        // registration bodies carry passwords and the responses carry JWTs, and any app on a
+        // debuggable device could read them from logcat (OWASP Foundation, n.d.b). Sensitive
+        // headers are redacted as a second line of defence. See REFERENCES-CODE.md.
         val logging = HttpLoggingInterceptor().apply {
-            level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY else HttpLoggingInterceptor.Level.NONE
+            level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BASIC else HttpLoggingInterceptor.Level.NONE
+            redactHeader("Authorization")
+            redactHeader("Cookie")
+            redactHeader("Set-Cookie")
         }
         return OkHttpClient.Builder()
             .addInterceptor(AuthInterceptor(tokenManager))

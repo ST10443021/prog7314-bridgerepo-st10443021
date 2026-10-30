@@ -14,6 +14,8 @@ import org.junit.Before
 import org.junit.Test
 import java.io.IOException
 
+// Reference scope: JVM unit testing for Android with JUnit, MockK and Truth. (Google Developers, n.d.s). See REFERENCES-CODE.md for full entries.
+
 @OptIn(ExperimentalCoroutinesApi::class)
 class TransactionDeletionViewModelTest {
     private val dispatcher = StandardTestDispatcher()

@@ -108,7 +108,7 @@
     <string name="settings_notifications">Notifications</string>
     <string name="settings_push_notifications">Push Notifications</string>
     <string name="settings_sync">Sync Settings</string>
-    <string name="settings_auto_sync">Auto Sync</string>
+    <string name="settings_auto_sync">Automatic background sync</string>
     <string name="settings_wifi_only">Sync On Wi-Fi Only</string>
     <string name="settings_sync_now">Sync Now</string>
     <string name="settings_currency">Base Currency</string>

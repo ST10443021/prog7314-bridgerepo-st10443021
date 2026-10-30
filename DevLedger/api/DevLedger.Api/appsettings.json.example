@@ -1,0 +1,15 @@
+{
+  "Logging": { "LogLevel": { "Default": "Information", "Microsoft.AspNetCore": "Warning" } },
+  "AllowedHosts": "*",
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=localhost;Port=5432;Database=devledger;Username=postgres;Password=CHANGE_ME"
+  },
+  "Jwt": {
+    "SigningKey": "REQUIRED: at least 32 random characters. Prefer user-secrets / the Jwt__SigningKey environment variable instead of this file.",
+    "Issuer": "DevLedger.Api"
+  },
+  "Google": { "WebClientId": "<Google OAuth web client id>" },
+  "GitHub": { "ClientId": "<GitHub OAuth client id>", "ClientSecret": "<set via secrets, never commit>" },
+  "Firebase": { "CredentialsPath": "/etc/secrets/firebase-service-account.json" },
+  "Swagger": { "Enabled": false }
+}

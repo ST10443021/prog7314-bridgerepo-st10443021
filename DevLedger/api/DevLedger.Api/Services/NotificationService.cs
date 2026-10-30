@@ -23,6 +23,16 @@ public class NotificationService
         _logger = logger;
     }
 
+    /// <summary>True when the Firebase Admin SDK was initialised with valid credentials.</summary>
+    public virtual bool IsConfigured => FirebaseApp.DefaultInstance is not null;
+
+    /// <summary>
+    /// Sends a DATA-ONLY high-priority message. A message that carries a "notification" payload is
+    /// shown by Android itself while the app is in the background, and the app's
+    /// onMessageReceived never runs, so the alert would never reach the in-app Notifications list
+    /// (Firebase, n.d.a). With data only, DevLedgerMessagingService always runs, shows the system
+    /// notification itself and records it in Room.
+    /// </summary>
     public virtual async Task SendToTokensAsync(IEnumerable<string> fcmTokens, string title, string body, string type)
     {
         if (FirebaseApp.DefaultInstance is null)
@@ -39,8 +49,13 @@ public class NotificationService
                 await messaging.SendAsync(new Message
                 {
                     Token = token,
-                    Notification = new Notification { Title = title, Body = body },
-                    Data = new Dictionary<string, string> { ["type"] = type },
+                    Data = new Dictionary<string, string>
+                    {
+                        ["title"] = title,
+                        ["body"] = body,
+                        ["type"] = type,
+                    },
+                    Android = new AndroidConfig { Priority = Priority.High },
                 });
             }
             catch (FirebaseMessagingException ex)

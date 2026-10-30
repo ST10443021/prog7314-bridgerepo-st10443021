@@ -52,6 +52,8 @@ import com.devledger.app.R
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+// Reference scope: Jetpack Compose screen. (Google Developers, n.d.p). See REFERENCES-CODE.md for full entries.
+
 @HiltViewModel
 class SecuritySetupViewModel @Inject constructor(
     private val pinStorage: PinStorage,
@@ -93,8 +95,8 @@ class SecuritySetupViewModel @Inject constructor(
                     pinStorage.createPinCredentials(requestedPin)
                 }
                 val result = withTimeout(10_000L) {
-                    authRepository.saveSecurityProfile(credentials.hash, credentials.salt,
-                        requestedBiometrics)
+                    // Only the biometric preference is uploaded; the PIN hash stays on this device.
+                    authRepository.saveSecurityProfile(requestedBiometrics)
                 }
                 when (result) {
                     is DevLedgerResult.Error -> errorText =
@@ -167,6 +169,7 @@ fun SecuritySetupScreen(
                     viewModel.isFingerprintVerified = false
                 },
                 onFailed = { message -> viewModel.errorText = UiText.Dynamic(message) },
+                mode = BiometricAuthHelper.Mode.ENROLL,
             )
         } else {
             viewModel.errorText = UiText.Resource(R.string.lang_biometric_hardware_unavailable)
@@ -283,7 +286,7 @@ fun SecuritySetupScreen(
             value = viewModel.pin,
             onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) viewModel.pin = it },
             label = strings.get(R.string.lang_create_4_digit_pin),
-            placeholder = "0000",
+            placeholder = strings.get(R.string.placeholder_pin),
             isPassword = true,
             isValid = viewModel.pin.length == 4,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
@@ -294,7 +297,7 @@ fun SecuritySetupScreen(
             value = viewModel.confirmPin,
             onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) viewModel.confirmPin = it },
             label = strings.get(R.string.lang_confirm_4_digit_pin),
-            placeholder = "0000",
+            placeholder = strings.get(R.string.placeholder_pin),
             isPassword = true,
             isValid = pinMatch,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),

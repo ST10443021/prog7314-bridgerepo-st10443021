@@ -6,6 +6,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
+// Reference scope: Jetpack Compose theming and reusable components. (Google Developers, n.d.p). See REFERENCES-CODE.md for full entries.
+
 // The Figma design uses the Inter font family. Compose falls back to the system
 // sans-serif font here; drop Inter's .ttf files into res/font/ and reference them
 // via FontFamily(Font(R.font.inter_regular), ...) for a byte-for-byte match.

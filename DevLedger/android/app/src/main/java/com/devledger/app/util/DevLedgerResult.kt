@@ -2,6 +2,8 @@ package com.devledger.app.util
 
 import java.io.IOException
 
+// Reference scope: Utility helpers kept free of UI code. (Google Developers, n.d.f). See REFERENCES-CODE.md for full entries.
+
 /**
  * Lightweight result wrapper used across the repository layer so ViewModels can react
  * to success/failure without throwing across coroutine boundaries, and so offline

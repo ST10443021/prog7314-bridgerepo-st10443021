@@ -234,4 +234,14 @@ interface SnippetDao {
 
     @Query("SELECT EXISTS(SELECT 1 FROM deleted_entities WHERE userId = :userId AND entityType = 'folder' AND entityId = :id)")
     suspend fun hasDeletedFolder(userId: String, id: String): Boolean
+
+    /** Live (not deleted) snippets of an account that carry at least one tag; used by tag rename/delete. */
+    @Query("SELECT * FROM snippets WHERE userId = :userId AND tagsCsv != '' AND syncStatus NOT IN ('DELETE_PENDING', 'DELETED')")
+    suspend fun getTaggedForUser(userId: String): List<SnippetEntity>
+
+    /** Writes several snippets atomically so a tag rewrite is never half-applied. */
+    @Transaction
+    suspend fun upsertAll(snippets: List<SnippetEntity>) {
+        for (snippet in snippets) upsert(snippet)
+    }
 }

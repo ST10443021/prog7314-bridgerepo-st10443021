@@ -4,6 +4,8 @@ import com.devledger.app.R
 import com.devledger.app.util.localization.AppStrings
 import java.util.concurrent.TimeUnit
 
+// Reference scope: Utility helpers kept free of UI code. (Google Developers, n.d.f). See REFERENCES-CODE.md for full entries.
+
 /** Relative time resolved with Android plurals for the current application language. */
 object TimeAgo {
     fun format(timestampMillis: Long, strings: AppStrings): String {

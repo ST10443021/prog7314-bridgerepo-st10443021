@@ -11,6 +11,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 
+// Reference scope: ASP.NET Core unit testing with xUnit and FluentAssertions. (Microsoft Learn, n.d.d). See REFERENCES-CODE.md for full entries.
+
 namespace DevLedger.Api.Tests;
 
 /// <summary>Production controllers and budget service, isolated EF InMemory store,

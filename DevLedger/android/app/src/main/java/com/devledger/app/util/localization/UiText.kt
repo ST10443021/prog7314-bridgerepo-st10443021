@@ -3,6 +3,8 @@ package com.devledger.app.util.localization
 import androidx.annotation.PluralsRes
 import androidx.annotation.StringRes
 
+// Reference scope: Per-app language support. (Google Developers, n.d.r). See REFERENCES-CODE.md for full entries.
+
 /** Locale-independent UI state: resolve only at the screen, using its current locale. */
 sealed interface UiText {
     data class Resource(@StringRes val id: Int, val args: List<Any> = emptyList()) : UiText

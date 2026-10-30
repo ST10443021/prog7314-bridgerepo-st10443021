@@ -5,6 +5,8 @@ import com.devledger.app.ui.screens.sync.*
 import org.junit.Assert.*
 import org.junit.Test
 
+// Reference scope: JVM unit testing for Android with JUnit, MockK and Truth. (Google Developers, n.d.s). See REFERENCES-CODE.md for full entries.
+
 class SyncStatusModelTest {
     @Test fun `empty queue alone is not a successful sync`() {
         assertFalse(SyncUiState(accountId = "user", isLoaded = true).isUpToDate)

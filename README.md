@@ -1,17 +1,25 @@
-# DevLedger PoE Final
+# DevLedger
 
-<img src="DevLedger/android/app/src/main/ic_launcher-playstore.png" alt="DevLedger app icon" width="144">
+<p align="center">
+  <img src="store/feature-graphic-1024x500.png" alt="DevLedger feature graphic" width="720">
+</p>
 
-**Personal Developer Utility & Asset Vault · PROG7314 Part 3 — Final Portfolio of Evidence**
+[![Android CI](https://github.com/EMGPPT/prog7314-2026-poe-st10443021/actions/workflows/android-ci.yml/badge.svg)](https://github.com/EMGPPT/prog7314-2026-poe-st10443021/actions/workflows/android-ci.yml)
+[![API CI](https://github.com/EMGPPT/prog7314-2026-poe-st10443021/actions/workflows/api-ci.yml/badge.svg)](https://github.com/EMGPPT/prog7314-2026-poe-st10443021/actions/workflows/api-ci.yml)
 
-DevLedger is a native Android application that brings a developer's reusable code, configuration templates and freelance finances into one place. The Snippet Vault helps organise development material, while the Financial Tracker records income, expenses and supporting attachments. Local storage and background synchronisation support continued work when connectivity is unavailable.
+**Personal Developer Utility and Asset Vault** · PROG7314 Final Portfolio of Evidence · Technical report
 
-**Repository:** [Institutional GitHub repository](https://github.com/EMGPPT/prog7314-2026-poe-st10443021)  
-**Changes since Part 2:** [Release notes](RELEASE_NOTES.md)
+> **Demonstration video:** [Watch on YouTube (unlisted)](https://youtu.be/REPLACE_WITH_VIDEO_ID)
+> **Release notes:** [RELEASE_NOTES.md](RELEASE_NOTES.md) · **AI-use write-up:** [AI_USE_WRITEUP.md](AI_USE_WRITEUP.md) · **Code references:** [REFERENCES-CODE.md](REFERENCES-CODE.md)
 
-**Current status, 24 October 2026:** Part 3 feature and artwork changes are implemented. Institutional Android and API CI passed for commit `055bf26` on `blake`; downloaded reports confirm 151 Android and 68 API tests passing, zero Android lint errors and a matching debug-APK checksum. Blake has also confirmed successful verification after merging into `main`; the exact main commit and run links remain to be recorded below. Hamza's physical-device acceptance, the signed production release and final demonstration evidence remain pending.
+## Contents
+1. [Abstract](#1-abstract)  2. [Team](#2-team)  3. [Requirements and rubric mapping](#3-requirements-and-rubric-mapping)  4. [Architecture](#4-architecture)  5. [Feature design](#5-feature-design-and-design-considerations)  6. [REST API](#6-rest-api)  7. [DevOps](#7-devops-and-version-control)  8. [Testing](#8-testing)  9. [Release and Play Store readiness](#9-release-and-play-store-readiness)  10. [Setup](#10-setup-and-configuration)  11. [Screenshots](#11-screenshots)  12. [Limitations](#12-known-limitations)  13. [References](#13-references)
 
-## Team members
+## 1. Abstract
+
+DevLedger is a native Android app (Kotlin, Jetpack Compose) that keeps a developer's reusable code and freelance finances in one place. The **Snippet and Config Vault** stores code, scripts, regex and configuration templates in folders and tags. The **Financial Tracker** records freelance income and hosting or tool costs, with a monthly budget that triggers push alerts. A custom ASP.NET Core REST API with PostgreSQL provides sign-in (email, Google, GitHub), cloud sync and Firebase Cloud Messaging push. Everything works offline: changes are saved to Room and synchronised by WorkManager when a connection returns. The interface is available in English, Afrikaans and isiXhosa.
+
+## 2. Team
 
 | Name | Student number |
 |---|---|
@@ -20,279 +28,194 @@ DevLedger is a native Android application that brings a developer's reusable cod
 | Connor Albertyn | ST10437293 |
 | Muzammil Cassim | ST10259792 |
 
-## 1. Purpose and features
+## 3. Requirements and rubric mapping
 
-DevLedger was designed in Part 1, prototyped in Part 2 and refined for Part 3. Its interface combines a developer asset vault with personal financial tracking, account settings and visibility into background work.
+| Rubric criterion (marks) | Where it is implemented | Evidence |
+|---|---|---|
+| App runs on a physical device (5) | Release build, `targetSdk` 36; invalid input is validated in view models and repositories | Demonstration video; Section 8 |
+| Biometric authentication (10) | `BiometricAuthHelper`, `BiometricKeyManager` (Keystore-bound), `PinStorage`, `PinLockoutPolicy` | Video; unit tests in `security/` |
+| Offline mode with sync (10) | Room entities, `SyncScheduler`, `SyncWorker`, `DevLedgerApplication` preference observer | Video (airplane-mode demo); `repository/` and `sync/` tests |
+| Real-time notifications (10) | `DevLedgerMessagingService`, `NotificationsController`, `NotificationService`, `BudgetAlertService` | Video (live push); API tests |
+| Multi-language (10) | `values/`, `values-af/`, `values-xh/` (640 strings, 8 plurals each) | Video; `localization/` tests |
+| **User Defined 4:** Snippet and Config Vault (10) | `ui/screens/snippets`, `ui/screens/folders`, `SnippetRepository`, `FolderRepository`, `UserTagRepository` | Video; repository tests |
+| **User Defined 5:** Developer Financial Tracker (10) | `ui/screens/finance`, `TransactionRepository`, budget in Settings, `BudgetAlertService` | Video; `FinanceUiStateTest`, `BudgetInputTest` |
+| User interface (10) | Single design system in `ui/theme` and `ui/components`; every control wired | Section 11 |
+| Play Store preparation (5) | Section 9, `store/`, signed APK/AAB from CI | GitHub Release assets |
+| AI-use write-up (5) | [AI_USE_WRITEUP.md](AI_USE_WRITEUP.md) | |
+| GitHub, README, automated testing (10) | Section 7; `.github/workflows/` | Actions tab, commit history |
+| Demonstration video (5) | Link at the top of this file | |
 
-| Area | Available functionality |
-|---|---|
-| Authentication | Email registration/login, Google sign-in and GitHub OAuth through the custom API. |
-| Device security | Native biometric verification, an app PIN fallback and account-specific biometric preferences. Enabling biometrics requires a successful native verification. |
-| Snippet Vault | Code/configuration snippets, folders, tags, syntax-aware editing, line numbers, search, favourites, sharing, duplication and archiving. |
-| Financial Tracker | Income/expense entries, categories, monthly summaries and charts, recurring transactions, receipt/invoice attachments and a configurable monthly budget. |
-| Offline work | Room-backed local data, queued supported changes, WorkManager scheduling and synchronisation with the API after connectivity returns. |
-| Sync recovery | Explicit conflict handling, a keep-both recovery option, retry controls and status that distinguishes queued work, failures and incomplete downloads. |
-| Notifications | Firebase Cloud Messaging integration, retryable device registration and backend budget alerts triggered by direct transaction creation and batch synchronisation. |
-| Languages | English, Afrikaans and isiXhosa resources across screens, validation, prompts and relevant messages; locale-aware formatting and notification text. |
-| Preferences | Saved application settings, including language, security and synchronisation preferences such as Wi-Fi-only and charging-only operation. |
-| Branding | Launcher, round and adaptive icons, a themed monochrome icon, notification icon and existing 512 × 512 store artwork. |
+**Learning outcomes.** Blob storage and a NoSQL database are PoE outcomes but are not separate rubric lines. DevLedger stores receipt attachments as Base64 text in PostgreSQL and uses a relational database; it does not use a dedicated blob service or a NoSQL store. This is declared openly (Section 12) rather than claimed.
 
-These are implementation descriptions. The acceptance checks in Section 7 remain the record of what has been demonstrated on a phone.
-
-**Part 1 feature mapping — pending:** add the agreed Part 1 descriptions and evidence for rubric entries **User Defined 4** and **User Defined 5**. The Snippet Vault and Financial Tracker already exist; their rubric numbering must be confirmed against Part 1.
-
-## 2. Architecture and design
+## 4. Architecture
 
 ```mermaid
 flowchart TD
-    UI["Android UI · Compose and ViewModels"] <--> REPO["Repositories · Hilt and Retrofit"]
-    REPO <--> ROOM["Room · local data and pending changes"]
-    ROOM <--> WORK["WorkManager · sync and retries"]
-    WORK <--> API["ASP.NET Core API"]
+    UI["Compose screens + ViewModels"] <--> REPO["Repositories (Hilt, Retrofit)"]
+    REPO <--> ROOM["Room: local data + PENDING queue"]
+    APP["DevLedgerApplication observer"] --> WORK["WorkManager: periodic + one-time sync"]
+    ROOM <--> WORK
+    WORK <-->|HTTPS / JSON / JWT| API["ASP.NET Core API"]
     REPO <-->|HTTPS / JSON / JWT| API
-    API <--> DB["PostgreSQL · Entity Framework Core"]
-    UI --> IDP["Google and GitHub sign-in"]
+    API <--> DB[("PostgreSQL via EF Core")]
+    UI --> IDP["Google / GitHub sign-in"]
     API <--> IDP
     API --> FCM["Firebase Cloud Messaging"]
-    FCM --> UI
+    FCM --> SVC["DevLedgerMessagingService"]
+    SVC --> ROOM
 ```
 
-**Client separation.** Compose screens render ViewModel state; repositories coordinate local persistence and API access. This keeps presentation, data access and background work separate (Android Developers, n.d.a).
+**Client layers.** Screens render ViewModel state; repositories combine Room and Retrofit; Hilt wires them (Google Developers, n.d.a; n.d.o). User-facing text lives in `UiText`/resources so the language can change without rebuilding state.
 
-**Offline persistence.** Supported edits are recorded locally and queued for upload. Room provides structured on-device storage, while WorkManager schedules persistent work subject to connectivity and saved constraints (Android Developers, n.d.b; n.d.c). Sync acknowledgement preserves a newer local edit made during an upload, and conflicts require an explicit recovery decision.
+**Offline-first sync.** Every write goes to Room first with `syncStatus = PENDING`, then `SyncScheduler.queueAfterLocalChange` queues a one-time job if automatic sync is on. `DevLedgerApplication` observes the signed-in user and the saved sync preferences and schedules or cancels the periodic job, so the schedule is correct at start-up, after login and after any settings change (Google Developers, n.d.c; n.d.l).
 
-**Backend and identity.** The ASP.NET Core API uses EF Core/Npgsql for PostgreSQL persistence and JWT-protected endpoints (Microsoft, n.d.). Google ID tokens are verified by the server; GitHub authorisation codes are exchanged server-side. The GitHub client secret remains on the server (Google, n.d.; GitHub, n.d.a).
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant R as Repository
+    participant DB as Room
+    participant S as SyncScheduler
+    participant W as SyncWorker
+    participant A as API
+    U->>R: edit snippet (offline)
+    R->>DB: save, status PENDING
+    R->>S: queueAfterLocalChange
+    S-->>W: enqueue (waits for network)
+    Note over U,A: connection returns
+    W->>A: POST /api/sync/batch
+    A-->>W: accepted / conflicts
+    W->>DB: mark SYNCED or CONFLICT
+```
 
-**Local verification.** AndroidX BiometricPrompt performs native biometric verification, with a separate app PIN fallback. The saved preference and per-account local registration state are reconciled. DevLedger does not collect fingerprint images; no claim is made that all vault data is encrypted by a biometric-bound key (Android Developers, n.d.d).
+**Push notifications.** The API sends data-only, high-priority FCM messages. The app is therefore always invoked, shows the system notification and writes it to Room, whether it is in the foreground or the background (Firebase, n.d.a). A tap opens the Notifications list once the user is past the PIN/biometric gate.
 
-**Messages and alerts.** Translated resources are resolved for the selected language instead of storing English UI text in ViewModel state (Android Developers, n.d.e). Backend budget checks use the relevant UTC month and base currency, prepare threshold alerts within the database transaction and send after a successful commit. Firebase supplies the push transport (Firebase, n.d.a; n.d.b).
+```mermaid
+sequenceDiagram
+    participant App as Android app
+    participant API as DevLedger API
+    participant FCM as Firebase
+    App->>API: POST /api/transactions (expense crosses 80% of budget)
+    API->>API: BudgetAlertService (after commit)
+    API->>FCM: data-only message (title, body, type)
+    FCM->>App: onMessageReceived
+    App->>App: show notification + store in Room
+```
 
-## 3. Repository layout
+## 5. Feature design and design considerations
 
-Paths below are relative to the **Git repository root**, which contains the outer `DevLedger` directory.
+**Biometric authentication.** AndroidX BiometricPrompt (strong class only) is bound to an AES key in the Android Keystore created with `setUserAuthenticationRequired(true)` and `setInvalidatedByBiometricEnrollment(true)`. A scan only counts if the key then performs an operation, and adding a new biometric invalidates the key (Google Developers, n.d.d; n.d.m). The 4-digit PIN fallback is hashed with a salt, kept in EncryptedSharedPreferences, never sent to the server, and locks after five wrong entries (30 s, 1, 5, 15, 30 min) because a 4-digit PIN has only 10,000 combinations (OWASP Foundation, n.d.a).
 
-| Path | Contents |
+**Offline mode.** Room is the source of truth. Conflicts are explicit, with a keep-both option; a newer edit made during an upload stays pending. Users choose automatic or manual sync, Wi-Fi only, charging only and the interval (15 minutes or more, the WorkManager minimum). Turning automatic sync off means changes wait for **Sync now**.
+
+**Real-time notifications.** Budget alerts at 80% and 100% are evaluated on the server after the database transaction commits, for both direct entries and offline-synced batches. A test endpoint and button send a real push on demand.
+
+**Multi-language.** English, Afrikaans and isiXhosa through string resources and per-app locale; server messages are localised too (Google Developers, n.d.r).
+
+**Snippet and Config Vault.** Folders, tags, favourites, archive and recycle bin; folders and tags are renamed or deleted from a three-dot menu, with tag changes applied to every affected snippet and synced.
+
+**Financial Tracker.** Income and expense entries, categories, charts, recurring transactions, attachments and a monthly budget (set in Settings, cached offline) shown as a progress bar.
+
+**Security design decisions.** HTTPS only in release builds; debug logs never include request bodies; the API requires a real JWT key, rate limits authentication, hides Swagger in production and does not store PIN material (Section 6).
+
+## 6. REST API
+
+Base URL: `https://devledger-api-op1w.onrender.com/`. All routes except `/api/auth/*` need a Bearer JWT.
+
+| Method and route | Purpose |
 |---|---|
-| `README.md` | Project overview, setup and submission evidence. |
-| `RELEASE_NOTES.md` | Part 3 functional changes and release status. |
-| `.github/workflows/android-ci.yml` | Android debug build, unit tests, lint and artifact uploads. |
-| `.github/workflows/api-ci.yml` | API restore, Release build, unit tests and test-report upload. |
-| `DevLedger/android/` | Android Gradle project and wrapper. |
-| `DevLedger/android/app/src/main/` | Kotlin sources, resources and Android manifest. |
-| `DevLedger/android/app/src/test/` | Android local unit tests. |
-| `DevLedger/api/DevLedger.Api/` | ASP.NET Core API, services and database migrations. |
-| `DevLedger/api/DevLedger.Api.Tests/` | API automated tests. |
-| `Dockerfile` | API container build definition. |
+| `POST /api/auth/register`, `/login`, `/sso`, `/refresh` | Email and SSO sign-in; refresh rotates a signed 30-day refresh token. Rate limited. |
+| `GET/PUT /api/users/me` | Profile and biometric preference (PIN is device-only) |
+| `GET/PUT /api/settings` | Language, biometric, Wi-Fi-only, base currency, **monthly budget** |
+| `GET/POST/PUT/DELETE /api/folders`, `GET /api/tags` | Folder and tag catalogue |
+| `GET/POST/PUT/DELETE /api/snippets`, `GET /api/snippets/snapshot` | Snippets |
+| `GET/POST /api/transactions`, `/summary`, `/daily-series`, `/category-breakdown`, `/{id}/attachment` | Finance |
+| `POST /api/sync/batch`, `GET /api/sync/deletions` | Offline queue upload and deletion feed |
+| `POST /api/notifications/register`, `POST /api/notifications/test` | FCM device registration; live test push |
 
-GitHub Actions workflows now live in `.github/workflows/` at the repository root, where GitHub discovers them (GitHub, n.d.b). Their commands use the nested Android/API project paths described above.
+Secrets are configuration only: `Jwt__SigningKey` (required, 32+ characters), `ConnectionStrings__DefaultConnection`, `Google__WebClientId`, `GitHub__ClientId/ClientSecret`, `Firebase__CredentialsPath`. See `DevLedger/api/DevLedger.Api/appsettings.json.example`.
 
-## 4. Technology and prerequisites
+## 7. DevOps and version control
 
-| Component | Project configuration / requirement |
+- **Repository:** [EMGPPT/prog7314-2026-poe-st10443021](https://github.com/EMGPPT/prog7314-2026-poe-st10443021). Commit small, descriptive changes under each member's own identity (`feat:`, `fix:`, `docs:`, `test:`); never rewrite history.
+- **Android CI** (`.github/workflows/android-ci.yml`) on every push and pull request: debug build, unit tests, lint **and a minified release build** (R8), then uploads reports and the debug APK with a SHA-256.
+- **API CI** (`api-ci.yml`): restore, Release build and xUnit tests on .NET 10.
+- **Signed release** (`release.yml`): pushing the tag `Final-POE` builds the signed APK and AAB, verifies the signature with `apksigner`, and attaches them with checksums to a GitHub Release.
+- **Secrets** (repository settings, never committed): `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`, `GOOGLE_SERVICES_JSON_B64`.
+- **Final tag:** `git tag -a Final-POE -m "Final PoE submission" && git push origin Final-POE`.
+- **Gate:** `bash scripts/verify-submission.sh` checks the PoE checklist before you submit.
+
+## 8. Testing
+
+Automated tests run on every push (static count: 169 Android unit-test methods in 29 suites; 83 API test cases). Android uses JUnit, MockK, Truth, Turbine and Robolectric; the API uses xUnit and FluentAssertions. Coverage includes repositories, sync, biometrics and PIN storage, lock-out policy, budget parsing, finance state, localisation parity, token and refresh handling, budget alerts and the localised push text. Logging uses `android.util.Log` (and `ILogger` on the API) throughout to show lifecycle and state changes.
+
+Manual acceptance on a physical phone is shown in the demonstration video (Section 3).
+
+## 9. Release and Play Store readiness
+
+| Item | Status |
 |---|---|
-| Android client | Kotlin, Jetpack Compose, MVVM, Hilt, Retrofit, Room and WorkManager. |
-| Android tooling | Android Studio, Android SDK 34 and the checked-in Gradle wrapper. |
-| Java | JDK 21 for the configured Gradle daemon; Android Java/Kotlin compilation targets Java 17. |
-| Device | Android 8.0 / API 26 minimum. Compile/target SDK is currently 34; these values do not establish current Play submission eligibility. |
-| API | .NET 10 SDK, ASP.NET Core and Entity Framework Core 10. |
-| Database | PostgreSQL through the Npgsql provider. |
-| Identity and push | Google/GitHub OAuth configuration; Firebase Android configuration and server-side Firebase Admin credentials. |
-| Hosting | Render API deployment configuration and PostgreSQL persistence; recheck deployment linkage after the repository move (Render, n.d.). |
-| Tests | Android JUnit/MockK/Turbine and related test libraries; API xUnit and Fluent Assertions. |
-| Source control | Git and the institutional GitHub repository. |
+| Target API 36, version 1.0.0 (code 100) | Done (Google Play Console Help, n.d.) |
+| Release signing, R8 rules, no cleartext, all languages in the bundle | Done in `app/build.gradle.kts`, `proguard-rules.pro` |
+| Signed APK + AAB | Built by the `Signed release` workflow; attached to the GitHub Release |
+| Listing text, data-safety answers, content-rating notes | `store/listing.md` |
+| Privacy policy | `docs/privacy-policy.md` (host it and put the URL in the listing) |
+| Icon (512 px), feature graphic (1024x500) | `DevLedger/android/app/src/main/ic_launcher-playstore.png`, `store/feature-graphic-1024x500.png` |
+| Promotional screenshots | `docs/screenshots/` (Section 11) |
 
-### Environment configuration
+Create the signing key once with `bash scripts/generate-keystore.sh` (needs `keytool`; run in Git Bash on Windows).
 
-Use the existing project configuration for the team's deployment, or supply matching values for a separate environment.
+## 10. Setup and configuration
 
-| Setting | Where to configure it |
-|---|---|
-| API base URL | `BASE_URL` in `DevLedger/android/app/build.gradle.kts`. The reviewed configuration uses `https://devledger-api-op1w.onrender.com/`. Reachability must be checked before the final demonstration. |
-| Google OAuth | Android `GOOGLE_WEB_CLIENT_ID` and server `Google:WebClientId` / `Google__WebClientId` must match the intended web client. Register the Android package and signing-certificate fingerprints with the provider. |
-| GitHub OAuth | Android `GITHUB_CLIENT_ID` and server `GitHub:ClientId` / `GitHub__ClientId`; keep `GitHub:ClientSecret` / `GitHub__ClientSecret` server-side. Callback: `devledger://oauth/github/callback`. |
-| Firebase Android app | Provide the environment's valid `DevLedger/android/app/google-services.json` for `com.devledger.app`. This is client configuration, distinct from a service-account private key. |
-| Database | Server `ConnectionStrings:DefaultConnection` / `ConnectionStrings__DefaultConnection`. |
-| JWT | Server `Jwt:SigningKey` / `Jwt__SigningKey` and `Jwt:Issuer` / `Jwt__Issuer`. Use a private signing key for the intended environment. |
-| Firebase Admin | Server `Firebase:CredentialsPath` / `Firebase__CredentialsPath` pointing to a securely provisioned service-account file. Without valid server configuration, push delivery is unavailable. |
+**Prerequisites:** Android Studio (latest stable), JDK 21, Android SDK 36, .NET 10 SDK, PostgreSQL (or the hosted API).
 
-The colon form is used in .NET configuration/user-secrets; the double-underscore form is suitable for environment variables. Keep database credentials, JWT signing keys, OAuth client secrets, service-account keys and Android signing keys out of source control. OAuth client IDs and Firebase Android configuration identify client applications; they are not substitutes for server credentials.
-
-## 5. Build and run
-
-### Get the source
-
-For a new checkout:
-
-```powershell
+```bash
 git clone https://github.com/EMGPPT/prog7314-2026-poe-st10443021.git
-Set-Location .\prog7314-2026-poe-st10443021
+cd prog7314-2026-poe-st10443021/DevLedger/android
+cp app/google-services.json.example app/google-services.json   # then paste your real Firebase file
+./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
 ```
 
-If the repository is already cloned, use that checkout. Open `DevLedger/android` in Android Studio, let it resolve the SDK path, and supply the configuration above. The commands below reset to the Git root so they also work when the terminal is inside a project subfolder.
+`google-services.json` is private and git-ignored; get yours from Firebase Console > Project settings > Your apps (`com.devledger.app`). The Gradle build fails without it.
 
-### Android build, unit tests and lint
-
-```powershell
-Set-Location (git rev-parse --show-toplevel)
-Set-Location .\DevLedger\android
-.\gradlew.bat :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
+```bash
+cd DevLedger/api/DevLedger.Api
+dotnet user-secrets set "Jwt:SigningKey" "$(openssl rand -base64 48)"
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=localhost;Database=devledger;Username=postgres;Password=..."
+dotnet run
+dotnet test ../DevLedger.Api.Tests
 ```
 
-On macOS/Linux, use `./gradlew` from `DevLedger/android`.
+On Render set `Jwt__SigningKey`, the connection string, OAuth settings and `Firebase__CredentialsPath` as environment variables or secret files. A phone cannot reach your PC's `localhost`; point `BASE_URL` at a reachable HTTPS address.
 
-| Output | Path from repository root |
-|---|---|
-| Debug APK | `DevLedger/android/app/build/outputs/apk/debug/app-debug.apk` |
-| Unit-test report | `DevLedger/android/app/build/reports/tests/testDebugUnitTest/index.html` |
-| Lint report | `DevLedger/android/app/build/reports/lint-results-debug.html` |
+## 11. Screenshots
 
-Install/run from Android Studio on a physical phone for acceptance testing. The debug APK is a development build; production signing and release installation are separate pending checks.
+Captured on a physical phone from the release build (see `docs/screenshots/README.md` for the checklist).
 
-### API restore, build and test
-
-```powershell
-Set-Location (git rev-parse --show-toplevel)
-dotnet restore .\DevLedger\api\DevLedger.Api.Tests\DevLedger.Api.Tests.csproj
-dotnet build .\DevLedger\api\DevLedger.Api.Tests\DevLedger.Api.Tests.csproj --no-restore
-dotnet test .\DevLedger\api\DevLedger.Api.Tests\DevLedger.Api.Tests.csproj --no-build
-```
-
-To run a configured local API:
-
-```powershell
-Set-Location (git rev-parse --show-toplevel)
-dotnet run --project .\DevLedger\api\DevLedger.Api\DevLedger.Api.csproj
-```
-
-The API applies pending EF Core migrations on startup; point it at the intended database before starting it. A phone needs a reachable API address and valid HTTPS configuration. Its `localhost` is the phone itself, so update the Android base URL appropriately when using a local API.
-
-## 6. Version control, CI and release management
-
-Development history has been transferred to the institution's repository. Continue meaningful commits and reviews there; the most recently supplied development branch was `blake`. The final submission must identify the exact tested commit and retain the contributors' genuine history.
-
-### Automated checks
-
-Both root-level workflows run on every remote push, on pull requests and by manual dispatch, without the previous branch/path filters.
-
-| Workflow | Runner configuration and checks | Uploaded artifacts |
+| | | |
 |---|---|---|
-| Android CI | Ubuntu runner; Temurin JDK 21; Android SDK 34; checked-in Gradle 8.9 wrapper; tracked Firebase client configuration checked for `com.devledger.app`; debug assembly, local unit tests and lint. Java/Kotlin bytecode targets remain 17. | `android-unit-test-results`, `android-lint-report`, `devledger-debug-apk` (APK plus SHA-256 sidecar). |
-| API CI | Ubuntu runner; .NET 10 SDK; explicit test-project restore, Release build and unit-test execution. | `api-test-results` containing `api-tests.trx`. |
+| ![Sign-in](docs/screenshots/play-01.png) | ![Biometric](docs/screenshots/play-02.png) | ![Vault](docs/screenshots/play-03.png) |
+| ![Folders and tags](docs/screenshots/play-04.png) | ![Finance](docs/screenshots/play-05.png) | ![Settings](docs/screenshots/play-06.png) |
+| ![Sync](docs/screenshots/play-07.png) | ![Notifications](docs/screenshots/play-08.png) | |
 
-The official POSIX Gradle launcher replaced the script that failed on Linux. Git tracks its executable permission and enforces LF line endings. Android lint now uses `abortOnError = true`, so detected errors fail the lint task. `checkReleaseBuilds = true` also restores fatal lint checks during release builds; the debug CI run does not verify release packaging or installation (Android Developers, n.d.f). Warnings remain visible and are not promoted to errors.
+## 12. Known limitations
 
-### Recorded CI evidence — 24 October 2026
+- **Blob storage and NoSQL:** attachments are Base64 text in PostgreSQL and there is no NoSQL store (see Section 3).
+- Currency conversion uses a manually maintained approximate rate table.
+- FCM delivery needs valid credentials, a registered device, connectivity and notification permission.
+- The PIN is set once per device because it is not stored on the server.
+- User content and notifications already delivered are not retroactively translated.
 
-| Evidence | Revision / result | Link or follow-up |
-|---|---|---|
-| Android CI #3 | `055bf26`, branch `blake`: passed; 151 tests passed, 0 failed, 0 skipped; lint reported 0 errors and 211 warnings. | [Successful Android run](https://github.com/EMGPPT/prog7314-2026-poe-st10443021/actions/runs/40089993728) |
-| API CI #3 | `055bf26`, branch `blake`: passed; 68 tests passed, 0 failed, 0 skipped. | [Successful API run](https://github.com/EMGPPT/prog7314-2026-poe-st10443021/actions/runs/40089993753) |
-| Main branch verification | Merge and verification confirmed successful by Blake on 24 October 2026. | Exact main commit: **Pending**; Android run URL: **Pending**; API run URL: **Pending**. These are distinct from the branch runs linked above. |
+## 13. References
 
-The downloaded JUnit XML, TRX and lint XML were inspected; both test reports contain the stated individual passing results. All four artifact archives passed ZIP integrity checks. The debug APK also passed archive integrity checking, and its calculated SHA-256 matched the uploaded sidecar:
+Code-level references are cited in each source file and listed in full in [REFERENCES-CODE.md](REFERENCES-CODE.md). Sources used in this document:
 
-```text
-ac0f56a80caf40ff980b10142f08b03a66852b807a7fabaa5d259eafdea3b370
-```
-
-This checksum identifies the debug artifact from the recorded `055bf26` run; it is not a signed production APK or the checksum of a later main/release build.
-
-**Artifact retention:** the institutional repository currently limits artifacts to **one day**, overriding the workflows' requested 30 days. Download all four artifacts promptly from the run summary before expiry (GitHub, n.d.c). Keep the downloaded evidence outside the source repository and record the associated commit/run URLs. Blake cannot change the repository retention settings with his current access; the limit does not prevent builds or downloads.
-
-**Actions page:** [Institutional repository Actions](https://github.com/EMGPPT/prog7314-2026-poe-st10443021/actions).
-
-Tag the final tested deployment commit only after release verification. Record the actual tag below; a valid identifier such as `final-poe` can carry a “Final POE” annotation. No final tag or release is claimed by this README.
-
-## 7. Verification
-
-The table distinguishes inspected automated reports from checks still requiring device/release evidence. Section 6 records the source revision and run URLs; final release results must be captured for the final tested revision.
-
-| Check | Latest supplied result | Remaining evidence |
-|---|---|---|
-| Android debug assembly and unit tests | Institutional CI passed for `055bf26`; inspected XML confirms 151 passed, 0 failed, 0 skipped across 26 suites. The local command also completed successfully after enabling lint failures. | Record the main commit/run URLs and final-release results. |
-| Android lint | Inspected CI XML: 0 errors, 211 warnings. Errors now fail the lint task. | Review warnings and run the relevant release checks; this is not a warning-free result. |
-| API automated tests | Institutional CI passed for `055bf26`; inspected TRX confirms 68 passed, 0 failed, 0 skipped on .NET 10. | Record the main commit/run URLs and final-release results. |
-| Uploaded CI artifacts | Android test and lint reports, debug APK/checksum and API TRX downloaded and inspected; archive integrity and APK checksum passed. | Preserve main/final-release evidence before the one-day expiry. |
-| Whitespace check | Earlier `git diff --check` outputs reported no whitespace errors; Windows LF/CRLF conversion warnings were observed. | Repeat for these documentation changes and the final source. |
-| Language resource parity | Static audit: 610 named strings and 8 plural resources in each of English, Afrikaans and isiXhosa. | Fluent-speaker review, layout and persistence checks on the phone. |
-| Physical-device acceptance | Assigned to Hamza; results pending. | Phone model, Android version, build/commit, dates and outcomes. |
-| Signed production release | Pending. | Version/signing details, release build, installation/regression results and matching commit/tag. |
-
-Most lint warnings concern unused resources, dependency updates, version-catalog use and typography. Targeted review items also include date formatting without an explicit locale, App Bundle language splitting, device identifiers and backup rules. Earlier local API build warnings concerned deprecated Google credential loading, deprecated Firebase message-token use and a nullable folder-dictionary key; passing tests do not establish a warning-free build.
-
-Physical-device acceptance must cover:
-
-- SSO, invalid input, biometric success/failure/cancellation, unavailable or unenrolled biometrics, PIN fallback, account changes and restart.
-- Offline create/edit/delete on supported records, reconnection, retry, concurrent edits, conflict recovery and visible backend results.
-- Actual backend-originated FCM delivery in foreground/background, denied notification permission and account/token changes.
-- Language switching across screens/messages, restart persistence and longer translations.
-- Launcher/round/themed icon rendering, notification icons and the final signed APK.
-
-**Final test evidence location:** Pending — add the actual report or repository path after it exists.
-
-## 8. Known limitations and assessment follow-up
-
-- **Session renewal:** the reviewed `/api/auth/refresh` endpoint still returns an unauthorised response instead of rotating refresh tokens. A rejected renewal requires sign-in again.
-- **Attachments and storage:** attachments currently use Base64 data in PostgreSQL rather than dedicated blob storage. The reviewed implementation uses SQL, not NoSQL. Confirm how the brief's blob/NoSQL objectives will be satisfied or clarified with the lecturer; this README does not claim those services exist.
-- **Currency conversion:** the reviewed Android converter uses a manually maintained approximate rate table. Live exchange-rate refresh has not been established.
-- **Push delivery:** configured Firebase credentials, a registered device, connectivity and notification permission are required. A local notification record or successful database write alone does not demonstrate delivery.
-- **Translation boundaries:** user-entered content is preserved. Provider-controlled/system dialogs follow their own localisation, and previously delivered notification text is not rewritten when the language changes.
-- **Release readiness:** automated CI has passed and its branch artifacts have been inspected. Record the confirmed main verification links; device acceptance, current store requirements, final versioning/signing and final deployment verification remain open.
-
-## 9. Screenshots and demonstration
-
-The app icon above is existing project artwork. Add actual screenshots of the tested build below; no screen evidence is implied by the placeholders.
-
-| Evidence to add | Image / evidence location |
-|---|---|
-| Sign-in and biometric/PIN flow | Pending — add screenshot(s) and caption. |
-| Snippet Vault, editor and organisation | Pending — add screenshot(s) and caption. |
-| Financial Tracker, summary and attachments | Pending — add screenshot(s) and caption. |
-| Offline action, sync recovery and backend result | Pending — add screenshot(s) and caption. |
-| Server-originated budget notification | Pending — add screenshot(s) and caption. |
-| Afrikaans and isiXhosa screens | Pending — add screenshot(s) and caption. |
-| Launcher, round/themed icon and store material | Pending — add screenshot(s) and caption. |
-
-### Final demonstration video
-
-**Status:** Not yet recorded.  
-**Video URL:** Pending — add the final accessible link after recording.  
-**Recording date / demonstrated build:** Pending.
-
-The narrated demonstration must show the application running on a **physical phone**: SSO and biometric verification, changing/saving settings, communication with the hosted REST API, an offline action followed by successful reconnection/sync, visible API/database changes and the Part 1 user-defined features. Include truthful evidence of the deployed authentication flow; a Firebase dependency alone does not establish a Firebase Authentication flow. Use suitable demonstration data and hide credentials.
-
-## 10. Final release and submission checklist
-
-| Item | Value / evidence to add |
-|---|---|
-| Release version and version code | Pending. Reviewed Android values remain `1.0.0-prototype` / `1`. |
-| Release date | Pending. |
-| Final tested commit SHA | Pending. |
-| Final POE tag and release page | Pending — add the actual tag and URL. |
-| Signed production APK | Pending — add the release asset location and SHA-256 checksum. |
-| Phone acceptance sign-off | Pending — add device/build details and results. |
-| Promotional screenshots / publication preparation | Pending — add the completed material and evidence. |
-| User Defined 4 / 5 mapping | Pending — confirm against Part 1 and add evidence. |
-| AI-use write-up | Pending — add the actual document/path; maximum 500 words, describing actual use with citations. |
-| Final video | Pending — complete Section 9 after recording. |
-
-Before submission, align the README, release notes, passing checks, APK and final tag to the same tested revision. Submit organised source directly in Git, without compressed patch/source archives, generated build output or private credentials.
-
-## References
-
-Author-date references retain the original README's Harvard-style approach. Original sources were consulted on 22 October 2026, with lint and artifact-download references added on 24 October 2026. These sources describe platform behaviour and do not certify DevLedger's deployment or test outcomes.
-
-- Android Developers, n.d.a. *Guide to app architecture*. [Online] Available at: [developer.android.com/topic/architecture](https://developer.android.com/topic/architecture) [Accessed 22 October 2026].
-- Android Developers, n.d.b. *Save data in a local database using Room*. [Online] Available at: [developer.android.com/training/data-storage/room](https://developer.android.com/training/data-storage/room) [Accessed 22 October 2026].
-- Android Developers, n.d.c. *Task scheduling*. [Online] Available at: [developer.android.com/develop/background-work/background-tasks/persistent](https://developer.android.com/develop/background-work/background-tasks/persistent) [Accessed 22 October 2026].
-- Android Developers, n.d.d. *Show a biometric authentication dialog*. [Online] Available at: [developer.android.com/identity/sign-in/biometric-auth](https://developer.android.com/identity/sign-in/biometric-auth) [Accessed 22 October 2026].
-- Android Developers, n.d.e. *Localize your app*. [Online] Available at: [developer.android.com/guide/topics/resources/localization](https://developer.android.com/guide/topics/resources/localization) [Accessed 22 October 2026].
-- Android Developers, n.d.f. *Lint: Android Gradle Plugin 8.6 DSL reference*. [Online] Available at: [developer.android.com/reference/tools/gradle-api/8.6/com/android/build/api/dsl/Lint](https://developer.android.com/reference/tools/gradle-api/8.6/com/android/build/api/dsl/Lint) [Accessed 24 October 2026].
-- Firebase, n.d.a. *Get started with Firebase Cloud Messaging in Android apps*. [Online] Available at: [firebase.google.com/docs/cloud-messaging/android/get-started](https://firebase.google.com/docs/cloud-messaging/android/get-started) [Accessed 22 October 2026].
-- Firebase, n.d.b. *Add the Firebase Admin SDK to your server*. [Online] Available at: [firebase.google.com/docs/admin/setup](https://firebase.google.com/docs/admin/setup) [Accessed 22 October 2026].
-- GitHub, n.d.a. *Authorizing OAuth apps*. [Online] Available at: [docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps) [Accessed 22 October 2026].
-- GitHub, n.d.b. *Workflows*. [Online] Available at: [docs.github.com/en/actions/concepts/workflows-and-actions/workflows](https://docs.github.com/en/actions/concepts/workflows-and-actions/workflows) [Accessed 22 October 2026].
-- GitHub, n.d.c. *Downloading workflow artifacts*. [Online] Available at: [docs.github.com/en/actions/how-tos/manage-workflow-runs/download-workflow-artifacts](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/download-workflow-artifacts) [Accessed 24 October 2026].
-- Google, n.d. *Authenticate with a backend server*. [Online] Available at: [developers.google.com/identity/sign-in/android/backend-auth](https://developers.google.com/identity/sign-in/android/backend-auth) [Accessed 22 October 2026].
-- Microsoft, n.d. *ASP.NET documentation*. [Online] Available at: [learn.microsoft.com/en-us/aspnet/core/?view=aspnetcore-10.0](https://learn.microsoft.com/en-us/aspnet/core/?view=aspnetcore-10.0) [Accessed 22 October 2026].
-- Render, n.d. *Web Services*. [Online] Available at: [render.com/docs/web-services](https://render.com/docs/web-services) [Accessed 22 October 2026].
+- Firebase, n.d.a. *About FCM messages*. [Online] Available at: <https://firebase.google.com/docs/cloud-messaging/concept-options> [Accessed ____ 2026].
+- Google Developers, n.d.a. *Guide to app architecture*. [Online] Available at: <https://developer.android.com/topic/architecture> [Accessed ____ 2026].
+- Google Developers, n.d.c. *Getting started with WorkManager*. [Online] Available at: <https://developer.android.com/develop/background-work/background-tasks/persistent/getting-started> [Accessed ____ 2026].
+- Google Developers, n.d.d. *Show a biometric authentication dialog*. [Online] Available at: <https://developer.android.com/identity/sign-in/biometric-auth> [Accessed ____ 2026].
+- Google Developers, n.d.l. *DataStore*. [Online] Available at: <https://developer.android.com/topic/libraries/architecture/datastore> [Accessed ____ 2026].
+- Google Developers, n.d.m. *Android Keystore system*. [Online] Available at: <https://developer.android.com/privacy-and-security/keystore> [Accessed ____ 2026].
+- Google Developers, n.d.o. *Dependency injection with Hilt*. [Online] Available at: <https://developer.android.com/training/dependency-injection/hilt-android> [Accessed ____ 2026].
+- Google Developers, n.d.r. *Per-app language preferences*. [Online] Available at: <https://developer.android.com/guide/topics/resources/app-languages> [Accessed ____ 2026].
+- Google Play Console Help, n.d. *Meet Google Play's target API level requirement*. [Online] Available at: <https://support.google.com/googleplay/android-developer/answer/11926878> [Accessed 29 October 2026].
+- OWASP Foundation, n.d.a. *Authentication Cheat Sheet*. [Online] Available at: <https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html> [Accessed ____ 2026].

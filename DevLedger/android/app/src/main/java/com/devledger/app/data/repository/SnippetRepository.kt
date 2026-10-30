@@ -225,11 +225,54 @@ class SnippetRepository @Inject constructor(
             uploadedTimestamp = snippet.updatedAt,
         ) == 1
 
+    /**
+     * Replaces [oldName] with [newName] (case-insensitive) in every live snippet of the
+     * signed-in account and queues them for upload. Returns how many snippets changed.
+     */
+    suspend fun renameTag(oldName: String, newName: String): Int {
+        val user = userDao.getCurrentUser() ?: error("Sign in before renaming a tag.")
+        val replacement = newName.trim()
+        require(replacement.isNotEmpty() && ',' !in replacement) { "Use one tag name without commas." }
+        val changed = rewriteTags(user.userId, oldName) { tags ->
+            tags.map { if (it.equals(oldName, ignoreCase = true)) replacement else it }
+        }
+        Log.i("SnippetRepository", "Renamed a tag on ${changed.size} snippet(s).")
+        return changed.size
+    }
+
+    /** Removes [name] (case-insensitive) from every live snippet of the signed-in account. */
+    suspend fun removeTag(name: String): Int {
+        val user = userDao.getCurrentUser() ?: error("Sign in before deleting a tag.")
+        val changed = rewriteTags(user.userId, name) { tags ->
+            tags.filterNot { it.equals(name, ignoreCase = true) }
+        }
+        Log.i("SnippetRepository", "Removed a tag from ${changed.size} snippet(s).")
+        return changed.size
+    }
+
+    private suspend fun rewriteTags(userId: String, target: String, transform: (List<String>) -> List<String>): List<SnippetEntity> {
+        val now = System.currentTimeMillis()
+        val changed = dao.getTaggedForUser(userId).mapNotNull { snippet ->
+            val tags = snippet.tagsCsv.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+            if (tags.none { it.equals(target, ignoreCase = true) }) return@mapNotNull null
+            val rewritten = transform(tags).distinctBy { it.lowercase() }
+            snippet.copy(
+                tagsCsv = rewritten.joinToString(","),
+                updatedAt = maxOf(now, snippet.updatedAt + 1),
+                syncStatus = if (snippet.syncStatus == SyncStatus.CONFLICT) SyncStatus.CONFLICT else SyncStatus.PENDING,
+            )
+        }
+        if (changed.isNotEmpty()) {
+            dao.upsertAll(changed)
+            queueSync()
+        }
+        return changed
+    }
+
+    /** Honours the auto-sync preference (see [SyncScheduler.queueAfterLocalChange]). */
     private suspend fun queueSync() {
         try {
-            val wifiOnly = settingsRepository.wifiOnlySync.first()
-            SyncScheduler.schedulePeriodicSync(context, wifiOnly)
-            SyncScheduler.syncNow(context, wifiOnly)
+            SyncScheduler.queueAfterLocalChange(context, settingsRepository)
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (error: Exception) {

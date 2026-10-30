@@ -26,6 +26,8 @@ import com.devledger.app.ui.theme.DevLedgerColors
 import java.text.DateFormat
 import java.util.Date
 
+// Reference scope: Background work with WorkManager. (Google Developers, n.d.c). See REFERENCES-CODE.md for full entries.
+
 @Composable
 fun SyncScreen(onBack: () -> Unit, viewModel: SyncViewModel = hiltViewModel()) {
     val strings = rememberAppStrings()

@@ -12,6 +12,7 @@ import androidx.lifecycle.viewModelScope
 import com.devledger.app.data.remote.dto.UserSettingsDto
 import com.devledger.app.data.repository.AuthRepository
 import com.devledger.app.data.repository.SettingsRepository
+import com.devledger.app.util.BudgetInput
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.IOException
 import javax.inject.Inject
@@ -22,12 +23,18 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 
+// Reference scope: UI and state-holder separation. (Google Developers, n.d.a; Google Developers, n.d.f). See REFERENCES-CODE.md for full entries.
+
 data class SettingsUiState(
     val language: String = "en",
     val biometricEnabled: Boolean = false,
     val isVerifyingBiometrics: Boolean = false,
     val wifiOnlySync: Boolean = false,
     val baseCurrency: String = "ZAR",
+    /** Text of the monthly-budget field; blank means no budget. */
+    val monthlyBudgetInput: String = "",
+    val budgetEdited: Boolean = false,
+    val budgetError: UiText? = null,
     val isLoading: Boolean = true,
     val isSaving: Boolean = false,
     val isLoaded: Boolean = false,
@@ -146,6 +153,12 @@ class SettingsViewModel @Inject constructor(
     fun setBaseCurrency(currency: String) =
         edit { it.copy(baseCurrency = currency) }
 
+    /** Accepts digits and one decimal separator only; full validation happens on save. */
+    fun setMonthlyBudgetInput(text: String) {
+        val filtered = text.filter { it.isDigit() || it == '.' || it == ',' }.take(13)
+        edit { it.copy(monthlyBudgetInput = filtered, budgetEdited = true, budgetError = null) }
+    }
+
     private fun edit(
         change: (SettingsUiState) -> SettingsUiState,
     ) {
@@ -171,6 +184,18 @@ class SettingsViewModel @Inject constructor(
             !current.hasChanges
         ) return
 
+        // Validate the budget before any network call so bad input never reaches the API.
+        var budgetValue: Double? = null
+        if (current.budgetEdited) {
+            when (val parsed = BudgetInput.parse(current.monthlyBudgetInput)) {
+                is BudgetInput.Result.Valid -> budgetValue = parsed.amount
+                BudgetInput.Result.Invalid -> {
+                    _uiState.update { it.copy(budgetError = UiText.Resource(R.string.settings_budget_invalid)) }
+                    return
+                }
+            }
+        }
+
         _uiState.update {
             it.copy(
                 isSaving = true,
@@ -192,6 +217,8 @@ class SettingsViewModel @Inject constructor(
                         wifiOnlySync = current.wifiOnlySync,
                         baseCurrency = current.baseCurrency,
                         biometricVerified = biometricVerified,
+                        monthlyBudget = budgetValue,
+                        updateBudget = current.budgetEdited,
                     )
                 }
 
@@ -222,6 +249,7 @@ class SettingsViewModel @Inject constructor(
             biometricEnabled = settings.biometricEnabled,
             wifiOnlySync = settings.syncOnWifiOnly,
             baseCurrency = settings.baseCurrency,
+            monthlyBudgetInput = BudgetInput.format(settings.monthlyBudget),
             isLoading = false,
             isLoaded = true,
             message = message,

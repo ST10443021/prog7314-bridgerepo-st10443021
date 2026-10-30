@@ -24,6 +24,11 @@ import javax.inject.Inject
  * threshold alerts, snippet-backup confirmations and new-device sign-ins, shows a system
  * notification, and mirrors the event into Room so it also appears on the in-app
  * Notifications screen when the device is offline (Firebase, n.d.).
+ *
+ * The API sends DATA-ONLY messages (title, body and type travel in the data map). Android only
+ * calls [onMessageReceived] for every message, foreground or background, when no "notification"
+ * payload is present; a notification payload would be displayed by the system alone while the
+ * app is in the background and would never reach the in-app list (Firebase, n.d.a).
  */
 @AndroidEntryPoint
 /**
@@ -36,8 +41,9 @@ class DevLedgerMessagingService : FirebaseMessagingService() {
 
     override fun onMessageReceived(message: RemoteMessage) {
         super.onMessageReceived(message)
-        val title = message.notification?.title ?: message.data["title"] ?: "DevLedger"
-        val body = message.notification?.body ?: message.data["body"] ?: ""
+        // Data-only payload first; the notification payload is a fallback for older server builds.
+        val title = message.data["title"] ?: message.notification?.title ?: "DevLedger"
+        val body = message.data["body"] ?: message.notification?.body ?: ""
         val type = message.data["type"] ?: "SYSTEM"
 
         showSystemNotification(title, body)
@@ -69,7 +75,11 @@ class DevLedgerMessagingService : FirebaseMessagingService() {
                 NotificationChannel(CHANNEL_ID, AppStrings.forContext(this).get(R.string.lang_devledger_alerts), NotificationManager.IMPORTANCE_HIGH),
             )
         }
-        val intent = android.content.Intent(this, MainActivity::class.java)
+        val intent = android.content.Intent(this, MainActivity::class.java).apply {
+            // Tapping the notification opens the in-app list (after the security gate).
+            putExtra(NotificationDeepLink.EXTRA_OPEN_NOTIFICATIONS, true)
+            flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
         val pendingIntent = android.app.PendingIntent.getActivity(
             this, 0, intent,
             android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT,

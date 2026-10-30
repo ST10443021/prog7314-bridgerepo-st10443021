@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Strings added in the final PoE remediation pass: folder/tag menus, budget, sync labels,
+     test push, PIN lock-out and key-bound biometrics. All three languages must stay in sync
+     (MissingTranslation is a fatal lint error for release builds). -->
+<resources>
+    <string name="folders_menu_rename">Thiya ngokutsha</string>
+    <string name="folders_more_options">Ezinye iinketho</string>
+    <string name="folders_search_hint">Khangela iifolda neethegi</string>
+    <string name="folders_clear_search">Cima ukukhangela</string>
+    <string name="tags_rename_title">Thiya ithegi ngokutsha</string>
+    <string name="tags_delete_title">Cima ithegi "%1$s"?</string>
+    <string name="tags_delete_body">Ithegi liza kususwa kuzo zonke iziqwenga ezilisebenzisayo.</string>
+    <string name="settings_auto_sync_hint">Yiyeka iDevLedger yenze ungqamaniso ngokwayo. Cima ukuze kungqamaniswe kuphela xa ucofa u-Ngqamanisa ngoku.</string>
+    <string name="settings_wifi_only_hint">Sebenzisa i-Wi-Fi kuphela kungqamaniso oluzenzekelayo nolwenziwa ngesandla, ungasebenzisi idatha yomnxeba.</string>
+    <string name="settings_budget_title">Isabelo senyanga</string>
+    <string name="settings_budget_subtitle">Umda wokuchitha osetyenziselwa izaziso zesabelo</string>
+    <string name="settings_budget_label">Isabelo senyanga (%1$s)</string>
+    <string name="settings_budget_hint">Shiya ngenanto ukuba ungafuni sabelo. Uyaziswa ku-%1$d%% nasku-%2$d%% walo.</string>
+    <string name="settings_budget_invalid">Faka isixa esisebenzayo, umzekelo 5000 okanye 5000.50.</string>
+    <string name="finance_budget_title">Isabelo senyanga</string>
+    <string name="finance_budget_not_set">Akukho sabelo senyanga sibekiweyo. Songeza kwiSeto ukulandela ukuchitha nokufumana izaziso.</string>
+    <string name="finance_budget_used">%1$s kwi-%2$s ichithiwe (%3$d%%)</string>
+    <string name="finance_budget_remaining">%1$s eseleyo kule nyanga</string>
+    <string name="finance_budget_over">%1$s ngaphezu kwesabelo</string>
+    <string name="notif_send_test">Thumela isaziso sovavanyo</string>
+    <string name="notif_test_sent">Uvavanyo luceliwe. Kufanele lufike kwiisekhondi ezimbalwa.</string>
+    <string name="notif_test_no_device">Akukabikho sixhobo sibhalisiweyo sezaziso. Vumela izaziso, uhlale uqhagamshelwe uze uphinde uzame.</string>
+    <string name="notif_test_failed">Asikwazanga ukuthumela isaziso sovavanyo. Khangela uqhagamshelo uze uphinde uzame.</string>
+    <string name="pin_locked_out">Iinzame ezininzi kakhulu ezingachanekanga. Zama kwakhona kwiisekhondi ezingama-%1$d.</string>
+    <string name="pin_attempts_left">I-PIN ayichanekanga. Kusele iinzame ezi-%1$d ngaphambi kokuvalwa okwethutyana.</string>
+    <string name="bio_key_invalidated">I-biometrics yakho iguqukile kule foni. Sebenzisa i-PIN yakho, uze uvule kwakhona ukuvula nge-biometrics kwiSeto.</string>
+    <string name="placeholder_full_name">Alex Morgan</string>
+    <string name="placeholder_email">alex@devledger.io</string>
+    <string name="placeholder_pin">0000</string>
+    <string name="placeholder_amount">0.00</string>
+</resources>

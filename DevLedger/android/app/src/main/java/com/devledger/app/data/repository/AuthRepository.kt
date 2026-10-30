@@ -17,6 +17,8 @@ import javax.inject.Singleton
 import com.devledger.app.data.remote.dto.UpdateUserProfileRequest
 import com.devledger.app.data.remote.dto.UserProfileDto
 
+// Reference scope: Repository pattern and offline-first data flow. (Google Developers, n.d.a; Google Developers, n.d.b). See REFERENCES-CODE.md for full entries.
+
 /**
  * Handles SSO / email authentication against the DevLedger REST API and persists the
  * resulting session both as an encrypted JWT pair ([TokenManager]) and as a cached
@@ -59,27 +61,6 @@ class AuthRepository @Inject constructor(
             userDao.replaceCurrentUser(user)
             deviceRegistrar.scheduleRegistration()
 
-            // Safety: If the SSO response is missing security fields, try a full profile refresh
-            // to avoid sending existing users to the "Setup PIN" screen.
-            if (user.pinHash == null) {
-                Log.i("AuthRepository", "SSO response missing security fields, refreshing profile...")
-                try {
-                    val profileResponse = api.getProfile()
-                    if (profileResponse.isSuccessful) {
-                        profileResponse.body()?.let { profile ->
-                            val updatedUser = profile.toUserEntity()
-                            if (profile.pinHash != null && profile.pinSalt != null) {
-                                pinStorage.syncFromBackend(profile.email, profile.pinHash, profile.pinSalt, profile.biometricEnabled)
-                            }
-                            userDao.replaceCurrentUser(updatedUser)
-                            return@safeCall updatedUser
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.w("AuthRepository", "Failed to refresh profile after SSO login", e)
-                }
-            }
-
             user
         }
 
@@ -110,27 +91,6 @@ class AuthRepository @Inject constructor(
             userDao.replaceCurrentUser(user)
             deviceRegistrar.scheduleRegistration()
 
-            // Safety: If the SSO response is missing security fields, try a full profile refresh
-            // to avoid sending existing users to the "Setup PIN" screen.
-            if (user.pinHash == null) {
-                Log.i("AuthRepository", "SSO response missing security fields, refreshing profile...")
-                try {
-                    val profileResponse = api.getProfile()
-                    if (profileResponse.isSuccessful) {
-                        profileResponse.body()?.let { profile ->
-                            val updatedUser = profile.toUserEntity()
-                            if (profile.pinHash != null && profile.pinSalt != null) {
-                                pinStorage.syncFromBackend(profile.email, profile.pinHash, profile.pinSalt, profile.biometricEnabled)
-                            }
-                            userDao.replaceCurrentUser(updatedUser)
-                            return@safeCall updatedUser
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.w("AuthRepository", "Failed to refresh profile after SSO login", e)
-                }
-            }
-            
             user
         }
 
@@ -158,27 +118,6 @@ class AuthRepository @Inject constructor(
             userDao.replaceCurrentUser(user)
             deviceRegistrar.scheduleRegistration()
 
-            // Safety: If the SSO response is missing security fields, try a full profile refresh
-            // to avoid sending existing users to the "Setup PIN" screen.
-            if (user.pinHash == null) {
-                Log.i("AuthRepository", "SSO response missing security fields, refreshing profile...")
-                try {
-                    val profileResponse = api.getProfile()
-                    if (profileResponse.isSuccessful) {
-                        profileResponse.body()?.let { profile ->
-                            val updatedUser = profile.toUserEntity()
-                            if (profile.pinHash != null && profile.pinSalt != null) {
-                                pinStorage.syncFromBackend(profile.email, profile.pinHash, profile.pinSalt, profile.biometricEnabled)
-                            }
-                            userDao.replaceCurrentUser(updatedUser)
-                            return@safeCall updatedUser
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.w("AuthRepository", "Failed to refresh profile after SSO login", e)
-                }
-            }
-            
             user
         }
 
@@ -262,16 +201,17 @@ class AuthRepository @Inject constructor(
             user
         }
 
+    /**
+     * Saves the account-level biometric preference. The PIN itself is deliberately NOT uploaded:
+     * it stays on this device as a salted hash in encrypted storage (see PinStorage), so a leaked
+     * API database cannot be used to brute-force PINs offline.
+     */
     suspend fun saveSecurityProfile(
-        pinHash: String,
-        pinSalt: String,
         biometricEnabled: Boolean
     ): DevLedgerResult<UserEntity> =
         DevLedgerResult.safeCall {
             val response = api.updateProfile(
                 UpdateUserProfileRequest(
-                    pinHash = pinHash,
-                    pinSalt = pinSalt,
                     biometricEnabled = biometricEnabled
                 )
             )

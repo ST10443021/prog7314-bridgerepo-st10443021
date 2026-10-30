@@ -7,6 +7,8 @@ import com.devledger.app.data.local.entity.UserEntity
 import kotlinx.coroutines.flow.Flow
 import androidx.room.Transaction
 
+// Reference scope: Room persistence. (Google Developers, n.d.b). See REFERENCES-CODE.md for full entries.
+
 @Dao
 interface UserDao {
     @Query("SELECT * FROM users LIMIT 1")

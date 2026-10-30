@@ -1,6 +1,8 @@
 using System.Globalization;
 using System.Resources;
 
+// Reference scope: ASP.NET Core application services. (Microsoft Learn, n.d.; Firebase, n.d.b). See REFERENCES-CODE.md for full entries.
+
 namespace DevLedger.Api.Services;
 
 /// <summary>Localize server-originated alerts from the account's saved language so

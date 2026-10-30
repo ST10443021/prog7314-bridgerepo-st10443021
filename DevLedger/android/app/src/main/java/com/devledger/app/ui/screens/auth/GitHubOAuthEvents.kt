@@ -3,6 +3,8 @@ package com.devledger.app.ui.screens.auth
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 
+// Reference scope: Jetpack Compose screen. (Google Developers, n.d.p). See REFERENCES-CODE.md for full entries.
+
 /**
  * Carries the GitHub OAuth redirect result from [com.devledger.app.MainActivity]
  * (which receives it as a deep-link Intent, outside the Compose tree) into

@@ -443,8 +443,25 @@ private fun SnippetPreviewCard(
                         modifier = Modifier.size(20.dp)
                     )
                 }
-                IconButton(onClick = { /* Menu */ }, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Filled.MoreVert, contentDescription = null, tint = DevLedgerColors.TextMuted, modifier = Modifier.size(20.dp))
+                var menuOpen by remember { mutableStateOf(false) }
+                Box {
+                    IconButton(onClick = { menuOpen = true }, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Filled.MoreVert, contentDescription = strings.get(R.string.folders_more_options), tint = DevLedgerColors.TextMuted, modifier = Modifier.size(20.dp))
+                    }
+                    DropdownMenu(
+                        expanded = menuOpen,
+                        onDismissRequest = { menuOpen = false },
+                        modifier = Modifier.background(DevLedgerColors.SurfaceCard),
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(strings.get(R.string.lang_open), color = Color.White) },
+                            onClick = { menuOpen = false; onClick() },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(strings.get(R.string.lang_archive), color = Color.White) },
+                            onClick = { menuOpen = false; onArchive() },
+                        )
+                    }
                 }
             }
 

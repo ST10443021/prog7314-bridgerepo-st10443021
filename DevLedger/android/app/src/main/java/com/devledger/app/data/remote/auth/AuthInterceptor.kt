@@ -3,6 +3,8 @@ package com.devledger.app.data.remote.auth
 import okhttp3.Interceptor
 import okhttp3.Response
 
+// Reference scope: Token storage and OkHttp authenticators. (Google Developers, n.d.e; Square, n.d.). See REFERENCES-CODE.md for full entries.
+
 /** Attaches the stored JWT bearer token, if any, to every outgoing API request. */
 class AuthInterceptor(private val tokenManager: TokenManager) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {

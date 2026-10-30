@@ -16,6 +16,8 @@ import org.junit.Before
 import org.junit.Test
 import retrofit2.Response
 
+// Reference scope: JVM unit testing for Android with JUnit, MockK and Truth. (Google Developers, n.d.s). See REFERENCES-CODE.md for full entries.
+
 class SyncConflictRecoveryTest {
     private val user = UserEntity("user", "test@example.test", "Test", null)
     private val account = MutableStateFlow<UserEntity?>(user)

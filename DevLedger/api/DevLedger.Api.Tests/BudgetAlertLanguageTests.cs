@@ -1,6 +1,8 @@
 using DevLedger.Api.Services;
 using Xunit;
 
+// Reference scope: ASP.NET Core unit testing with xUnit and FluentAssertions. (Microsoft Learn, n.d.d). See REFERENCES-CODE.md for full entries.
+
 namespace DevLedger.Api.Tests;
 
 public class BudgetAlertLanguageTests

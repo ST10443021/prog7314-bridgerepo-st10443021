@@ -5,6 +5,8 @@ import com.devledger.app.data.remote.dto.*
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
+// Reference scope: Background work with WorkManager. (Google Developers, n.d.c). See REFERENCES-CODE.md for full entries.
+
 sealed interface SyncUploadSource {
     data class Snippet(val row: SnippetEntity) : SyncUploadSource
     data class Transaction(val row: TransactionEntity) : SyncUploadSource

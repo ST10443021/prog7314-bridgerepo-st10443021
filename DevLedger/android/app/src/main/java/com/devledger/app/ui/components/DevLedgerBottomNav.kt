@@ -29,6 +29,8 @@ import com.devledger.app.R
 import com.devledger.app.ui.theme.DevLedgerColors
 import androidx.compose.material3.MaterialTheme
 
+// Reference scope: Jetpack Compose theming and reusable components. (Google Developers, n.d.p). See REFERENCES-CODE.md for full entries.
+
 enum class BottomNavTab { DASHBOARD, SNIPPETS, FINANCE, NOTIFICATIONS }
 
 /** Bottom navigation bar with a centre FAB — a 1:1 port of BottomNav.tsx from the

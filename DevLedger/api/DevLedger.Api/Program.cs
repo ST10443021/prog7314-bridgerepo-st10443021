@@ -1,11 +1,15 @@
 using System.Text;
+using System.Threading.RateLimiting;
 using DevLedger.Api.Data;
 using DevLedger.Api.Services;
 using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+
+// Reference scope: ASP.NET Core application setup. (Microsoft Learn, n.d.). See REFERENCES-CODE.md for full entries.
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,8 +40,10 @@ else
     builder.Services.AddDbContext<DevLedgerDbContext>(options => options.UseNpgsql(connectionString));
 }
 
-var jwtSigningKey = builder.Configuration["Jwt:SigningKey"] ?? "dev-only-signing-key-change-in-production-32chars!!";
-var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "DevLedger.Api";
+// The signing key must come from configuration (Render env var Jwt__SigningKey, or user-secrets
+// locally). There is deliberately no hard-coded fallback; the app refuses to start without one.
+var jwtSigningKey = JwtSettings.RequireSigningKey(builder.Configuration);
+var jwtIssuer = JwtSettings.Issuer(builder.Configuration);
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -56,12 +62,32 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 builder.Services.AddAuthorization();
 
-builder.Services.AddCors(options =>
+// CORS is intentionally not enabled: the only client is the native Android app, and browsers never
+// call this API cross-origin, so an "allow any origin" policy would only widen the attack surface.
+
+// Render terminates TLS in a reverse proxy; honour X-Forwarded-* so rate limiting sees the real client IP.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
-    options.AddDefaultPolicy(policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownProxies.Clear();
 });
 
-// Firebase Admin SDK — enables server-initiated push notifications (Google, n.d.a),
+// Brute-force protection for sign-in, registration, SSO and refresh: 10 requests per minute per IP
+// (OWASP Foundation, n.d.a; Microsoft Learn, n.d.a). Applied with [EnableRateLimiting("auth")].
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("auth", httpContext => RateLimitPartition.GetFixedWindowLimiter(
+        httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 10,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
+        }));
+});
+
+// Firebase Admin SDK — enables server-initiated push notifications (Firebase, n.d.b),
 // the server-side half of the "Implementation of Real-time Notification" core
 // requirement. Reads a service-account credentials file whose path comes from
 // user-secrets locally or a Render Secret File in production; never committed.
@@ -83,11 +109,17 @@ if (FirebaseApp.DefaultInstance is null)
     app.Logger.LogWarning("Firebase Admin SDK was not initialised — push notifications are disabled until Firebase:CredentialsPath points at a valid service-account file.");
 }
 
-// Enable Swagger in all environments (including Production)
-app.UseSwagger();
-app.UseSwaggerUI();
+app.UseForwardedHeaders();
 
-app.UseCors();
+// Swagger exposes every endpoint, so it is limited to Development. For a recorded demonstration of
+// the hosted API, set the environment variable Swagger__Enabled=true on the host and remove it afterwards.
+if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("Swagger:Enabled"))
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
@@ -101,7 +133,7 @@ if (!app.Environment.IsEnvironment("Testing"))
     db.Database.Migrate();
 }
 
-app.MapGet("/", () => Results.Ok(new { status = "DevLedger API is running", version = "1.0.0-prototype" }));
+app.MapGet("/", () => Results.Ok(new { status = "DevLedger API is running", version = "1.0.0" }));
 
 app.Run();
 

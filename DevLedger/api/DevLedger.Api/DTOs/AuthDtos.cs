@@ -1,3 +1,5 @@
+// Reference scope: Data transfer objects for the REST contract. (Microsoft Learn, n.d.). See REFERENCES-CODE.md for full entries.
+
 namespace DevLedger.Api.DTOs;
 
 public record SsoLoginRequest(string Provider, string? IdToken = null, string? Code = null);

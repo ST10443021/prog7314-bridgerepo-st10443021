@@ -33,8 +33,18 @@ data class FinanceUiState(
 ) {
     val netBalance: Double get() = incomeStat.total - expenseStat.total
 
+    /** True when the user has set a monthly budget in Settings. */
+    val hasBudget: Boolean get() = monthlyBudget > 0.0
+
+    /** Share of the budget spent this month, capped at 1.0 for the progress bar. */
     val budgetUsedFraction: Double
-        get() = if (monthlyBudget > 0.0) (expenseStat.total / monthlyBudget).coerceAtMost(1.0) else 0.0
+        get() = if (hasBudget) (expenseStat.total / monthlyBudget).coerceIn(0.0, 1.0) else 0.0
+
+    /** Uncapped percentage so the card can say "112% used" once the budget is exceeded. */
+    val budgetUsedPercent: Int
+        get() = if (hasBudget) Math.round(expenseStat.total / monthlyBudget * 100.0).toInt() else 0
+
+    val isOverBudget: Boolean get() = hasBudget && expenseStat.total > monthlyBudget
 
     val monthLabel: String
         get() = java.text.SimpleDateFormat("MMMM yyyy", java.util.Locale.getDefault())
@@ -65,12 +75,14 @@ class FinanceViewModel @Inject constructor(
     }
 
     val uiState: StateFlow<FinanceUiState> = combine(
-        allTransactions, 
-        settingsRepository.baseCurrency, 
+        allTransactions,
+        settingsRepository.baseCurrency,
         selectedYearMonth,
-        summaryRange
-    ) { transactions, currency, (year, month), range ->
-        buildState(transactions, currency, year, month, range)
+        summaryRange,
+        // Budget entered in Settings; cached locally so the budget bar also works offline.
+        settingsRepository.monthlyBudget,
+    ) { transactions, currency, (year, month), range, budget ->
+        buildState(transactions, currency, year, month, range, budget)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), FinanceUiState())
 
     fun onPreviousMonth() {
@@ -91,7 +103,7 @@ class FinanceViewModel @Inject constructor(
         summaryRange.value = range
     }
 
-    private fun buildState(transactions: List<TransactionEntity>, currency: String, year: Int, month: Int, range: SummaryRange): FinanceUiState {
+    private fun buildState(transactions: List<TransactionEntity>, currency: String, year: Int, month: Int, range: SummaryRange, budget: Double): FinanceUiState {
         val (monthStart, monthEnd) = monthBounds(year, month)
         val (prevStart, prevEnd) = monthBounds(if (month == 0) year - 1 else year, if (month == 0) 11 else month - 1)
 
@@ -154,7 +166,7 @@ class FinanceViewModel @Inject constructor(
             selectedYear = year, selectedMonth = month, incomeStat = incomeStat, expenseStat = expenseStat,
             netBalancePercentChange = netChange, baseCurrency = currency,
             dailyPoints = dailyPoints, recentTransactions = transactions.sortedByDescending { it.transactionDate }.take(5),
-            summaryRange = range, monthlyBudget = 0.0 // Default for now as it's not implemented in VM yet
+            summaryRange = range, monthlyBudget = budget
         )
     }
 

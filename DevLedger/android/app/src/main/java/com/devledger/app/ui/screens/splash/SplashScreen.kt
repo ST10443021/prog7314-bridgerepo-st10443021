@@ -30,6 +30,8 @@ import com.devledger.app.R
 import com.devledger.app.ui.theme.DevLedgerColors
 import kotlinx.coroutines.delay
 
+// Reference scope: Jetpack Compose screen. (Google Developers, n.d.p). See REFERENCES-CODE.md for full entries.
+
 private const val SPLASH_DURATION = 1500L
 
 /**

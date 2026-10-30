@@ -11,6 +11,8 @@ import okhttp3.Route
 import javax.inject.Inject
 import javax.inject.Provider
 
+// Reference scope: Token storage and OkHttp authenticators. (Google Developers, n.d.e; Square, n.d.). See REFERENCES-CODE.md for full entries.
+
 /**
  * Automatically attempts to exchange a refresh token for a new access token pair if a
  * request returns 401 Unauthorized. If the refresh token is also rejected or missing,

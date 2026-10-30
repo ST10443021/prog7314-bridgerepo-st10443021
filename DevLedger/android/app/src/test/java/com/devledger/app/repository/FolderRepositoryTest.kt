@@ -26,6 +26,8 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 
+// Reference scope: JVM unit testing for Android with JUnit, MockK and Truth. (Google Developers, n.d.s). See REFERENCES-CODE.md for full entries.
+
 class FolderRepositoryTest {
     private lateinit var dao: FolderDao
     private lateinit var snippetDao: SnippetDao
@@ -47,6 +49,7 @@ class FolderRepositoryTest {
         coEvery { userDao.getCurrentUser() } returns user
         every { userDao.observeCurrentUser() } returns flowOf(user)
         mockkObject(SyncScheduler)
+        coEvery { SyncScheduler.queueAfterLocalChange(any(), any()) } returns Unit
         every { SyncScheduler.schedulePeriodicSync(any(), any()) } returns Unit
         every { SyncScheduler.syncNow(any(), any()) } returns Unit
         repository = FolderRepository(dao, snippetDao, deletedDao, userDao, api, settings, context)

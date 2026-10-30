@@ -2,6 +2,8 @@ package com.devledger.app.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
+// Reference scope: Jetpack Compose theming and reusable components. (Google Developers, n.d.p). See REFERENCES-CODE.md for full entries.
+
 /**
  * Colour tokens lifted directly from the Part 1 pixel-accurate Figma Make export
  * (src/index.css, StatusBar.tsx, BottomNav.tsx and the individual screen components)

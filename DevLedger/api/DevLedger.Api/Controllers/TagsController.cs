@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
+// Reference scope: ASP.NET Core controller, routing and HTTP responses. (Microsoft Learn, n.d.). See REFERENCES-CODE.md for full entries.
+
 namespace DevLedger.Api.Controllers;
 
 [ApiController]

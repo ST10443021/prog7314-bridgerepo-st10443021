@@ -13,9 +13,16 @@ import com.devledger.app.R
 /**
  * Native Class 3 biometric verification. A failed scan is retryable; only success
  * verifies the user. DevLedger's own PIN remains a separate fallback.
- * Reference: https://developer.android.com/identity/sign-in/biometric-auth
+ *
+ * The prompt is bound to a hardware-backed Keystore key through a BiometricPrompt.CryptoObject
+ * (see [BiometricKeyManager]), so success also requires the secure hardware to release the key.
+ * Reference scope: (Google Developers, n.d.d). See REFERENCES-CODE.md for full entries.
+ * https://developer.android.com/identity/sign-in/biometric-auth
  */
 class BiometricAuthHelper(private val activity: FragmentActivity) {
+    /** ENROLL creates a fresh key (turning biometrics on); UNLOCK uses the existing one. */
+    enum class Mode { ENROLL, UNLOCK }
+
     private val authenticators = BiometricManager.Authenticators.BIOMETRIC_STRONG
     private var prompt: BiometricPrompt? = null
     private var active = false
@@ -32,6 +39,7 @@ class BiometricAuthHelper(private val activity: FragmentActivity) {
         onSuccess: () -> Unit,
         onError: (String) -> Unit,
         onFailed: (String) -> Unit = {},
+        mode: Mode = Mode.UNLOCK,
     ) {
         if (active) return
         val status = authenticationStatus()
@@ -40,11 +48,26 @@ class BiometricAuthHelper(private val activity: FragmentActivity) {
             onError(statusMessage(status))
             return
         }
+        // Bind the prompt to the hardware-backed key. If the enrolled biometrics changed since the
+        // key was made, refuse and ask for the PIN instead of silently re-trusting the new scan.
+        val cipher = when (val prepared = BiometricKeyManager.prepare(createFresh = mode == Mode.ENROLL)) {
+            is BiometricKeyManager.Prepared.Ready -> prepared.cipher
+            BiometricKeyManager.Prepared.Invalidated -> {
+                onError(activity.getString(R.string.bio_key_invalidated))
+                return
+            }
+            is BiometricKeyManager.Prepared.Unavailable -> null
+        }
         active = true
         val callback = object : BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                 if (!active) return
                 active = false
+                if (cipher != null && !BiometricKeyManager.confirmUse(result.cryptoObject?.cipher)) {
+                    Log.w(TAG, "Scan succeeded but the Keystore key refused to unlock")
+                    onError(activity.getString(R.string.bio_unavailable))
+                    return
+                }
                 Log.i(TAG, "Native biometric verification succeeded")
                 onSuccess()
             }
@@ -69,7 +92,8 @@ class BiometricAuthHelper(private val activity: FragmentActivity) {
             .setNegativeButtonText(activity.getString(R.string.bio_cancel))
             .build()
         try {
-            prompt?.authenticate(info)
+            if (cipher != null) prompt?.authenticate(info, BiometricPrompt.CryptoObject(cipher))
+            else prompt?.authenticate(info)
         } catch (_: IllegalStateException) {
             active = false
             onError(activity.getString(R.string.bio_unavailable))

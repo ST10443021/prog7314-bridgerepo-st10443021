@@ -74,6 +74,8 @@ import java.util.Currency
 import java.util.Locale
 import androidx.compose.foundation.border
 
+// Reference scope: Jetpack Compose screen. (Google Developers, n.d.p). See REFERENCES-CODE.md for full entries.
+
 @Composable
 fun ProfileScreen(
     onBack: () -> Unit,

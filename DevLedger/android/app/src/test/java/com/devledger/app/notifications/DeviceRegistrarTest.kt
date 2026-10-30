@@ -24,6 +24,8 @@ import org.robolectric.annotation.Config
 import retrofit2.Response
 import java.io.IOException
 
+// Reference scope: JVM unit testing for Android with JUnit, MockK and Truth. (Google Developers, n.d.s). See REFERENCES-CODE.md for full entries.
+
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28], application = Application::class)
 class DeviceRegistrarTest {

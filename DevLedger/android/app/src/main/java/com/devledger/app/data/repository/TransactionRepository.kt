@@ -203,11 +203,10 @@ class TransactionRepository @Inject constructor(
         return calendar.timeInMillis
     }
 
+    /** Honours the auto-sync preference (see [SyncScheduler.queueAfterLocalChange]). */
     private suspend fun queueSync() {
         try {
-            val wifiOnly = settingsRepository.wifiOnlySync.first()
-            SyncScheduler.schedulePeriodicSync(context, wifiOnly)
-            SyncScheduler.syncNow(context, wifiOnly)
+            SyncScheduler.queueAfterLocalChange(context, settingsRepository)
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (error: Exception) {

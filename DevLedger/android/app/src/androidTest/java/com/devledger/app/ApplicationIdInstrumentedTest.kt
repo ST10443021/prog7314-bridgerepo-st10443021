@@ -6,6 +6,8 @@ import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 import org.junit.runner.RunWith
 
+// Reference scope: Android instrumented testing. (Google Developers, n.d.s). See REFERENCES-CODE.md for full entries.
+
 /**
  * Minimal instrumented (on-device) sanity test replacing Android Studio's default
  * "Hello World" template test. Confirms the app under test is packaged with the

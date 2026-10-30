@@ -45,6 +45,8 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 
+// Reference scope: Jetpack Compose screen. (Google Developers, n.d.p). See REFERENCES-CODE.md for full entries.
+
 private const val TAG = "AuthScreen"
 
 @Composable
@@ -74,7 +76,7 @@ fun AuthScreen(
             val account = task.getResult(ApiException::class.java)
             val idToken = account.idToken
             if (idToken != null) {
-                Log.i(TAG, "Google Sign-In succeeded for ${account.email}, forwarding ID token to API")
+                Log.i(TAG, "Google Sign-In succeeded, forwarding ID token to API")
                 viewModel.signInWithGoogle(idToken)
             } else {
                 Log.w(TAG, "Google Sign-In returned no ID token")

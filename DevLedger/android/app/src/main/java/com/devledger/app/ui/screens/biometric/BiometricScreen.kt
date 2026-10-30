@@ -41,6 +41,8 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+// Reference scope: Jetpack Compose screen. (Google Developers, n.d.p). See REFERENCES-CODE.md for full entries.
+
 @HiltViewModel
 class BiometricViewModel @Inject constructor(
     private val pinStorage: PinStorage,
@@ -122,12 +124,7 @@ fun BiometricScreen(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(24.dp).clickable { /* Keep on identity page for safety */ }
-            )
+            // No back arrow: this screen is the security gate, so leaving it is not an option.
             Spacer(modifier = Modifier.weight(1f))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(

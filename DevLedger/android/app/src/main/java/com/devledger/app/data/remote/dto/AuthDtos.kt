@@ -2,6 +2,8 @@ package com.devledger.app.data.remote.dto
 
 import kotlinx.serialization.Serializable
 
+// Reference scope: kotlinx.serialization DTOs. (Kotlin, n.d.). See REFERENCES-CODE.md for full entries.
+
 @Serializable
 data class SsoLoginRequest(val provider: String, val idToken: String? = null, val code: String? = null)
 

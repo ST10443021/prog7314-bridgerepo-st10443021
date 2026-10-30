@@ -1,3 +1,5 @@
+// Reference scope: Data transfer objects for the REST contract. (Microsoft Learn, n.d.). See REFERENCES-CODE.md for full entries.
+
 namespace DevLedger.Api.DTOs;
 
 /// <summary>
@@ -19,6 +21,7 @@ public sealed record UserProfileDto(
 
 /// <summary>
 /// Fields that the user may update from the Profile screen or Security Setup.
+/// PinHash and PinSalt are accepted only so older clients still deserialise; the server ignores them.
 /// </summary>
 public sealed record UpdateUserProfileRequest(
     string? FullName = null,

@@ -12,6 +12,8 @@ import androidx.compose.ui.platform.LocalContext
 import com.devledger.app.R
 import java.util.Locale
 
+// Reference scope: Per-app language support. (Google Developers, n.d.r). See REFERENCES-CODE.md for full entries.
+
 /** Resource access captured during composition; safe in click/result callbacks too.
  * Locale changes rebuild the provider rather than caching translated text in a ViewModel.
  * References: https://developer.android.com/develop/ui/compose/resources

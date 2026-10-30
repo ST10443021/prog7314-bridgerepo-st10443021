@@ -25,6 +25,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.devledger.app.ui.theme.DevLedgerColors
 
+// Reference scope: Jetpack Compose theming and reusable components. (Google Developers, n.d.p). See REFERENCES-CODE.md for full entries.
+
 /** Filled primary action button â€” matches the `#1D6FE8` accent buttons across every
  *  design screen (Sign In, Save Transaction, Save snippet, etc.). */
 @Composable
@@ -203,7 +205,7 @@ fun DevLedgerTextField(
 
 /**
  * Color-coded password strength meter.
- * References: "Implementing visual feedback for credential strength" (Google, 2024).
+ * Reference scope: password-quality guidance. (OWASP Foundation, n.d.a). See REFERENCES-CODE.md.
  */
 @Composable
 fun PasswordStrengthMeter(strength: Int, modifier: Modifier = Modifier) {

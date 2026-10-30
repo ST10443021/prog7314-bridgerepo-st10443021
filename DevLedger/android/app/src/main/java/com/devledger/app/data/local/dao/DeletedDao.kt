@@ -5,6 +5,8 @@ import kotlinx.coroutines.flow.Flow
 import com.devledger.app.data.local.entity.DeletedEntity
 import com.devledger.app.data.local.entity.SyncStatus
 
+// Reference scope: Room persistence. (Google Developers, n.d.b). See REFERENCES-CODE.md for full entries.
+
 /** Durable outbox and retained delete-wins markers, scoped to the signed-in account. */
 @Dao
 interface DeletedDao {

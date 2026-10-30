@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.RestoreFromTrash
 import androidx.compose.material3.ButtonDefaults
@@ -42,6 +43,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Switch
@@ -75,6 +80,8 @@ import com.devledger.app.ui.theme.DevLedgerColors
 import com.devledger.app.ui.theme.DevLedgerTheme
 import com.devledger.app.util.CurrencyConverter
 
+// Reference scope: Jetpack Compose screen. (Google Developers, n.d.p). See REFERENCES-CODE.md for full entries.
+
 @Composable
 fun SettingsScreen(
     onSignedOut: () -> Unit,
@@ -84,6 +91,8 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
+    val syncPreferences: SyncPreferencesViewModel = hiltViewModel()
+    val autoSyncEnabled by syncPreferences.autoSync.collectAsState()
     val context = LocalContext.current
     val activity = context.findFragmentActivity()
     val biometricHelper = remember(activity) { activity?.let { BiometricAuthHelper(it) } }
@@ -97,12 +106,6 @@ fun SettingsScreen(
     LaunchedEffect(state.appliedLanguage) {
         state.appliedLanguage?.let { languageTag ->
             applyAppLocale(context, languageTag)
-        }
-    }
-
-    LaunchedEffect(state.appliedWifiOnlySync) {
-        state.appliedWifiOnlySync?.let {
-            SyncScheduler.schedulePeriodicSync(context, it)
         }
     }
 
@@ -125,11 +128,15 @@ fun SettingsScreen(
                         onSuccess = viewModel::biometricVerificationSucceeded,
                         onError = viewModel::biometricVerificationFailed,
                         onFailed = viewModel::biometricScanNotRecognised,
+                        mode = BiometricAuthHelper.Mode.ENROLL,
                     )
                 }
             }
         },
         onWifiOnlySyncChange = viewModel::setWifiOnlySync,
+        autoSyncEnabled = autoSyncEnabled,
+        onAutoSyncChange = syncPreferences::setAutoSync,
+        onMonthlyBudgetChange = viewModel::setMonthlyBudgetInput,
         onSyncNow = {
             SyncScheduler.syncNow(
                 context = context,
@@ -159,6 +166,9 @@ fun SettingsScreenContent(
     onSaveChanges: () -> Unit,
     onSignOut: () -> Unit,
     onRetryLoading: () -> Unit,
+    autoSyncEnabled: Boolean = true,
+    onAutoSyncChange: (Boolean) -> Unit = {},
+    onMonthlyBudgetChange: (String) -> Unit = {},
 ) {
     val strings = rememberAppStrings()
     LazyColumn(
@@ -273,9 +283,20 @@ fun SettingsScreenContent(
                 subtitle = strings.get(R.string.lang_manage_data_synchronisation_and_offline_updates),
                 accentColor = DevLedgerColors.AccentBlue,
             ) {
+                // Automatic sync is a separate switch from Wi-Fi only: the first decides WHETHER
+                // DevLedger syncs by itself, the second decides OVER WHICH network it may.
+                ToggleSettingRow(
+                    title = stringResource(R.string.settings_auto_sync),
+                    description = stringResource(R.string.settings_auto_sync_hint),
+                    checked = autoSyncEnabled,
+                    onCheckedChange = onAutoSyncChange,
+                )
+
+                HorizontalDivider(color = DevLedgerColors.Border)
+
                 ToggleSettingRow(
                     title = stringResource(R.string.settings_wifi_only),
-                    description = strings.get(R.string.lang_only_synchronise_while_connected_to_wi_fi),
+                    description = stringResource(R.string.settings_wifi_only_hint),
                     checked = state.wifiOnlySync,
                     onCheckedChange = onWifiOnlySyncChange,
                 )
@@ -332,6 +353,35 @@ fun SettingsScreenContent(
                 CurrencyOptions(
                     selectedCurrency = state.baseCurrency,
                     onCurrencySelected = onBaseCurrencyChange,
+                )
+            }
+        }
+
+        item {
+            SettingsSectionCard(
+                icon = Icons.Filled.Savings,
+                title = stringResource(R.string.settings_budget_title),
+                subtitle = stringResource(R.string.settings_budget_subtitle),
+                accentColor = DevLedgerColors.AccentPurple,
+            ) {
+                OutlinedTextField(
+                    value = state.monthlyBudgetInput,
+                    onValueChange = onMonthlyBudgetChange,
+                    enabled = state.isLoaded && !state.isLoading && !state.isSaving,
+                    singleLine = true,
+                    label = { Text(stringResource(R.string.settings_budget_label, state.baseCurrency)) },
+                    isError = state.budgetError != null,
+                    supportingText = {
+                        Text(state.budgetError?.resolve(strings) ?: stringResource(R.string.settings_budget_hint, 80, 100))
+                    },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
                 )
             }
         }

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Strings added in the final PoE remediation pass: folder/tag menus, budget, sync labels,
+     test push, PIN lock-out and key-bound biometrics. All three languages must stay in sync
+     (MissingTranslation is a fatal lint error for release builds). -->
+<resources>
+    <string name="folders_menu_rename">Hernoem</string>
+    <string name="folders_more_options">Meer opsies</string>
+    <string name="folders_search_hint">Soek vouers en merkers</string>
+    <string name="folders_clear_search">Maak soektog skoon</string>
+    <string name="tags_rename_title">Hernoem merker</string>
+    <string name="tags_delete_title">Verwyder merker "%1$s"?</string>
+    <string name="tags_delete_body">Die merker sal van elke kodebrokkie wat dit gebruik verwyder word.</string>
+    <string name="settings_auto_sync_hint">Laat DevLedger self sinkroniseer. Skakel af om net te sinkroniseer wanneer jy op Sinkroniseer nou tik.</string>
+    <string name="settings_wifi_only_hint">Gebruik slegs Wi-Fi vir outomatiese en handmatige sinkronisering, nooit mobiele data nie.</string>
+    <string name="settings_budget_title">Maandelikse begroting</string>
+    <string name="settings_budget_subtitle">Bestedingsgrens vir begrotingskennisgewings</string>
+    <string name="settings_budget_label">Maandelikse begroting (%1$s)</string>
+    <string name="settings_budget_hint">Los leeg vir geen begroting. Jy word in kennis gestel by %1$d%% en %2$d%% daarvan.</string>
+    <string name="settings_budget_invalid">Voer \'n geldige bedrag in, byvoorbeeld 5000 of 5000.50.</string>
+    <string name="finance_budget_title">Maandelikse begroting</string>
+    <string name="finance_budget_not_set">Geen maandelikse begroting gestel nie. Voeg een by in Instellings om bestedings te volg en kennisgewings te kry.</string>
+    <string name="finance_budget_used">%1$s van %2$s bestee (%3$d%%)</string>
+    <string name="finance_budget_remaining">%1$s oor hierdie maand</string>
+    <string name="finance_budget_over">%1$s oor die begroting</string>
+    <string name="notif_send_test">Stuur toetskennisgewing</string>
+    <string name="notif_test_sent">Toets aangevra. Dit behoort binne \'n paar sekondes te arriveer.</string>
+    <string name="notif_test_no_device">Geen toestel is nog vir stootkennisgewings geregistreer nie. Laat kennisgewings toe, bly aanlyn en probeer weer.</string>
+    <string name="notif_test_failed">Kon nie die toetskennisgewing stuur nie. Kontroleer jou verbinding en probeer weer.</string>
+    <string name="pin_locked_out">Te veel verkeerde pogings. Probeer weer oor %1$d sekondes.</string>
+    <string name="pin_attempts_left">Verkeerde PIN. %1$d pogings oor voor \'n tydelike sluiting.</string>
+    <string name="bio_key_invalidated">Jou biometrie het op hierdie foon verander. Gebruik jou PIN en skakel dan biometriese ontsluiting weer in Instellings aan.</string>
+    <string name="placeholder_full_name">Alex Morgan</string>
+    <string name="placeholder_email">alex@devledger.io</string>
+    <string name="placeholder_pin">0000</string>
+    <string name="placeholder_amount">0.00</string>
+</resources>

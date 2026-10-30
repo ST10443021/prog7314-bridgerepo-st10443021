@@ -20,6 +20,8 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 
+// Reference scope: JVM unit testing for Android with JUnit, MockK and Truth. (Google Developers, n.d.s). See REFERENCES-CODE.md for full entries.
+
 /** Exercises the current view-model calculation rather than removed budget-state fields. */
 @OptIn(ExperimentalCoroutinesApi::class)
 class FinanceUiStateTest {
@@ -38,11 +40,12 @@ class FinanceUiStateTest {
             }.timeInMillis
         }
 
-    private fun viewModel(transactions: List<TransactionEntity>): FinanceViewModel {
+    private fun viewModel(transactions: List<TransactionEntity>, budget: Double = 0.0): FinanceViewModel {
         val repository = mockk<TransactionRepository>()
         val settings = mockk<SettingsRepository>()
         val auth = mockk<AuthRepository>()
         every { settings.baseCurrency } returns flowOf("ZAR")
+        every { settings.monthlyBudget } returns flowOf(budget)
         every { auth.currentUser } returns flowOf(UserEntity("a", "a@example.test", "A", null))
         every { repository.observeAllForUser("a") } returns flowOf(transactions)
         return FinanceViewModel(repository, settings, auth)

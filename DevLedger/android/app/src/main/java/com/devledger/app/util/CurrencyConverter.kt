@@ -1,5 +1,7 @@
 package com.devledger.app.util
 
+// Reference scope: Utility helpers kept free of UI code. (Google Developers, n.d.f). See REFERENCES-CODE.md for full entries.
+
 /**
  * Converts between currencies using a small in-memory rate table so the Financial
  * Tracker's "real-time conversion rates" requirement (Part 1 app concept) works even

@@ -2,6 +2,7 @@ package com.devledger.app.ui.screens.folders
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import android.util.Log
 import com.devledger.app.data.local.entity.FolderEntity
 import com.devledger.app.data.repository.FolderRepository
 import com.devledger.app.data.repository.SnippetRepository
@@ -25,6 +26,10 @@ data class FoldersTagsUiState(
     val folders: List<FolderEntity> = emptyList(),
     val folderCounts: Map<String, Int> = emptyMap(),
     val tagCounts: List<Pair<String, Int>> = emptyList(),
+    /** Lower-cased tag name to the id of its catalogue row (only tags created in the app have one). */
+    val tagIds: Map<String, String> = emptyMap(),
+    val totalSnippets: Int = 0,
+    val archivedCount: Int = 0,
 )
 
 @HiltViewModel
@@ -34,7 +39,7 @@ data class FoldersTagsUiState(
  */
 class FoldersTagsViewModel @Inject constructor(
     private val folderRepository: FolderRepository,
-    snippetRepository: SnippetRepository,
+    private val snippetRepository: SnippetRepository,
     private val userTagRepository: UserTagRepository,
 ) : ViewModel() {
 
@@ -51,7 +56,8 @@ class FoldersTagsViewModel @Inject constructor(
         folderRepository.observeFolders(),
         snippetRepository.observeSnippets(""),
         userTagRepository.observeTags(),
-    ) { folders, snippets, userTags ->
+        snippetRepository.observeArchived(),
+    ) { folders, snippets, userTags, archived ->
 
         /*
          * Existing snippets currently store their assigned tags as CSV.
@@ -128,6 +134,9 @@ class FoldersTagsViewModel @Inject constructor(
             },
             folderCounts = folderCounts,
             tagCounts = tagCounts,
+            tagIds = userTags.associate { tag -> tag.name.trim().lowercase() to tag.tagId },
+            totalSnippets = snippets.size,
+            archivedCount = archived.size,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -181,6 +190,39 @@ class FoldersTagsViewModel @Inject constructor(
     ) {
         viewModelScope.launch {
             folderRepository.delete(id, reassignToFolderId)
+        }
+    }
+
+    /**
+     * Renames a tag everywhere: on every snippet that uses it and in the tag catalogue.
+     * Both writes are local-first and queue the normal background synchronisation.
+     */
+    fun renameTag(oldName: String, newName: String) {
+        val clean = newName.trim()
+        if (clean.isBlank() || ',' in clean) return
+        viewModelScope.launch {
+            try {
+                snippetRepository.renameTag(oldName, clean)
+                uiState.value.tagIds[oldName.trim().lowercase()]?.let { userTagRepository.rename(it, clean) }
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                Log.e("FoldersTagsVM", "Could not rename tag", error)
+            }
+        }
+    }
+
+    /** Deletes a tag from the catalogue and removes it from every snippet that carries it. */
+    fun deleteTag(name: String) {
+        viewModelScope.launch {
+            try {
+                snippetRepository.removeTag(name)
+                uiState.value.tagIds[name.trim().lowercase()]?.let { userTagRepository.delete(it) }
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                Log.e("FoldersTagsVM", "Could not delete tag", error)
+            }
         }
     }
 

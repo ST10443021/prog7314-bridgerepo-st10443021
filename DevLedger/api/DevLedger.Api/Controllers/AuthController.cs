@@ -6,6 +6,7 @@ using DevLedger.Api.Models;
 using DevLedger.Api.Services;
 using Google.Apis.Auth;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace DevLedger.Api.Controllers;
@@ -16,9 +17,12 @@ namespace DevLedger.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/auth")]
+[EnableRateLimiting("auth")]
 /// <remarks>
-/// Reference scope: ASP.NET Core controller, routing and HTTP response patterns.
-/// (Microsoft Learn, n.d.). See REFERENCES-CODE.md for full entries.
+/// Reference scope: ASP.NET Core controller, routing, rate limiting and HTTP response patterns.
+/// (Microsoft Learn, n.d.; Microsoft Learn, n.d.a; OWASP Foundation, n.d.a). See REFERENCES-CODE.md.
+/// Every action is rate limited per client IP (see the "auth" policy in Program.cs) to slow
+/// password guessing and token-endpoint abuse.
 /// </remarks>
 public class AuthController : ControllerBase
 {
@@ -26,18 +30,24 @@ public class AuthController : ControllerBase
     private readonly TokenService _tokenService;
     private readonly IConfiguration _configuration;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly ILogger<AuthController> _logger;
 
     public AuthController(
         DevLedgerDbContext db,
         TokenService tokenService,
         IConfiguration configuration,
-        IHttpClientFactory httpClientFactory)
+        IHttpClientFactory httpClientFactory,
+        ILogger<AuthController> logger)
     {
         _db = db;
         _tokenService = tokenService;
         _configuration = configuration;
         _httpClientFactory = httpClientFactory;
+        _logger = logger;
     }
+
+    /// <summary>Emails are matched case-insensitively and stored in lower case.</summary>
+    private static string NormalizeEmail(string? email) => (email ?? string.Empty).Trim().ToLowerInvariant();
 
     [HttpPost("sso")]
     public async Task<ActionResult<AuthResponse>> Sso([FromBody] SsoLoginRequest request)
@@ -64,11 +74,12 @@ public class AuthController : ControllerBase
                 }
                 catch (InvalidJwtException ex)
                 {
-                    Console.WriteLine($"Google SSO validation failed: {ex.Message}");
-                    return Unauthorized($"Invalid Google ID token: {ex.Message}");
+                    // Details go to the server log only; the client gets a generic message.
+                    _logger.LogWarning(ex, "Google SSO token validation failed.");
+                    return Unauthorized("Google sign-in could not be verified.");
                 }
 
-                verifiedEmail = payload.Email;
+                verifiedEmail = NormalizeEmail(payload.Email);
                 verifiedName = payload.Name ?? payload.Email;
                 break;
 
@@ -88,11 +99,11 @@ public class AuthController : ControllerBase
                 }
                 catch (InvalidOperationException ex)
                 {
-                    Console.WriteLine($"GitHub SSO validation failed: {ex.Message}");
-                    return Unauthorized($"GitHub sign-in failed: {ex.Message}");
+                    _logger.LogWarning(ex, "GitHub SSO validation failed.");
+                    return Unauthorized("GitHub sign-in could not be verified.");
                 }
 
-                verifiedEmail = githubUser.Email;
+                verifiedEmail = NormalizeEmail(githubUser.Email);
                 verifiedName = githubUser.Name;
                 break;
 
@@ -100,7 +111,7 @@ public class AuthController : ControllerBase
                 return BadRequest("Unsupported SSO provider.");
         }
 
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == verifiedEmail);
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == verifiedEmail);
         if (user is null)
         {
             user = new User { Email = verifiedEmail, FullName = verifiedName, SsoProvider = request.Provider };
@@ -193,13 +204,21 @@ public class AuthController : ControllerBase
     [HttpPost("register")]
     public async Task<ActionResult<AuthResponse>> Register([FromBody] RegisterRequest request)
     {
-        if (await _db.Users.AnyAsync(u => u.Email == request.Email))
+        var email = NormalizeEmail(request.Email);
+        if (email.Length == 0 || email.Length > 254 || !email.Contains('@') || email.StartsWith('@') || email.EndsWith('@'))
+            return BadRequest("Enter a valid email address.");
+        if (string.IsNullOrWhiteSpace(request.FullName))
+            return BadRequest("Full name is required.");
+        if (string.IsNullOrEmpty(request.Password) || request.Password.Length < 8)
+            return BadRequest("Password must be at least 8 characters.");
+
+        if (await _db.Users.AnyAsync(u => u.Email.ToLower() == email))
             return Conflict("An account with this email already exists.");
 
         var user = new User
         {
-            Email = request.Email,
-            FullName = request.FullName,
+            Email = email,
+            FullName = request.FullName.Trim(),
             PasswordHash = PasswordHasher.Hash(request.Password),
         };
         _db.Users.Add(user);
@@ -211,27 +230,45 @@ public class AuthController : ControllerBase
     [HttpPost("login")]
     public async Task<ActionResult<AuthResponse>> Login([FromBody] EmailLoginRequest request)
     {
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+        var email = NormalizeEmail(request.Email);
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == email);
         if (user is null || user.PasswordHash is null || !PasswordHasher.Verify(request.Password, user.PasswordHash))
             return Unauthorized("Invalid email or password.");
 
         return Ok(BuildAuthResponse(user));
     }
 
+    /// <summary>
+    /// Exchanges a valid refresh token for a new access/refresh pair (rotation), so the app can
+    /// renew a session silently instead of forcing a new sign-in every hour.
+    /// </summary>
     [HttpPost("refresh")]
-    public ActionResult<AuthResponse> Refresh([FromBody] RefreshRequest request)
+    public async Task<ActionResult<AuthResponse>> Refresh([FromBody] RefreshRequest request)
     {
-        return Unauthorized("Refresh token flow not implemented in the prototype — please sign in again.");
+        var userId = _tokenService.ValidateRefreshToken(request.RefreshToken);
+        if (userId is null)
+            return Unauthorized("Your session has expired. Please sign in again.");
+
+        var user = await _db.Users.FindAsync(userId.Value);
+        if (user is null)
+            return Unauthorized("Your session has expired. Please sign in again.");
+
+        return Ok(BuildAuthResponse(user));
     }
 
+    /// <summary>
+    /// The PIN hash and salt are intentionally NOT returned. The PIN is device-local and is never
+    /// stored server-side, so a database leak cannot be used to brute-force 4-digit PINs offline
+    /// (OWASP Foundation, n.d.a). The fields remain in the DTO (always null) so older clients still parse it.
+    /// </summary>
     private AuthResponse BuildAuthResponse(User user) => new(
         AccessToken: _tokenService.GenerateAccessToken(user),
-        RefreshToken: _tokenService.GenerateRefreshToken(),
+        RefreshToken: _tokenService.GenerateRefreshToken(user),
         UserId: user.UserId.ToString(),
         FullName: user.FullName,
         Email: user.Email,
-        PinHash: user.PinHash,
-        PinSalt: user.PinSalt,
+        PinHash: null,
+        PinSalt: null,
         BiometricEnabled: user.BiometricEnabled
     );
 }

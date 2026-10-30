@@ -101,4 +101,8 @@ interface DevLedgerApiService {
 
     @POST("api/notifications/register")
     suspend fun registerDevice(@Body request: RegisterDeviceRequest): Response<Unit>
+
+    /** Asks the server to push a real FCM test message to this account's registered devices. */
+    @POST("api/notifications/test")
+    suspend fun sendTestNotification(): Response<Unit>
 }

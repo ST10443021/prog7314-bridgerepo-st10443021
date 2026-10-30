@@ -1,0 +1,10 @@
+**/bin/
+**/obj/
+**/.vs/
+**/.idea/
+**/.gradle/
+**/build/
+DevLedger/android/
+*.md
+.git/
+.github/

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Strings added in the final PoE remediation pass: folder/tag menus, budget, sync labels,
+     test push, PIN lock-out and key-bound biometrics. All three languages must stay in sync
+     (MissingTranslation is a fatal lint error for release builds). -->
+<resources>
+    <string name="folders_menu_rename">Rename</string>
+    <string name="folders_more_options">More options</string>
+    <string name="folders_search_hint">Search folders and tags</string>
+    <string name="folders_clear_search">Clear search</string>
+    <string name="tags_rename_title">Rename tag</string>
+    <string name="tags_delete_title">Delete tag "%1$s"?</string>
+    <string name="tags_delete_body">The tag will be removed from every snippet that uses it.</string>
+    <string name="settings_auto_sync_hint">Let DevLedger sync by itself. Turn off to sync only when you tap Sync now.</string>
+    <string name="settings_wifi_only_hint">Use Wi-Fi only for automatic and manual sync, never mobile data.</string>
+    <string name="settings_budget_title">Monthly budget</string>
+    <string name="settings_budget_subtitle">Spending limit used for budget alerts</string>
+    <string name="settings_budget_label">Monthly budget (%1$s)</string>
+    <string name="settings_budget_hint">Leave empty for no budget. You are notified at %1$d%% and %2$d%% of it.</string>
+    <string name="settings_budget_invalid">Enter a valid amount, for example 5000 or 5000.50.</string>
+    <string name="finance_budget_title">Monthly budget</string>
+    <string name="finance_budget_not_set">No monthly budget set. Add one in Settings to track spending and get alerts.</string>
+    <string name="finance_budget_used">%1$s of %2$s spent (%3$d%%)</string>
+    <string name="finance_budget_remaining">%1$s left this month</string>
+    <string name="finance_budget_over">%1$s over budget</string>
+    <string name="notif_send_test">Send test notification</string>
+    <string name="notif_test_sent">Test requested. It should arrive in a few seconds.</string>
+    <string name="notif_test_no_device">No device is registered for push yet. Allow notifications, stay online, then try again.</string>
+    <string name="notif_test_failed">Could not send the test notification. Check your connection and try again.</string>
+    <string name="pin_locked_out">Too many incorrect attempts. Try again in %1$d seconds.</string>
+    <string name="pin_attempts_left">Incorrect PIN. %1$d attempts left before a temporary lock.</string>
+    <string name="bio_key_invalidated">Your biometrics changed on this phone. Use your PIN, then turn biometric unlock on again in Settings.</string>
+    <string name="placeholder_full_name">Alex Morgan</string>
+    <string name="placeholder_email">alex@devledger.io</string>
+    <string name="placeholder_pin">0000</string>
+    <string name="placeholder_amount">0.00</string>
+</resources>

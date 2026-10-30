@@ -2,6 +2,8 @@ using DevLedger.Api.Services;
 using FluentAssertions;
 using Xunit;
 
+// Reference scope: ASP.NET Core unit testing with xUnit and FluentAssertions. (Microsoft Learn, n.d.d). See REFERENCES-CODE.md for full entries.
+
 namespace DevLedger.Api.Tests;
 
 /// <summary>Unit tests for <see cref="PasswordHasher"/> — verifies password hashing is

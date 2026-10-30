@@ -11,6 +11,8 @@ import javax.inject.Singleton
 import kotlinx.coroutines.flow.first
 import retrofit2.HttpException
 
+// Reference scope: Repository pattern and offline-first data flow. (Google Developers, n.d.a; Google Developers, n.d.b). See REFERENCES-CODE.md for full entries.
+
 /** Recovery never overwrites the remote original with an offline draft. */
 @Singleton
 class SyncConflictRepository @Inject constructor(

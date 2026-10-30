@@ -80,11 +80,16 @@ fun NotificationsScreen(
     viewModel: NotificationsViewModel = hiltViewModel(),
 ) {
     val notifications by viewModel.notifications.collectAsState()
+    val isSendingTest by viewModel.isSendingTest.collectAsState()
+    val testMessage by viewModel.testMessage.collectAsState()
 
     NotificationsContent(
         notifications = notifications,
         onMarkRead = viewModel::markRead,
         onMarkAllRead = viewModel::markAllRead,
+        isSendingTest = isSendingTest,
+        testMessage = testMessage,
+        onSendTest = viewModel::sendTestPush,
     )
 }
 
@@ -93,6 +98,9 @@ private fun NotificationsContent(
     notifications: List<NotificationEntity>,
     onMarkRead: (String) -> Unit,
     onMarkAllRead: () -> Unit,
+    isSendingTest: Boolean = false,
+    testMessage: com.devledger.app.util.localization.UiText? = null,
+    onSendTest: () -> Unit = {},
 ) {
     val strings = rememberAppStrings()
     var selectedFilter by rememberSaveable {
@@ -141,6 +149,22 @@ private fun NotificationsContent(
                 unreadCount = unreadCount,
                 onMarkAllRead = onMarkAllRead,
             )
+        }
+
+        item {
+            // Sends a real FCM push through the API so the live chain can be demonstrated on demand.
+            Column {
+                TextButton(onClick = onSendTest, enabled = !isSendingTest) {
+                    Text(strings.get(R.string.notif_send_test))
+                }
+                testMessage?.let {
+                    Text(
+                        text = it.resolve(strings),
+                        color = DevLedgerColors.TextMuted,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
         }
 
         item {

@@ -20,6 +20,8 @@ import kotlinx.coroutines.sync.withLock
 import retrofit2.HttpException
 import android.util.Log
 
+// Reference scope: Repository pattern and offline-first data flow. (Google Developers, n.d.a; Google Developers, n.d.b). See REFERENCES-CODE.md for full entries.
+
 private val Context.dataStore by preferencesDataStore(name = "devledger_settings")
 
 /**
@@ -47,6 +49,7 @@ class SettingsRepository @Inject constructor(
         val AUTO_SYNC_ENABLED = booleanPreferencesKey("auto_sync_enabled")
         val SYNC_FREQUENCY_MINUTES = androidx.datastore.preferences.core.intPreferencesKey("sync_frequency_minutes")
         val CHARGING_ONLY_SYNC = booleanPreferencesKey("charging_only_sync")
+        val MONTHLY_BUDGET = androidx.datastore.preferences.core.doublePreferencesKey("monthly_budget")
     }
 
     val language: Flow<String> = store.data.map { it[Keys.LANGUAGE] ?: "en" }
@@ -59,6 +62,9 @@ class SettingsRepository @Inject constructor(
     val autoSyncEnabled: Flow<Boolean> = store.data.map { it[Keys.AUTO_SYNC_ENABLED] ?: true }
     val syncFrequencyMinutes: Flow<Int> = store.data.map { it[Keys.SYNC_FREQUENCY_MINUTES] ?: 15 }
     val chargingOnlySync: Flow<Boolean> = store.data.map { it[Keys.CHARGING_ONLY_SYNC] ?: false }
+
+    /** Monthly spending budget in the base currency; 0.0 means none is set. Cached for offline use. */
+    val monthlyBudget: Flow<Double> = store.data.map { it[Keys.MONTHLY_BUDGET] ?: 0.0 }
 
     suspend fun setLanguage(languageTag: String) {
         store.edit { it[Keys.LANGUAGE] = languageTag }
@@ -107,8 +113,9 @@ class SettingsRepository @Inject constructor(
     }
 
     /**
-     * Updates the four preferences currently exposed by the Settings screen.
-     * Fetches the latest server values first to preserve the monthly budget.
+     * Updates the preferences exposed by the Settings screen (language, biometrics, Wi-Fi only,
+     * base currency and, when [updateBudget] is true, the monthly budget).
+     * Fetches the latest server values first so an untouched budget is preserved.
      */
     suspend fun saveToApi(
         language: String,
@@ -116,6 +123,8 @@ class SettingsRepository @Inject constructor(
         wifiOnlySync: Boolean,
         baseCurrency: String,
         biometricVerified: Boolean = false,
+        monthlyBudget: Double? = null,
+        updateBudget: Boolean = false,
     ): UserSettingsDto = remoteMutex.withLock {
         val user = currentUser()
         require(pinStorage.hasPin(user.email)) { "Configure a fallback PIN first." }
@@ -131,6 +140,8 @@ class SettingsRepository @Inject constructor(
             biometricEnabled = biometricEnabled,
             syncOnWifiOnly = wifiOnlySync,
             baseCurrency = baseCurrency,
+            // Only replace the stored budget when the user edited it; otherwise preserve it.
+            monthlyBudget = if (updateBudget) monthlyBudget else current.monthlyBudget,
         )
 
         Log.d("SettingsRepo", "saveToApi: updating remote")
@@ -185,6 +196,28 @@ class SettingsRepository @Inject constructor(
             preferences[Keys.BIOMETRIC_ENABLED] = settings.biometricEnabled
             preferences[Keys.WIFI_ONLY_SYNC] = settings.syncOnWifiOnly
             preferences[Keys.BASE_CURRENCY] = settings.baseCurrency
+            preferences[Keys.MONTHLY_BUDGET] = settings.monthlyBudget ?: 0.0
+        }
+    }
+
+    /**
+     * Best-effort mirror of the Wi-Fi-only switch from the Sync screen to the account settings, so
+     * the Sync screen and Settings can never disagree after the next settings download.
+     * Failures are logged only; the local value already applies to this device.
+     */
+    suspend fun pushWifiOnlyToApi(enabled: Boolean) = remoteMutex.withLock {
+        try {
+            val user = currentUser()
+            val current = fetchRemoteSettings()
+            ensureCurrentUser(user)
+            if (current.syncOnWifiOnly != enabled) {
+                val response = api.updateSettings(current.copy(syncOnWifiOnly = enabled))
+                if (!response.isSuccessful) Log.w("SettingsRepo", "pushWifiOnlyToApi: HTTP ${response.code()}")
+            }
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            Log.w("SettingsRepo", "pushWifiOnlyToApi: kept local value only", error)
         }
     }
 }

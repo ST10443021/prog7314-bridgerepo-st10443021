@@ -98,7 +98,7 @@
     <string name="settings_notifications">Kennisgewings</string>
     <string name="settings_push_notifications">Stootkennisgewings</string>
     <string name="settings_sync">Sinkroniseringsinstellings</string>
-    <string name="settings_auto_sync">Outomatiese Sinkronisering</string>
+    <string name="settings_auto_sync">Outomatiese agtergrondsinkronisering</string>
     <string name="settings_wifi_only">Sinkroniseer Slegs op Wi-Fi</string>
     <string name="settings_sync_now">Sinkroniseer Nou</string>
     <string name="settings_currency">Basisgeldeenheid</string>

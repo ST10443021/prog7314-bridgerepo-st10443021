@@ -38,9 +38,25 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
         with:
-          packages: 'platform-tools platforms;android-34 build-tools;34.0.0'
+          packages: 'platform-tools platforms;android-36 build-tools;36.0.0'
 
-      - name: Check tracked Firebase client configuration
+      # google-services.json is private and git-ignored. CI uses the real file when the repository
+      # secret GOOGLE_SERVICES_JSON_B64 (base64 of the file) exists; otherwise it falls back to the
+      # structural placeholder so forks and pull requests still compile. Push delivery is not
+      # exercised in CI, so the placeholder is sufficient for build, unit tests and lint.
+      - name: Provide Firebase client configuration
+        env:
+          GOOGLE_SERVICES_JSON_B64: ${{ secrets.GOOGLE_SERVICES_JSON_B64 }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON_B64" ]; then
+            echo "$GOOGLE_SERVICES_JSON_B64" | base64 --decode > app/google-services.json
+            echo "Using the real Firebase configuration from repository secrets."
+          else
+            cp app/google-services.json.example app/google-services.json
+            echo "::notice::GOOGLE_SERVICES_JSON_B64 not set - using the placeholder google-services.json."
+          fi
+
+      - name: Check Firebase client configuration
         run: |
           python3 - <<'PY'
           import json
@@ -48,7 +64,7 @@ jobs:
 
           path = Path("app/google-services.json")
           if not path.is_file():
-              raise SystemExit("Missing tracked app/google-services.json.")
+              raise SystemExit("Missing app/google-services.json.")
           config = json.loads(path.read_text(encoding="utf-8-sig"))
           clients = config.get("client", [])
           matching = [
@@ -68,8 +84,10 @@ jobs:
           java -version
           ./gradlew --no-daemon --version
 
+      # assembleRelease also runs R8 shrinking and release lint, so ProGuard problems that only
+      # appear in the minified production build are caught on every push (unsigned without a keystore).
       - name: Build, run unit tests and lint
-        run: ./gradlew --no-daemon --continue :app:assembleDebug :app:testDebugUnitTest :app:lintDebug --stacktrace
+        run: ./gradlew --no-daemon --continue :app:assembleDebug :app:testDebugUnitTest :app:lintDebug :app:assembleRelease --stacktrace
 
       - name: Verify outputs and calculate APK checksum
         run: |

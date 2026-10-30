@@ -4,6 +4,8 @@ import com.devledger.app.util.localization.UiText
 
 import com.devledger.app.data.local.entity.*
 
+// Reference scope: Background work with WorkManager. (Google Developers, n.d.c). See REFERENCES-CODE.md for full entries.
+
 enum class SyncRunState { IDLE, QUEUED, WAITING, RUNNING, SUCCEEDED, FAILED, RETRYING, PARTIAL, CONFLICT, CANCELLED }
 data class QueueItem(val id: String, val label: String, val entityType: String, val direction: String)
 data class SyncUiState(

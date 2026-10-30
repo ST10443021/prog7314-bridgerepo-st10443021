@@ -1,6 +1,8 @@
 using DevLedger.Api.Data;
 using Microsoft.EntityFrameworkCore;
 
+// Reference scope: ASP.NET Core application services. (Microsoft Learn, n.d.; Firebase, n.d.b). See REFERENCES-CODE.md for full entries.
+
 namespace DevLedger.Api.Services;
 
 /// <summary>A frozen budget period lets both write paths compare the same monthly

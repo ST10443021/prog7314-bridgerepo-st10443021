@@ -18,6 +18,8 @@ import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
+// Reference scope: Firebase Cloud Messaging and notification handling. (Firebase, n.d.). See REFERENCES-CODE.md for full entries.
+
 /** Outcomes describe registration, not delivery of a push notification. */
 enum class DeviceRegistrationOutcome { REGISTERED, RETRY, SIGNED_OUT, SESSION_CHANGED, REJECTED }
 

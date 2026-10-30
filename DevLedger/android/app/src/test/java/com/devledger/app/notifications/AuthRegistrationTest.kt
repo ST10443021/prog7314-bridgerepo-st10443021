@@ -16,6 +16,8 @@ import org.junit.Before
 import org.junit.Test
 import retrofit2.Response
 
+// Reference scope: JVM unit testing for Android with JUnit, MockK and Truth. (Google Developers, n.d.s). See REFERENCES-CODE.md for full entries.
+
 class AuthRegistrationTest {
     private val api = mockk<DevLedgerApiService>()
     private val tokens = mockk<TokenManager>(relaxed = true)

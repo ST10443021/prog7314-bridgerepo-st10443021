@@ -8,27 +8,60 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+/*
+ * Release signing (Google Developers, n.d.h).
+ * The upload keystore and its passwords are NEVER committed. They are read from either
+ *   1. DevLedger/android/keystore.properties (git-ignored; see keystore.properties.example), or
+ *   2. the DEVLEDGER_KEYSTORE_* environment variables used by .github/workflows/release.yml.
+ * When neither is present the release build is produced unsigned so CI and fresh clones
+ * still compile.
+ */
+val keystoreProperties = java.util.Properties().apply {
+    val file = rootProject.file("keystore.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
+}
+
+fun signingValue(propertyName: String, environmentName: String): String? =
+    (keystoreProperties.getProperty(propertyName) ?: System.getenv(environmentName))
+        ?.takeIf { it.isNotBlank() }
+
 android {
     namespace = "com.devledger.app"
-    compileSdk = 34
+    // Google Play requires new apps and updates to target Android 16 (API 36) from
+    // 31 August 2026 (Google Play Console Help, n.d.).
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.devledger.app"
         minSdk = 26
-        targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0-prototype"
+        targetSdk = 36
+        // Final PoE release. versionCode must increase for every Play upload.
+        versionCode = 100
+        versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        // 1. BASE_URL pointing to your live Render backend
+        // Base URL of the hosted DevLedger REST API (Render deployment). Must end with "/".
         buildConfigField("String", "BASE_URL", "\"https://devledger-api-op1w.onrender.com/\"")
 
-        // 2. GOOGLE_WEB_CLIENT_ID using your Web Client ID from Google Cloud
-        // Base URL for the DevLedger REST API. Overridden per build type below.
+        // OAuth *client identifiers* are public by design; the matching secrets live only on
+        // the API server (GitHub, n.d.a; Google, n.d.).
+        // Web client ID used to request the Google ID token that the API verifies.
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"293392981245-br01csqhvog5audb2r5hvmq3lp9p15at.apps.googleusercontent.com\"")
 
-        //3. GITHUB_CLIENT_ID using your GitHub Client ID from GitHub
+        // GitHub OAuth app client ID (the client secret stays server-side).
         buildConfigField("String", "GITHUB_CLIENT_ID", "\"Ov23liCiru7JpKPZZKwn\"")
+    }
+
+    signingConfigs {
+        create("release") {
+            val storePath = signingValue("storeFile", "DEVLEDGER_KEYSTORE_FILE")
+            if (storePath != null) {
+                storeFile = rootProject.file(storePath)
+                storePassword = signingValue("storePassword", "DEVLEDGER_KEYSTORE_PASSWORD")
+                keyAlias = signingValue("keyAlias", "DEVLEDGER_KEY_ALIAS")
+                keyPassword = signingValue("keyPassword", "DEVLEDGER_KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
@@ -39,6 +72,16 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // Signed only when a keystore is supplied (see the comment above).
+            signingConfig = signingConfigs.getByName("release").takeIf { it.storeFile != null }
+        }
+    }
+
+    // The in-app language picker (English / Afrikaans / isiXhosa) switches locale at runtime,
+    // so every language must ship in the base APK of an App Bundle (Google Developers, n.d.i).
+    bundle {
+        language {
+            enableSplit = false
         }
     }
 
@@ -118,11 +161,11 @@ dependencies {
     // Biometric authentication (Google Developers, n.d.d)
     implementation("androidx.biometric:biometric:1.1.0")
 
-    // Firebase (Cloud Messaging + Auth — Firebase, n.d.)
+    // Firebase Cloud Messaging for real-time push (Firebase, n.d.). Authentication is handled by
+    // the DevLedger API (JWT) with Google/GitHub SSO, so the unused firebase-auth module was removed.
     implementation(platform("com.google.firebase:firebase-bom:33.1.2"))
     implementation("com.google.firebase:firebase-messaging-ktx")
     implementation("com.google.firebase:firebase-installations") // Classify retryable installation errors.
-    implementation("com.google.firebase:firebase-auth-ktx")
 
     // Google Sign-In (SSO)
     implementation("com.google.android.gms:play-services-auth:21.2.0")

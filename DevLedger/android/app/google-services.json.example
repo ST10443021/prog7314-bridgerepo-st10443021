@@ -1,0 +1,20 @@
+{
+  "_comment": "Structural PLACEHOLDER so the project compiles in CI/forks. Replace with the real file from Firebase Console > Project settings > Your apps. The real file is git-ignored and is never committed.",
+  "project_info": {
+    "project_number": "000000000000",
+    "project_id": "devledger-placeholder",
+    "storage_bucket": "devledger-placeholder.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:000000000000:android:0000000000000000000000",
+        "android_client_info": { "package_name": "com.devledger.app" }
+      },
+      "oauth_client": [],
+      "api_key": [ { "current_key": "AIzaSyPLACEHOLDER_NOT_A_REAL_KEY_000000000" } ],
+      "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
+    }
+  ],
+  "configuration_version": "1"
+}

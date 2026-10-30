@@ -14,6 +14,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 
+// Reference scope: Background work with WorkManager. (Google Developers, n.d.c). See REFERENCES-CODE.md for full entries.
+
 /** WorkManager adapter; the engine owns upload/download and conflict decisions. */
 @HiltWorker
 class SyncWorker @AssistedInject constructor(

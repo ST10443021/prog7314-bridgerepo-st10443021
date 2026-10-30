@@ -1,5 +1,7 @@
 package com.devledger.app.ui.navigation
 
+// Reference scope: Navigation Compose. (Google Developers, n.d.q). See REFERENCES-CODE.md for full entries.
+
 /** Route constants matching the navigation wireflow diagram (Figure 11) from the
  *  Part 1 Planning and Design document. */
 object DevLedgerDestinations {

@@ -20,6 +20,8 @@ import androidx.compose.ui.unit.sp
 import com.devledger.app.ui.theme.DevLedgerColors
 import androidx.compose.material3.MaterialTheme
 
+// Reference scope: Jetpack Compose theming and reusable components. (Google Developers, n.d.p). See REFERENCES-CODE.md for full entries.
+
 /** Simple top bar with an optional back button — used across the secondary screens
  *  (Snippet Editor, Add Transaction, etc.) matching the design's `TopBar.tsx`. */
 @Composable

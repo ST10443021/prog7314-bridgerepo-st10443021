@@ -63,8 +63,7 @@ public class ProfileController : ControllerBase
             user.FullName = fullName;
         }
 
-        if (request.PinHash != null) user.PinHash = request.PinHash;
-        if (request.PinSalt != null) user.PinSalt = request.PinSalt;
+        // PinHash / PinSalt in the request are deliberately ignored: the PIN stays on the device.
         if (request.BiometricEnabled.HasValue) user.BiometricEnabled = request.BiometricEnabled.Value;
 
         await _db.SaveChangesAsync();
@@ -83,8 +82,8 @@ public class ProfileController : ControllerBase
             user.PreferredLanguage,
             user.BaseCurrency,
             user.BiometricEnabled,
-            user.PinHash,
-            user.PinSalt,
+            PinHash: null,
+            PinSalt: null,
             user.CreatedAt
         );
     }

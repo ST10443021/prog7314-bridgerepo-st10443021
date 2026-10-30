@@ -22,6 +22,7 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
+import io.mockk.slot
 import io.mockk.unmockkObject
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
@@ -29,6 +30,8 @@ import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+
+// Reference scope: JVM unit testing for Android with JUnit, MockK and Truth. (Google Developers, n.d.s). See REFERENCES-CODE.md for full entries.
 
 /**
  * Unit tests for the offline-first snippet repository.
@@ -69,6 +72,7 @@ class SnippetRepositoryTest {
         every { settingsRepository.wifiOnlySync } returns flowOf(false)
 
         mockkObject(SyncScheduler)
+        coEvery { SyncScheduler.queueAfterLocalChange(any(), any()) } returns Unit
         every { SyncScheduler.schedulePeriodicSync(any(), any()) } returns Unit
         every { SyncScheduler.syncNow(any(), any()) } returns Unit
 
@@ -198,6 +202,52 @@ class SnippetRepositoryTest {
 
         assertThat(deleted).isEqualTo(0)
         coVerify(exactly = 0) { notificationRepository.notify(any(), any(), any()) }
+    }
+
+    @Test
+    fun `renameTag rewrites every snippet that carries the tag and queues them`() = runTest {
+        val withTag = snippet("a").copy(tagsCsv = "Kotlin,ci")
+        val other = snippet("b").copy(tagsCsv = "shell")
+        coEvery { dao.getTaggedForUser("user-1") } returns listOf(withTag, other)
+        val saved = slot<List<SnippetEntity>>()
+        coEvery { dao.upsertAll(capture(saved)) } returns Unit
+
+        val changed = repository.renameTag("kotlin", "Kotlin-Android")
+
+        assertThat(changed).isEqualTo(1)
+        assertThat(saved.captured).hasSize(1)
+        assertThat(saved.captured.single().tagsCsv).isEqualTo("Kotlin-Android,ci")
+        assertThat(saved.captured.single().syncStatus).isEqualTo(SyncStatus.PENDING)
+        coVerify(exactly = 1) { SyncScheduler.queueAfterLocalChange(any(), any()) }
+    }
+
+    @Test
+    fun `removeTag strips the tag and keeps the others`() = runTest {
+        coEvery { dao.getTaggedForUser("user-1") } returns listOf(snippet("a").copy(tagsCsv = "ci,old,shell"))
+        val saved = slot<List<SnippetEntity>>()
+        coEvery { dao.upsertAll(capture(saved)) } returns Unit
+
+        repository.removeTag("OLD")
+
+        assertThat(saved.captured.single().tagsCsv).isEqualTo("ci,shell")
+    }
+
+    @Test
+    fun `renameTag does nothing when no snippet uses the tag`() = runTest {
+        coEvery { dao.getTaggedForUser("user-1") } returns listOf(snippet("a").copy(tagsCsv = "shell"))
+
+        val changed = repository.renameTag("missing", "other")
+
+        assertThat(changed).isEqualTo(0)
+        coVerify(exactly = 0) { dao.upsertAll(any()) }
+        coVerify(exactly = 0) { SyncScheduler.queueAfterLocalChange(any(), any()) }
+    }
+
+    @Test
+    fun `renameTag rejects names containing commas`() = runTest {
+        val error = runCatching { repository.renameTag("ci", "a,b") }.exceptionOrNull()
+
+        assertThat(error).isInstanceOf(IllegalArgumentException::class.java)
     }
 
     private fun snippet(

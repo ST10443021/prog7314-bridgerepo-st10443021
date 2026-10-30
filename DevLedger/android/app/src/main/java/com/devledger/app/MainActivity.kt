@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.rememberNavController
+import com.devledger.app.notifications.NotificationDeepLink
 import com.devledger.app.ui.navigation.DevLedgerNavHost
 import com.devledger.app.ui.screens.auth.GitHubOAuthEvents
 import com.devledger.app.ui.screens.auth.GitHubOAuthResult
@@ -22,6 +23,8 @@ import com.devledger.app.ui.theme.DevLedgerTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import androidx.appcompat.app.AppCompatActivity
+
+// Reference scope: Android application component. (Google Developers, n.d.a). See REFERENCES-CODE.md for full entries.
 
 
 /**
@@ -52,7 +55,8 @@ class MainActivity : AppCompatActivity() {
         }
         // Cold start: the app was not already running when GitHub redirected back.
         handleGitHubRedirect(intent)
-        
+        handleNotificationTap(intent)
+
         requestNotificationPermission()
     }
 
@@ -68,6 +72,15 @@ class MainActivity : AppCompatActivity() {
         // Warm start: this is the path that fires for the normal case — the Custom
         // Tab was sitting on top of the already-running app.
         handleGitHubRedirect(intent)
+        handleNotificationTap(intent)
+    }
+
+    /** A tap on a DevLedger notification asks the nav host to open the Notifications list. */
+    private fun handleNotificationTap(intent: Intent?) {
+        if (intent?.getBooleanExtra(NotificationDeepLink.EXTRA_OPEN_NOTIFICATIONS, false) == true) {
+            NotificationDeepLink.request()
+            intent.removeExtra(NotificationDeepLink.EXTRA_OPEN_NOTIFICATIONS)
+        }
     }
 
     private fun handleGitHubRedirect(intent: Intent?) {

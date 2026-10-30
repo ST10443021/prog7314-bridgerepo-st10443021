@@ -28,6 +28,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.devledger.app.ui.components.*
 import com.devledger.app.ui.theme.DevLedgerColors
 
+// Reference scope: Jetpack Compose screen. (Google Developers, n.d.p). See REFERENCES-CODE.md for full entries.
+
 /**
  * Registration screen. Implementation follows the "Register Screen" design mockup.
  * Includes real-time validation, password strength meter, and API error handling.
@@ -124,7 +126,7 @@ fun RegisterScreen(
             value = state.fullName,
             onValueChange = viewModel::onFullNameChange,
             label = "",
-            placeholder = "Alex Morgan",
+            placeholder = strings.get(R.string.placeholder_full_name),
             leadingIcon = Icons.Filled.Person,
             isValid = state.isFullNameValid,
             isError = state.fullNameError?.resolve(strings) != null,
@@ -137,7 +139,7 @@ fun RegisterScreen(
             value = state.email,
             onValueChange = viewModel::onEmailChange,
             label = "",
-            placeholder = "alex@devledger.io",
+            placeholder = strings.get(R.string.placeholder_email),
             leadingIcon = Icons.Filled.Email,
             isValid = state.isEmailValid,
             isError = state.emailError?.resolve(strings) != null,

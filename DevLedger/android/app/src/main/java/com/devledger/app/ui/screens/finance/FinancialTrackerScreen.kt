@@ -132,8 +132,10 @@ fun FinancialTrackerScreen(
                 /*
                  * The month selector is placed underneath the title instead of
                  * beside it. This prevents the selector from being squeezed on
-                 * smaller physical-device screens.
+                 * smaller physical-device screens. Tapping it opens the last twelve
+                 * months (previously the tap did nothing).
                  */
+                var monthMenuOpen by remember { mutableStateOf(false) }
                 Box(
                     modifier = Modifier
                         .align(Alignment.End)
@@ -144,14 +146,34 @@ fun FinancialTrackerScreen(
                             color = DevLedgerColors.Border,
                             shape = RoundedCornerShape(8.dp)
                         )
-                        .clickable {
-                            // Month picker can be connected here.
-                        }
+                        .clickable { monthMenuOpen = true }
                         .padding(
                             horizontal = 10.dp,
                             vertical = 6.dp
                         )
                 ) {
+                    DropdownMenu(
+                        expanded = monthMenuOpen,
+                        onDismissRequest = { monthMenuOpen = false },
+                        modifier = Modifier.background(DevLedgerColors.SurfaceCard),
+                    ) {
+                        (0..11).map { back ->
+                            Calendar.getInstance().apply { set(Calendar.DAY_OF_MONTH, 1); add(Calendar.MONTH, -back) }
+                        }.forEach { month ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        SimpleDateFormat("MMMM yyyy", strings.locale).format(month.time),
+                                        color = Color.White,
+                                    )
+                                },
+                                onClick = {
+                                    viewModel.onMonthSelected(month.get(Calendar.YEAR), month.get(Calendar.MONTH))
+                                    monthMenuOpen = false
+                                },
+                            )
+                        }
+                    }
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -235,6 +257,18 @@ fun FinancialTrackerScreen(
         }
 
         item {
+            BudgetCard(
+                hasBudget = state.hasBudget,
+                spentText = currencyFormat.format(state.expenseStat.total),
+                budgetText = currencyFormat.format(state.monthlyBudget),
+                remainingText = currencyFormat.format(kotlin.math.abs(state.monthlyBudget - state.expenseStat.total)),
+                percent = state.budgetUsedPercent,
+                fraction = state.budgetUsedFraction.toFloat(),
+                isOver = state.isOverBudget,
+            )
+        }
+
+        item {
             MonthlySummarySection(
                 points = state.dailyPoints,
                 currentRange = state.summaryRange,
@@ -284,6 +318,72 @@ fun FinancialTrackerScreen(
         item {
             Spacer(
                 modifier = Modifier.height(80.dp)
+            )
+        }
+    }
+}
+
+/**
+ * Monthly budget progress. The budget is entered in Settings and enforced server-side, where the
+ * API sends a push notification when spending crosses 80% and 100% of it.
+ * Reference scope: Compose UI state. (Google Developers, n.d.f). See REFERENCES-CODE.md.
+ */
+@Composable
+private fun BudgetCard(
+    hasBudget: Boolean,
+    spentText: String,
+    budgetText: String,
+    remainingText: String,
+    percent: Int,
+    fraction: Float,
+    isOver: Boolean,
+) {
+    val strings = rememberAppStrings()
+    val barColor = when {
+        isOver -> DevLedgerColors.ErrorRed
+        percent >= 80 -> DevLedgerColors.WarningAmber
+        else -> DevLedgerColors.SuccessGreen
+    }
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(DevLedgerColors.SurfaceCard)
+            .border(1.dp, DevLedgerColors.Border, RoundedCornerShape(16.dp))
+            .padding(16.dp)
+    ) {
+        Text(
+            text = strings.get(R.string.finance_budget_title),
+            color = Color.White,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        if (!hasBudget) {
+            Text(
+                text = strings.get(R.string.finance_budget_not_set),
+                color = DevLedgerColors.TextMuted,
+                fontSize = 13.sp
+            )
+        } else {
+            Text(
+                text = strings.get(R.string.finance_budget_used, spentText, budgetText, percent),
+                color = Color.White,
+                fontSize = 13.sp
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            LinearProgressIndicator(
+                progress = { fraction },
+                modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
+                color = barColor,
+                trackColor = DevLedgerColors.SurfaceCardAlt,
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = if (isOver) strings.get(R.string.finance_budget_over, remainingText)
+                else strings.get(R.string.finance_budget_remaining, remainingText),
+                color = if (isOver) DevLedgerColors.ErrorRed else DevLedgerColors.TextMuted,
+                fontSize = 12.sp
             )
         }
     }

@@ -7,6 +7,8 @@ import kotlinx.serialization.json.Json
 import org.junit.Assert.*
 import org.junit.Test
 
+// Reference scope: JVM unit testing for Android with JUnit, MockK and Truth. (Google Developers, n.d.s). See REFERENCES-CODE.md for full entries.
+
 class SyncBatchPlannerTest {
     private val user = "user-a"
     private fun folder(id: String, parent: String? = null) = FolderEntity(id, user, id, parent, 1L, "PENDING")

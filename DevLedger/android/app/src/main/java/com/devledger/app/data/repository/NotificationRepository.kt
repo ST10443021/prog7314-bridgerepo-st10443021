@@ -65,6 +65,8 @@ class NotificationRepository @Inject constructor(
         }
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            // Open the in-app list after the security gate (see NotificationDeepLink).
+            putExtra(com.devledger.app.notifications.NotificationDeepLink.EXTRA_OPEN_NOTIFICATIONS, true)
         }
         val pendingIntent = PendingIntent.getActivity(
             context, 0, intent,

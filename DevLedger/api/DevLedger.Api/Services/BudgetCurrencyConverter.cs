@@ -1,3 +1,5 @@
+// Reference scope: ASP.NET Core application services. (Microsoft Learn, n.d.; Firebase, n.d.b). See REFERENCES-CODE.md for full entries.
+
 namespace DevLedger.Api.Services;
 
 /// <summary>Matches Android CurrencyConverter's existing offline prototype rates.

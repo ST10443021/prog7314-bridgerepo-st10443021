@@ -27,6 +27,11 @@ import com.devledger.app.ui.screens.auth.RegisterScreen
 import com.devledger.app.ui.screens.biometric.BiometricScreen
 import com.devledger.app.ui.screens.biometric.PinVerificationScreen
 import com.devledger.app.ui.screens.biometric.SecuritySetupScreen
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.navigation.compose.currentBackStackEntryAsState
+import com.devledger.app.notifications.NotificationDeepLink
 import com.devledger.app.ui.screens.dashboard.DashboardScreen
 import com.devledger.app.ui.screens.finance.AddTransactionScreen
 import com.devledger.app.ui.screens.finance.FinancialTrackerScreen
@@ -50,10 +55,31 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 
+// Reference scope: Navigation Compose. (Google Developers, n.d.q). See REFERENCES-CODE.md for full entries.
+
 @Composable
 fun DevLedgerNavHost(navController: NavHostController) {
     val authViewModelHolder: AuthEntryPoint = hiltViewModel()
     val isLoggedIn = authViewModelHolder.isLoggedIn()
+
+    // A notification tap opens the Notifications list, but only once the user is past the
+    // sign-in / PIN / biometric gate, so it can never be used to skip authentication.
+    val openNotifications by NotificationDeepLink.pending.collectAsState()
+    val currentEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = currentEntry?.destination?.route
+    LaunchedEffect(openNotifications, currentRoute) {
+        val gateRoutes = setOf(
+            DevLedgerDestinations.SPLASH, DevLedgerDestinations.AUTH, DevLedgerDestinations.REGISTER,
+            DevLedgerDestinations.BIOMETRIC, DevLedgerDestinations.PIN_VERIFICATION,
+            DevLedgerDestinations.SECURITY_SETUP, DevLedgerDestinations.TERMS, DevLedgerDestinations.PRIVACY_POLICY,
+        )
+        if (openNotifications && currentRoute != null && currentRoute !in gateRoutes) {
+            NotificationDeepLink.consume()
+            if (currentRoute != DevLedgerDestinations.NOTIFICATIONS) {
+                navController.navigate(DevLedgerDestinations.NOTIFICATIONS)
+            }
+        }
+    }
 
     NavHost(navController = navController, startDestination = DevLedgerDestinations.SPLASH) {
 
@@ -222,7 +248,7 @@ fun DevLedgerNavHost(navController: NavHostController) {
                     onAddSnippet = { navController.navigate(DevLedgerDestinations.snippetEditorRoute()) },
                     onOpenFoldersAndTags = { navController.navigate(DevLedgerDestinations.FOLDERS_TAGS) },
                     onOpenNotifications = { navController.navigate(DevLedgerDestinations.NOTIFICATIONS) },
-                    onOpenDrawer = { /* Drawer not implemented */ },
+                    onOpenDrawer = { navController.navigate(DevLedgerDestinations.SETTINGS) },
                     onOpenSync = { navController.navigate(DevLedgerDestinations.SYNC_STATUS) },
                 )
             }
@@ -290,7 +316,11 @@ fun DevLedgerNavHost(navController: NavHostController) {
         }
 
         composable(DevLedgerDestinations.ADD_TRANSACTION) {
-            AddTransactionScreen(onSaved = { navController.popBackStack() }, onBack = { navController.popBackStack() })
+            AddTransactionScreen(
+                onSaved = { navController.popBackStack() },
+                onBack = { navController.popBackStack() },
+                onOpenHistory = { type -> navController.navigate(DevLedgerDestinations.transactionListRoute(type)) },
+            )
         }
 
         composable(DevLedgerDestinations.SETTINGS) {

@@ -5,6 +5,8 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
+// Reference scope: Jetpack Compose theming and reusable components. (Google Developers, n.d.p). See REFERENCES-CODE.md for full entries.
+
 // Central colour scheme for the current DevLedger dark UI.
 private val DevLedgerDarkScheme = darkColorScheme(
     primary = DevLedgerColors.AccentBlue,

@@ -74,6 +74,16 @@ class UserTagRepository @Inject constructor(
         entity
     }
 
+    suspend fun rename(tagId: String, name: String): DevLedgerResult<Unit> = DevLedgerResult.safeCall {
+        val user = userDao.getCurrentUser() ?: error("Sign in before renaming a tag.")
+        val existing = dao.getById(tagId) ?: error("Tag not found.")
+        require(existing.userId == user.userId) { "Tag account mismatch." }
+        val clean = name.trim()
+        require(clean.isNotEmpty() && ',' !in clean) { "Use one tag name without commas." }
+        dao.upsert(existing.copy(name = clean, syncStatus = SyncStatus.PENDING))
+        queueSync()
+    }
+
     suspend fun delete(tagId: String): DevLedgerResult<Unit> = DevLedgerResult.safeCall {
         val user = userDao.getCurrentUser() ?: error("Sign in before deleting.")
         val existing = dao.getById(tagId) ?: return@safeCall
@@ -89,11 +99,10 @@ class UserTagRepository @Inject constructor(
     suspend fun markSyncedIfUnchanged(tag: UserTagEntity) = dao.markSyncedIfUnchanged(tag)
     suspend fun markSynced(id: String) = dao.updateSyncStatus(id, SyncStatus.SYNCED)
 
+    /** Honours the auto-sync preference (see [SyncScheduler.queueAfterLocalChange]). */
     private suspend fun queueSync() {
         try {
-            val wifiOnly = settingsRepository.wifiOnlySync.first()
-            SyncScheduler.schedulePeriodicSync(context, wifiOnly)
-            SyncScheduler.syncNow(context, wifiOnly)
+            SyncScheduler.queueAfterLocalChange(context, settingsRepository)
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (error: Exception) {
