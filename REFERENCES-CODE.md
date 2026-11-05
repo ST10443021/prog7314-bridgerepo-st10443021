@@ -28,6 +28,10 @@ undated pages, the letters `n.d.a`, `n.d.b`, ... identify them, exactly as cited
 - Google Developers, n.d.q. *Navigation with Compose*. [Online] Available at: <https://developer.android.com/develop/ui/compose/navigation> [Accessed ____ 2026].
 - Google Developers, n.d.r. *Per-app language preferences*. [Online] Available at: <https://developer.android.com/guide/topics/resources/app-languages> [Accessed ____ 2026].
 - Google Developers, n.d.s. *Fundamentals of testing Android apps*. [Online] Available at: <https://developer.android.com/training/testing/fundamentals> [Accessed ____ 2026].
+- Google Developers, n.d.t. *Display content edge-to-edge in your app and handle window insets in Compose*. [Online] Available at: <https://developer.android.com/develop/ui/compose/layouts/insets> [Accessed 5 November 2026].
+- Google Developers, n.d.u. *Set up window insets (padding modifiers and inset consumption)*. [Online] Available at: <https://developer.android.com/develop/ui/compose/system/insets-ui> [Accessed 5 November 2026].
+- Google Developers, n.d.v. *Graphics in Compose (Canvas and DrawScope)*. [Online] Available at: <https://developer.android.com/develop/ui/compose/graphics/draw/overview> [Accessed 5 November 2026].
+- Google Developers, n.d.w. *Value-based animations (Animatable)*. [Online] Available at: <https://developer.android.com/develop/ui/compose/animation/value-based> [Accessed 5 November 2026].
 
 ## Firebase and Google identity
 - Firebase, n.d. *Firebase Cloud Messaging*. [Online] Available at: <https://firebase.google.com/docs/cloud-messaging> [Accessed ____ 2026].

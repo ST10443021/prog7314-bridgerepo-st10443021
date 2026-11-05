@@ -2,6 +2,9 @@ package com.devledger.app.ui.screens.dashboard
 
 import com.devledger.app.util.localization.rememberAppStrings
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -41,6 +44,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -48,11 +52,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
@@ -77,6 +86,10 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Currency
 import java.util.Locale
+import kotlin.math.floor
+import kotlin.math.log10
+import kotlin.math.pow
+import kotlin.math.roundToInt
 
 @Composable
 /**
@@ -518,7 +531,7 @@ private fun FinancialOverviewCard(
             ) {
                 ChartLegend(
                     label = stringResource(R.string.finance_total_income),
-                    color = DevLedgerColors.AccentBlue,
+                    color = DevLedgerColors.SuccessGreen,
                 )
 
                 Spacer(modifier = Modifier.width(16.dp))
@@ -533,6 +546,7 @@ private fun FinancialOverviewCard(
 
             FinancialChart(
                 points = chartPoints,
+                locale = strings.locale,
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -585,93 +599,249 @@ private fun ChartLegend(
     }
 }
 
+/**
+ * Cumulative income / expense chart for the current month.
+ *
+ * Drawn with the Compose Canvas API (Google Developers, n.d.v):
+ * - smooth, non-overshooting curves (each segment is a cubic Bezier whose control points share the
+ *   segment's mid x-value, so a cumulative series never dips below or above its real values);
+ * - a soft gradient fill and glow under each line, green for income and red for expenses so the
+ *   colours match the figures printed under the chart;
+ * - a y-axis scaled to round values, a day axis along the bottom and an end-point marker on each line;
+ * - a left-to-right reveal animation using [Animatable] (Google Developers, n.d.w).
+ * With no transactions it shows a quiet dashed baseline instead of two overlapping flat lines.
+ */
 @Composable
 private fun FinancialChart(
     points: List<ChartPoint>,
+    locale: Locale,
 ) {
-    val gridColor = DevLedgerColors.Border.copy(alpha = 0.55f)
-    val incomeColor = DevLedgerColors.AccentBlue
+    val gridColor = DevLedgerColors.Border.copy(alpha = 0.7f)
+    val incomeColor = DevLedgerColors.SuccessGreen
     val expenseColor = DevLedgerColors.ErrorRed
+    val labelColor = DevLedgerColors.TextMuted
+    val markerCoreColor = DevLedgerColors.SurfaceCard
+
+    val reveal = remember { Animatable(0f) }
+    LaunchedEffect(points) {
+        reveal.snapTo(0f)
+        reveal.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(durationMillis = 900, easing = FastOutSlowInEasing),
+        )
+    }
+
+    val labelPaint = remember {
+        android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+    }
+    val axisNumberFormat = remember(locale) {
+        NumberFormat.getNumberInstance(locale).apply {
+            minimumFractionDigits = 0
+            maximumFractionDigits = 1
+            isGroupingUsed = false
+        }
+    }
+
+    val hasData = points.any { it.income > 0.0 || it.expenses > 0.0 }
+
+    // A single day still needs two points to form a line.
+    val series = if (points.size == 1) listOf(points[0], points[0]) else points
+
+    val maximum = points.maxOfOrNull { maxOf(it.income, it.expenses) } ?: 0.0
+    val axisStep = if (hasData) niceAxisStep(maximum / 3.0) else 1.0
+    val axisMaximum = axisStep * 3.0
+
+    // Up to five evenly spaced day labels, always including the first and last day.
+    val dayLabelIndexes = if (points.size <= 1) {
+        listOf(0)
+    } else {
+        val labelCount = minOf(5, points.size)
+        (0 until labelCount)
+            .map { (it * (points.size - 1f) / (labelCount - 1)).roundToInt() }
+            .distinct()
+    }
 
     Canvas(
         modifier = Modifier
             .fillMaxWidth()
-            .height(145.dp),
+            .height(176.dp),
     ) {
-        val chartTop = 8.dp.toPx()
-        val chartBottom = size.height - 12.dp.toPx()
-        val chartHeight = chartBottom - chartTop
+        val plotLeft = if (hasData) 40.dp.toPx() else 12.dp.toPx()
+        val plotRight = size.width - 10.dp.toPx()
+        val plotTop = 10.dp.toPx()
+        val plotBottom = size.height - 22.dp.toPx()
+        val plotWidth = plotRight - plotLeft
+        val plotHeight = plotBottom - plotTop
 
+        fun xAt(index: Int): Float =
+            if (series.size <= 1) plotLeft else plotLeft + plotWidth * index / (series.size - 1f)
+
+        fun yAt(value: Double): Float =
+            plotBottom - (value / axisMaximum).toFloat().coerceIn(0f, 1f) * plotHeight
+
+        labelPaint.textSize = 10.sp.toPx()
+        labelPaint.color = labelColor.toArgb()
+
+        // Grid lines (solid baseline, dashed guides) and y-axis labels.
+        val dashed = PathEffect.dashPathEffect(
+            floatArrayOf(4.dp.toPx(), 5.dp.toPx()),
+            0f,
+        )
         repeat(4) { index ->
-            val y = chartTop + chartHeight * index / 3f
+            val y = plotBottom - plotHeight * index / 3f
 
             drawLine(
                 color = gridColor,
-                start = Offset(0f, y),
-                end = Offset(size.width, y),
+                start = Offset(plotLeft, y),
+                end = Offset(plotRight, y),
                 strokeWidth = 1.dp.toPx(),
+                pathEffect = if (index == 0) null else dashed,
+            )
+
+            if (hasData) {
+                labelPaint.textAlign = android.graphics.Paint.Align.RIGHT
+                drawContext.canvas.nativeCanvas.drawText(
+                    compactAmount(axisStep * index, axisNumberFormat),
+                    plotLeft - 8.dp.toPx(),
+                    y + 3.5.dp.toPx(),
+                    labelPaint,
+                )
+            }
+        }
+
+        // Day labels along the bottom edge.
+        labelPaint.textAlign = android.graphics.Paint.Align.CENTER
+        dayLabelIndexes.forEach { index ->
+            val fraction = if (points.size <= 1) 0.5f else index / (points.size - 1f)
+            drawContext.canvas.nativeCanvas.drawText(
+                points[index].day.toString(),
+                plotLeft + plotWidth * fraction,
+                size.height - 4.dp.toPx(),
+                labelPaint,
             )
         }
 
-        if (points.isEmpty()) {
-            return@Canvas
+        // Everything below is revealed from left to right.
+        val revealRight = if (reveal.value >= 1f) {
+            size.width
+        } else {
+            plotLeft + plotWidth * reveal.value
         }
 
-        val maximum = points.maxOf {
-            maxOf(it.income, it.expenses)
-        }.coerceAtLeast(1.0)
+        clipRect(left = 0f, top = 0f, right = revealRight, bottom = size.height) {
+            if (!hasData) {
+                drawLine(
+                    color = labelColor.copy(alpha = 0.6f),
+                    start = Offset(plotLeft, plotBottom),
+                    end = Offset(plotRight, plotBottom),
+                    strokeWidth = 2.dp.toPx(),
+                    cap = StrokeCap.Round,
+                    pathEffect = dashed,
+                )
+                return@clipRect
+            }
 
-        fun xPosition(index: Int): Float {
-            return if (points.size <= 1) {
-                0f
-            } else {
-                size.width * index / (points.size - 1f)
+            fun buildLine(selector: (ChartPoint) -> Double): Path {
+                val path = Path()
+                series.forEachIndexed { index, point ->
+                    val x = xAt(index)
+                    val y = yAt(selector(point))
+                    if (index == 0) {
+                        path.moveTo(x, y)
+                    } else {
+                        val previousX = xAt(index - 1)
+                        val previousY = yAt(selector(series[index - 1]))
+                        val midX = (previousX + x) / 2f
+                        path.cubicTo(midX, previousY, midX, y, x, y)
+                    }
+                }
+                return path
+            }
+
+            fun drawSeries(color: Color, selector: (ChartPoint) -> Double) {
+                val line = buildLine(selector)
+
+                val area = Path().apply {
+                    addPath(line)
+                    lineTo(xAt(series.lastIndex), plotBottom)
+                    lineTo(xAt(0), plotBottom)
+                    close()
+                }
+
+                drawPath(
+                    path = area,
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            color.copy(alpha = 0.28f),
+                            color.copy(alpha = 0f),
+                        ),
+                        startY = plotTop,
+                        endY = plotBottom,
+                    ),
+                )
+
+                // Soft glow, then the crisp line on top.
+                drawPath(
+                    path = line,
+                    color = color.copy(alpha = 0.18f),
+                    style = Stroke(
+                        width = 8.dp.toPx(),
+                        cap = StrokeCap.Round,
+                        join = StrokeJoin.Round,
+                    ),
+                )
+                drawPath(
+                    path = line,
+                    color = color,
+                    style = Stroke(
+                        width = 2.5.dp.toPx(),
+                        cap = StrokeCap.Round,
+                        join = StrokeJoin.Round,
+                    ),
+                )
+            }
+
+            drawSeries(incomeColor) { it.income }
+            drawSeries(expenseColor) { it.expenses }
+
+            // End-point markers (ring + dot) on the latest value of each line.
+            val last = series.last()
+            val lastX = xAt(series.lastIndex)
+            listOf(
+                incomeColor to last.income,
+                expenseColor to last.expenses,
+            ).forEach { (color, value) ->
+                val center = Offset(lastX, yAt(value))
+                drawCircle(color = color.copy(alpha = 0.25f), radius = 8.dp.toPx(), center = center)
+                drawCircle(color = color, radius = 4.5.dp.toPx(), center = center)
+                drawCircle(color = markerCoreColor, radius = 2.dp.toPx(), center = center)
             }
         }
-
-        fun yPosition(value: Double): Float {
-            return chartBottom -
-                    ((value / maximum).toFloat() * chartHeight)
-        }
-
-        val incomePath = Path()
-        val expensePath = Path()
-
-        points.forEachIndexed { index, point ->
-            val x = xPosition(index)
-            val incomeY = yPosition(point.income)
-            val expenseY = yPosition(point.expenses)
-
-            if (index == 0) {
-                incomePath.moveTo(x, incomeY)
-                expensePath.moveTo(x, expenseY)
-            } else {
-                incomePath.lineTo(x, incomeY)
-                expensePath.lineTo(x, expenseY)
-            }
-        }
-
-        drawPath(
-            path = incomePath,
-            color = incomeColor,
-            style = Stroke(
-                width = 3.dp.toPx(),
-                cap = StrokeCap.Round,
-                join = StrokeJoin.Round,
-            ),
-        )
-
-        drawPath(
-            path = expensePath,
-            color = expenseColor,
-            style = Stroke(
-                width = 3.dp.toPx(),
-                cap = StrokeCap.Round,
-                join = StrokeJoin.Round,
-            ),
-        )
     }
 }
+
+/** Rounds [raw] up to a "nice" axis step (1, 2, 2.5, 5 or 10 times a power of ten). */
+private fun niceAxisStep(raw: Double): Double {
+    if (raw <= 0.0) return 1.0
+    val base = 10.0.pow(floor(log10(raw)))
+    val fraction = raw / base
+    val nice = when {
+        fraction <= 1.0 -> 1.0
+        fraction <= 2.0 -> 2.0
+        fraction <= 2.5 -> 2.5
+        fraction <= 5.0 -> 5.0
+        else -> 10.0
+    }
+    return nice * base
+}
+
+/** Short axis label, for example 850, 1.5k or 2M (no currency symbol, the card already shows it). */
+private fun compactAmount(value: Double, format: NumberFormat): String =
+    when {
+        value >= 1_000_000.0 -> format.format(value / 1_000_000.0) + "M"
+        value >= 1_000.0 -> format.format(value / 1_000.0) + "k"
+        else -> format.format(value)
+    }
 
 private fun createChartPoints(
     transactions: List<TransactionEntity>,
@@ -681,6 +851,7 @@ private fun createChartPoints(
     val numberOfDays = calendar.getActualMaximum(
         Calendar.DAY_OF_MONTH
     )
+    val today = calendar.get(Calendar.DAY_OF_MONTH)
 
     val transactionsByDay = transactions.groupBy { transaction ->
         Calendar.getInstance().apply {
@@ -688,10 +859,16 @@ private fun createChartPoints(
         }.get(Calendar.DAY_OF_MONTH)
     }
 
+    // The cumulative lines stop at today (or at the latest future-dated transaction this month)
+    // instead of running flat to the end of the month, which looked like real data for days that
+    // have not happened yet.
+    val lastDay = maxOf(today, transactionsByDay.keys.maxOrNull() ?: 0)
+        .coerceIn(1, numberOfDays)
+
     var cumulativeIncome = 0.0
     var cumulativeExpenses = 0.0
 
-    return (1..numberOfDays).map { day ->
+    return (1..lastDay).map { day ->
         transactionsByDay[day]
             .orEmpty()
             .forEach { transaction ->

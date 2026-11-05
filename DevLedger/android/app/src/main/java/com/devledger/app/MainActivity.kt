@@ -4,11 +4,14 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.Manifest
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -24,7 +27,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import androidx.appcompat.app.AppCompatActivity
 
-// Reference scope: Android application component. (Google Developers, n.d.a). See REFERENCES-CODE.md for full entries.
+// Reference scope: Android application component and window insets. (Google Developers, n.d.a; n.d.t; n.d.u). See REFERENCES-CODE.md for full entries.
 
 
 /**
@@ -49,7 +52,14 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        // DevLedger only ships a dark UI, so both system bars are forced to the "dark" style
+        // (transparent scrim, light icons). With the default auto style a phone set to light mode
+        // would draw dark status-bar icons on top of the dark app background (Google Developers,
+        // n.d.t).
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+        )
         setContent {
             DevLedgerApp()
         }
@@ -106,9 +116,17 @@ private fun DevLedgerApp() {
             modifier = Modifier
                 .fillMaxSize()
                 .background(DevLedgerColors.BgDeep),
+            color = DevLedgerColors.BgDeep,
         ) {
-            val navController = rememberNavController()
-            DevLedgerNavHost(navController = navController)
+            // Edge-to-edge is enabled in onCreate, so the status bar and the phone's navigation bar
+            // are drawn over the app. Applying the system-bar insets once here keeps every screen
+            // (splash, auth, dashboard, finance, editors, ...) clear of both bars. systemBarsPadding
+            // consumes the insets, so screens that call statusBarsPadding()/imePadding() themselves
+            // are not padded twice (Google Developers, n.d.t; n.d.u).
+            Box(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
+                val navController = rememberNavController()
+                DevLedgerNavHost(navController = navController)
+            }
         }
     }
 }

@@ -23,13 +23,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.devledger.app.R
 import com.devledger.app.ui.theme.DevLedgerColors
 import androidx.compose.material3.MaterialTheme
 
-// Reference scope: Jetpack Compose theming and reusable components. (Google Developers, n.d.p). See REFERENCES-CODE.md for full entries.
+// Reference scope: Jetpack Compose theming and reusable components, and window insets. (Google Developers, n.d.p; n.d.t; n.d.u). See REFERENCES-CODE.md for full entries.
+
+/** Extra breathing room between the app's bottom bar and the phone's own navigation bar. */
+private val SystemNavigationBarGap: Dp = 8.dp
 
 enum class BottomNavTab { DASHBOARD, SNIPPETS, FINANCE, NOTIFICATIONS }
 
@@ -46,6 +50,12 @@ fun DevLedgerBottomNav(
     Column(
         modifier = modifier
             .fillMaxWidth()
+            // Keep the bar above the phone's navigation bar (gesture pill or 3-button bar) and leave
+            // a small visible gap. These two modifiers sit BEFORE background/border so the bar's own
+            // colour and outline stop above the system bar instead of running underneath it. Insets
+            // already consumed higher up (MainActivity) are not applied a second time.
+            .navigationBarsPadding()
+            .padding(bottom = SystemNavigationBarGap)
             .background(DevLedgerColors.SurfaceNav)
             .border(BorderStroke(1.dp, DevLedgerColors.Border)),
     ) {
