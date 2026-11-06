@@ -41,7 +41,7 @@ DevLedger is a native Android app (Kotlin, Jetpack Compose) that keeps a develop
 | **User Defined 5:** Developer Financial Tracker (10) | `ui/screens/finance`, `TransactionRepository`, budget in Settings, `BudgetAlertService` | Video; `FinanceUiStateTest`, `BudgetInputTest` |
 | User interface (10) | Single design system in `ui/theme` and `ui/components`; every control wired | Section 11 |
 | Play Store preparation (5) | Section 9, `store/`, signed APK/AAB from CI | GitHub Release assets |
-| AI-use write-up (5) | [AI_USE_WRITEUP.md](AI_USE_WRITEUP.md) | |
+| AI-use write-up (5) | E:\GitHub\prog7314-2026-poe-st10443021\docs\DevLedger Final PoE AI Usage Write Up | |
 | GitHub, README, automated testing (10) | Section 7; `.github/workflows/` | Actions tab, commit history |
 | Demonstration video (5) | Link at the top of this file | |
 
