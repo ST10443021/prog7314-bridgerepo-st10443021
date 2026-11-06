@@ -9,7 +9,7 @@
 
 **Personal Developer Utility and Asset Vault** · PROG7314 Final Portfolio of Evidence · Technical report
 
-> **Demonstration video:** [Watch on YouTube (unlisted)](https://youtu.be/REPLACE_WITH_VIDEO_ID)
+> **Demonstration video:** [Watch Demo on YouTube (unlisted)](https://youtu.be/03nndztHXiE)
 > **Release notes:** [RELEASE_NOTES.md](RELEASE_NOTES.md) · **AI-use write-up:** [DevLedger Final PoE AI Usage Write Up](docs/DevLedger%20Final%20PoE%20AI%20Usage%20Write%20Up.pdf) · **Code references:** [REFERENCES-CODE.md](REFERENCES-CODE.md)
 
 ## Contents
