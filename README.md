@@ -41,7 +41,7 @@ DevLedger is a native Android app (Kotlin, Jetpack Compose) that keeps a develop
 | **User Defined 5:** Developer Financial Tracker (10) | `ui/screens/finance`, `TransactionRepository`, budget in Settings, `BudgetAlertService` | Video; `FinanceUiStateTest`, `BudgetInputTest` |
 | User interface (10) | Single design system in `ui/theme` and `ui/components`; every control wired | Section 11 |
 | Play Store preparation (5) | Section 9, `store/`, signed APK/AAB from CI | GitHub Release assets |
-| AI-use write-up (5) | [AI_USE_WRITEUP.md](AI_USE_WRITEUP.md) | |
+| AI-use write-up (5) | E:\GitHub\prog7314-2026-poe-st10443021\docs\DevLedger Final PoE AI Usage Write Up | PDF |
 | GitHub, README, automated testing (10) | Section 7; `.github/workflows/` | Actions tab, commit history |
 | Demonstration video (5) | Link at the top of this file | |
 
@@ -158,7 +158,7 @@ Manual acceptance on a physical phone is shown in the demonstration video (Secti
 | Release signing, R8 rules, no cleartext, all languages in the bundle | Done in `app/build.gradle.kts`, `proguard-rules.pro` |
 | Signed APK + AAB | Built by the `Signed release` workflow; attached to the GitHub Release |
 | Listing text, data-safety answers, content-rating notes | `store/listing.md` |
-| Privacy policy | `docs/privacy-policy.md` (host it and put the URL in the listing) |
+| Privacy policy | `https://docs.google.com/document/d/e/2PACX-1vRcFkRjTGmo-N5ACrnKfHLl6ryPPaLgZVkxK6rKJ0Q0dU_dbqwG5t91Vwei2q9SHMbLo9ugm-apsMQf/pub`|
 | Icon (512 px), feature graphic (1024x500) | `DevLedger/android/app/src/main/ic_launcher-playstore.png`, `store/feature-graphic-1024x500.png` |
 | Promotional screenshots | `docs/screenshots/` (Section 11) |
 
@@ -189,21 +189,19 @@ On Render set `Jwt__SigningKey`, the connection string, OAuth settings and `Fire
 
 ## 11. Screenshots
 
-Captured on a physical phone from the release build (see `docs/screenshots/README.md` for the checklist).
+Promotional screenshots made from the release build.
 
-| | | |
-|---|---|---|
-| ![Sign-in](<img width="1080" height="1920" alt="play-01" src="https://github.com/user-attachments/assets/769799f2-44dc-4652-a909-d88ca3ab4e3f" />
-) | ![Biometric](<img width="1080" height="1920" alt="play-02" src="https://github.com/user-attachments/assets/1473d094-d603-4a96-b8ed-c8ec9566e623" />
-) | ![Vault](<img width="1080" height="1920" alt="play-03" src="https://github.com/user-attachments/assets/56c7f2ac-58ae-4bb7-a31d-5899a553785c" />
-) |
-| ![Folders and tags](<img width="1080" height="1920" alt="play-04" src="https://github.com/user-attachments/assets/1e95ad83-3e34-4176-8c65-70e923fdcded" />
-) | ![Finance](<img width="1080" height="1920" alt="play-05" src="https://github.com/user-attachments/assets/e8ae231b-cb61-4c88-ba0b-4e1b9d586813" />
-) | ![Settings](<img width="1080" height="1920" alt="play-06" src="https://github.com/user-attachments/assets/26aa4ff3-f998-4b30-8d07-38e1e1b5aca3" />
-) |
-| ![Sync](<img width="1080" height="1920" alt="play-07" src="https://github.com/user-attachments/assets/69d1f2b4-15f2-4310-a2e2-e2e989038ee5" />
-) | ![Notifications](<img width="1080" height="1920" alt="play-08" src="https://github.com/user-attachments/assets/e21278f1-82d1-4251-9e38-89f4de865245" />
-) | |
+| Sign-in | Biometric | Vault |
+|:---:|:---:|:---:|
+| <img src="https://github.com/user-attachments/assets/769799f2-44dc-4652-a909-d88ca3ab4e3f" width="250" alt="Sign-in" /> | <img src="https://github.com/user-attachments/assets/1473d094-d603-4a96-b8ed-c8ec9566e623" width="250" alt="Biometric unlock" /> | <img src="https://github.com/user-attachments/assets/56c7f2ac-58ae-4bb7-a31d-5899a553785c" width="250" alt="Code vault" /> |
+
+| Folders and tags | Finance | Settings |
+|:---:|:---:|:---:|
+| <img src="https://github.com/user-attachments/assets/1e95ad83-3e34-4176-8c65-70e923fdcded" width="250" alt="Folders and tags" /> | <img src="https://github.com/user-attachments/assets/e8ae231b-cb61-4c88-ba0b-4e1b9d586813" width="250" alt="Finance" /> | <img src="https://github.com/user-attachments/assets/26aa4ff3-f998-4b30-8d07-38e1e1b5aca3" width="250" alt="Settings" /> |
+
+| Sync | Notifications |
+|:---:|:---:|
+| <img src="https://github.com/user-attachments/assets/69d1f2b4-15f2-4310-a2e2-e2e989038ee5" width="250" alt="Sync status" /> | <img src="https://github.com/user-attachments/assets/e21278f1-82d1-4251-9e38-89f4de865245" width="250" alt="Notifications" /> |
 
 ## 12. Known limitations
 
