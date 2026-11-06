@@ -1,4 +1,4 @@
-# Google Play listing (copy and paste into Play Console)
+# Google Play listing 
 
 | Field | Value | Limit |
 |---|---|---|
@@ -7,11 +7,11 @@
 | Category | Productivity | |
 | Default language | English (United Kingdom) | |
 | Additional languages | Afrikaans, isiXhosa | |
-| Contact email | REPLACE_WITH_CONTACT_EMAIL | |
+| Contact email | syedhamzakazmi52@gmail.com | |
 | Privacy policy URL | REPLACE_WITH_PRIVACY_POLICY_URL (host `docs/privacy-policy.md`, for example with GitHub Pages) | required |
 | App icon | `DevLedger/android/app/src/main/ic_launcher-playstore.png` | 512x512 |
 | Feature graphic | `store/feature-graphic-1024x500.png` | 1024x500 |
-| Phone screenshots | `docs/screenshots/play-01.png` to `play-08.png` (see `docs/screenshots/README.md`) | 2 to 8 |
+| Phone screenshots | `store/DevLedger Promotional Screenshots/` | 2 to 8 |
 | Release asset | Signed `.aab` from the `Signed release` workflow | |
 | Target API | 36 (Android 16) | required for new apps since 31 Aug 2026 (Google Play Console Help, n.d.) |
 
@@ -63,7 +63,5 @@ to the account). Location sharing: no. Digital purchases: none. Confirm the resu
 | Biometric data | Not collected. Android handles it and the app only receives success or failure |
 
 ## Release checklist
-1. Push the tag `Final-POE` to run the `Signed release` workflow.
-2. Download `devledger-1.0.0-release.aab` and upload it to an Internal testing track.
-3. Add screenshots, graphic, listing text, privacy policy URL and data safety answers.
-4. If you publish, add the Play App Signing certificate fingerprints to the Google and GitHub OAuth clients.
+
+4. Add the Play App Signing certificate fingerprints to the Google and GitHub OAuth clients.
