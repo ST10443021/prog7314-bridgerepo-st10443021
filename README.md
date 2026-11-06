@@ -193,9 +193,17 @@ Captured on a physical phone from the release build (see `docs/screenshots/READM
 
 | | | |
 |---|---|---|
-| ![Sign-in](docs/screenshots/play-01.png) | ![Biometric](docs/screenshots/play-02.png) | ![Vault](docs/screenshots/play-03.png) |
-| ![Folders and tags](docs/screenshots/play-04.png) | ![Finance](docs/screenshots/play-05.png) | ![Settings](docs/screenshots/play-06.png) |
-| ![Sync](docs/screenshots/play-07.png) | ![Notifications](docs/screenshots/play-08.png) | |
+| ![Sign-in](<img width="1080" height="1920" alt="play-01" src="https://github.com/user-attachments/assets/769799f2-44dc-4652-a909-d88ca3ab4e3f" />
+) | ![Biometric](<img width="1080" height="1920" alt="play-02" src="https://github.com/user-attachments/assets/1473d094-d603-4a96-b8ed-c8ec9566e623" />
+) | ![Vault](<img width="1080" height="1920" alt="play-03" src="https://github.com/user-attachments/assets/56c7f2ac-58ae-4bb7-a31d-5899a553785c" />
+) |
+| ![Folders and tags](<img width="1080" height="1920" alt="play-04" src="https://github.com/user-attachments/assets/1e95ad83-3e34-4176-8c65-70e923fdcded" />
+) | ![Finance](<img width="1080" height="1920" alt="play-05" src="https://github.com/user-attachments/assets/e8ae231b-cb61-4c88-ba0b-4e1b9d586813" />
+) | ![Settings](<img width="1080" height="1920" alt="play-06" src="https://github.com/user-attachments/assets/26aa4ff3-f998-4b30-8d07-38e1e1b5aca3" />
+) |
+| ![Sync](<img width="1080" height="1920" alt="play-07" src="https://github.com/user-attachments/assets/69d1f2b4-15f2-4310-a2e2-e2e989038ee5" />
+) | ![Notifications](<img width="1080" height="1920" alt="play-08" src="https://github.com/user-attachments/assets/e21278f1-82d1-4251-9e38-89f4de865245" />
+) | |
 
 ## 12. Known limitations
 
