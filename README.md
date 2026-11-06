@@ -10,7 +10,7 @@
 **Personal Developer Utility and Asset Vault** · PROG7314 Final Portfolio of Evidence · Technical report
 
 > **Demonstration video:** [Watch on YouTube (unlisted)](https://youtu.be/REPLACE_WITH_VIDEO_ID)
-> **Release notes:** [RELEASE_NOTES.md](RELEASE_NOTES.md) · **AI-use write-up:** [DevLedger Final PoE AI Usage Write Up](DevLedger Final PoE AI Usage Write Up) · **Code references:** [REFERENCES-CODE.md](REFERENCES-CODE.md)
+> **Release notes:** [RELEASE_NOTES.md](RELEASE_NOTES.md) · **AI-use write-up:** [DevLedger Final PoE AI Usage Write Up](docs/DevLedger%20Final%20PoE%20AI%20Usage%20Write%20Up.pdf) · **Code references:** [REFERENCES-CODE.md](REFERENCES-CODE.md)
 
 ## Contents
 1. [Abstract](#1-abstract)  2. [Team](#2-team)  3. [Requirements and rubric mapping](#3-requirements-and-rubric-mapping)  4. [Architecture](#4-architecture)  5. [Feature design](#5-feature-design-and-design-considerations)  6. [REST API](#6-rest-api)  7. [DevOps](#7-devops-and-version-control)  8. [Testing](#8-testing)  9. [Release and Play Store readiness](#9-release-and-play-store-readiness)  10. [Setup](#10-setup-and-configuration)  11. [Screenshots](#11-screenshots)  12. [Limitations](#12-known-limitations)  13. [References](#13-references)
