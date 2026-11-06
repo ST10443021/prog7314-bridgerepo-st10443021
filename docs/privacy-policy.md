@@ -23,7 +23,7 @@ Data is kept in a PostgreSQL database behind the DevLedger API, hosted on Render
 Data is shared only with the services needed to run the app: Google and GitHub (sign-in) and Google Firebase (push delivery).
 
 ## Your choices
-You can change the language, sync behaviour, budget and notification permission at any time in the app or in Android settings. To access or delete your data, email REPLACE_WITH_CONTACT_EMAIL.
+You can change the language, sync behaviour, budget and notification permission at any time in the app or in Android settings. To access or delete your data, email st10443021@Myemeris.edu.za.
 
 ## Children
 DevLedger is intended for adults and students aged 18 and over.
