@@ -57,6 +57,3 @@ undated pages, the letters `n.d.a`, `n.d.b`, ... identify them, exactly as cited
 - OWASP Foundation, n.d.a. *Authentication Cheat Sheet*. [Online] Available at: <https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html> [Accessed 6 November 2026].
 - OWASP Foundation, n.d.b. *Logging Cheat Sheet*. [Online] Available at: <https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html> [Accessed 6 November 2026].
 
-## How to cite from code
-Use the same style as the existing comments, e.g. `// Reference scope: Room persistence. (Google Developers, n.d.b).`
-Add any new source to this file with the next unused letter before citing it.
