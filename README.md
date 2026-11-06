@@ -9,8 +9,8 @@
 
 **Personal Developer Utility and Asset Vault** · PROG7314 Final Portfolio of Evidence · Technical report
 
-> **Demonstration video:** [Watch on YouTube (unlisted)](https://youtu.be/REPLACE_WITH_VIDEO_ID)
-> **Release notes:** [RELEASE_NOTES.md](RELEASE_NOTES.md) · **AI-use write-up:** [AI_USE_WRITEUP.md](AI_USE_WRITEUP.md) · **Code references:** [REFERENCES-CODE.md](REFERENCES-CODE.md)
+> **Demonstration video:** [Watch Demo on YouTube (unlisted)](https://youtu.be/03nndztHXiE)
+> **Release notes:** [RELEASE_NOTES.md](RELEASE_NOTES.md) · **AI-use write-up:** [DevLedger Final PoE AI Usage Write Up](docs/DevLedger%20Final%20PoE%20AI%20Usage%20Write%20Up.pdf) · **Code references:** [REFERENCES-CODE.md](REFERENCES-CODE.md)
 
 ## Contents
 1. [Abstract](#1-abstract)  2. [Team](#2-team)  3. [Requirements and rubric mapping](#3-requirements-and-rubric-mapping)  4. [Architecture](#4-architecture)  5. [Feature design](#5-feature-design-and-design-considerations)  6. [REST API](#6-rest-api)  7. [DevOps](#7-devops-and-version-control)  8. [Testing](#8-testing)  9. [Release and Play Store readiness](#9-release-and-play-store-readiness)  10. [Setup](#10-setup-and-configuration)  11. [Screenshots](#11-screenshots)  12. [Limitations](#12-known-limitations)  13. [References](#13-references)
@@ -41,7 +41,7 @@ DevLedger is a native Android app (Kotlin, Jetpack Compose) that keeps a develop
 | **User Defined 5:** Developer Financial Tracker (10) | `ui/screens/finance`, `TransactionRepository`, budget in Settings, `BudgetAlertService` | Video; `FinanceUiStateTest`, `BudgetInputTest` |
 | User interface (10) | Single design system in `ui/theme` and `ui/components`; every control wired | Section 11 |
 | Play Store preparation (5) | Section 9, `store/`, signed APK/AAB from CI | GitHub Release assets |
-| AI-use write-up (5) | E:\GitHub\prog7314-2026-poe-st10443021\docs\DevLedger Final PoE AI Usage Write Up | PDF |
+| AI-use write-up (5) | DevLedger Final PoE AI Usage Write Up | PDF |
 | GitHub, README, automated testing (10) | Section 7; `.github/workflows/` | Actions tab, commit history |
 | Demonstration video (5) | Link at the top of this file | |
 
