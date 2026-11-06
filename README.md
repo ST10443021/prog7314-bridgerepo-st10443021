@@ -215,13 +215,13 @@ Promotional screenshots made from the release build.
 
 Code-level references are cited in each source file and listed in full in [REFERENCES-CODE.md](REFERENCES-CODE.md). Sources used in this document:
 
-- Firebase, n.d.a. *About FCM messages*. [Online] Available at: <https://firebase.google.com/docs/cloud-messaging/concept-options> [Accessed ____ 2026].
-- Google Developers, n.d.a. *Guide to app architecture*. [Online] Available at: <https://developer.android.com/topic/architecture> [Accessed ____ 2026].
-- Google Developers, n.d.c. *Getting started with WorkManager*. [Online] Available at: <https://developer.android.com/develop/background-work/background-tasks/persistent/getting-started> [Accessed ____ 2026].
-- Google Developers, n.d.d. *Show a biometric authentication dialog*. [Online] Available at: <https://developer.android.com/identity/sign-in/biometric-auth> [Accessed ____ 2026].
-- Google Developers, n.d.l. *DataStore*. [Online] Available at: <https://developer.android.com/topic/libraries/architecture/datastore> [Accessed ____ 2026].
-- Google Developers, n.d.m. *Android Keystore system*. [Online] Available at: <https://developer.android.com/privacy-and-security/keystore> [Accessed ____ 2026].
-- Google Developers, n.d.o. *Dependency injection with Hilt*. [Online] Available at: <https://developer.android.com/training/dependency-injection/hilt-android> [Accessed ____ 2026].
-- Google Developers, n.d.r. *Per-app language preferences*. [Online] Available at: <https://developer.android.com/guide/topics/resources/app-languages> [Accessed ____ 2026].
+- Firebase, n.d.a. *About FCM messages*. [Online] Available at: <https://firebase.google.com/docs/cloud-messaging/concept-options> [Accessed 6 November 2026].
+- Google Developers, n.d.a. *Guide to app architecture*. [Online] Available at: <https://developer.android.com/topic/architecture> [Accessed 6 November 2026].
+- Google Developers, n.d.c. *Getting started with WorkManager*. [Online] Available at: <https://developer.android.com/develop/background-work/background-tasks/persistent/getting-started> [Accessed 6 November 2026].
+- Google Developers, n.d.d. *Show a biometric authentication dialog*. [Online] Available at: <https://developer.android.com/identity/sign-in/biometric-auth> [Accessed 6 November 2026].
+- Google Developers, n.d.l. *DataStore*. [Online] Available at: <https://developer.android.com/topic/libraries/architecture/datastore> [Accessed 6 November 2026].
+- Google Developers, n.d.m. *Android Keystore system*. [Online] Available at: <https://developer.android.com/privacy-and-security/keystore> [Accessed 6 November 2026].
+- Google Developers, n.d.o. *Dependency injection with Hilt*. [Online] Available at: <https://developer.android.com/training/dependency-injection/hilt-android> [Accessed 6 November 2026].
+- Google Developers, n.d.r. *Per-app language preferences*. [Online] Available at: <https://developer.android.com/guide/topics/resources/app-languages> [Accessed 6 November 2026].
 - Google Play Console Help, n.d. *Meet Google Play's target API level requirement*. [Online] Available at: <https://support.google.com/googleplay/android-developer/answer/11926878> [Accessed 29 October 2026].
-- OWASP Foundation, n.d.a. *Authentication Cheat Sheet*. [Online] Available at: <https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html> [Accessed ____ 2026].
+- OWASP Foundation, n.d.a. *Authentication Cheat Sheet*. [Online] Available at: <https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html> [Accessed 6 November 2026].
