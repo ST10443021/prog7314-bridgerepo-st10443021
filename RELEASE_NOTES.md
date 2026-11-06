@@ -102,13 +102,13 @@ These notes list every functional update made since the Part 2 prototype (`1.0.0
 
 | Field | Value |
 |---|---|
-| Release date | REPLACE_WITH_DATE |
+| Release date | 6 November 2026 |
 | Tested commit SHA | REPLACE_WITH_SHA |
 | Tag | `Final-POE` |
-| GitHub release URL | REPLACE_WITH_RELEASE_URL |
-| Signed APK SHA-256 | see `SHA256SUMS.txt` in the release |
-| Phone and Android version used for testing | REPLACE_WITH_DEVICE |
-| Demonstration video | REPLACE_WITH_VIDEO_URL |
+| GitHub release URL | https://github.com/EMGPPT/prog7314-2026-poe-st10443021/releases/tag/Final-POE |
+| Signed APK SHA-256 | 4141c7fde5e844b9e0df0dd89485709cc878ec06 |
+| Phone and Android version used for testing | Samsung Galaxy S26, Android 17|
+| Demonstration video | https://youtu.be/03nndztHXiE |
 
 ### Earlier verified history (Part 3 working branch)
 
