@@ -8,7 +8,7 @@
 | Default language | English (United Kingdom) | |
 | Additional languages | Afrikaans, isiXhosa | |
 | Contact email | syedhamzakazmi52@gmail.com | |
-| Privacy policy URL | REPLACE_WITH_PRIVACY_POLICY_URL (host `docs/privacy-policy.md`, for example with GitHub Pages) | required |
+| Privacy policy URL | [Privacy Policy URL](https://docs.google.com/document/d/e/2PACX-1vRcFkRjTGmo-N5ACrnKfHLl6ryPPaLgZVkxK6rKJ0Q0dU_dbqwG5t91Vwei2q9SHMbLo9ugm-apsMQf/pub) (host `docs/privacy-policy.md`, for example with GitHub Pages) | required |
 | App icon | `DevLedger/android/app/src/main/ic_launcher-playstore.png` | 512x512 |
 | Feature graphic | `store/feature-graphic-1024x500.png` | 1024x500 |
 | Phone screenshots | `store/DevLedger Promotional Screenshots/` | 2 to 8 |
